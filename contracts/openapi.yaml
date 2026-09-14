@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.1.0
+  version: 1.2.0
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -435,6 +435,25 @@ components:
           type: array
           minItems: 0
           items: { $ref: "#/components/schemas/ServerCard" }
+        sources:
+          description: >-
+            check sources that exist right now. A source appears after its probe's first accepted
+            report (the initialising event) and disappears when the probe is revoked; the UI shows
+            only listed sources in the legend, rows and checks. Missing sources are not an incident.
+          type: array
+          maxItems: 3
+          items: { $ref: "#/components/schemas/SourceAvailability" }
+    SourceAvailability:
+      type: object
+      additionalProperties: false
+      required: [source, state, last_report_at]
+      properties:
+        source: { type: string, enum: [pc, mobile, abroad] }
+        state:
+          description: active = reporting within the freshness window; silent = enrolled, no fresh report
+          type: string
+          enum: [active, silent]
+        last_report_at: { type: [string, "null"], format: date-time }
     ProtocolSummary:
       type: object
       additionalProperties: false
@@ -454,6 +473,7 @@ components:
               type: array
               items: { $ref: "#/components/schemas/ProtocolSummary" }
             checks:
+              description: only sources listed in /status.sources; empty when no probe has reported yet
               type: array
               items: { $ref: "#/components/schemas/EvidenceSummary" }
             uptime_7d: { type: [number, "null"], minimum: 0, maximum: 1 }

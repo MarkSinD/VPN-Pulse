@@ -35,7 +35,7 @@
   "status.noRecommendation": "No server with a confirmed check yet",
   "status.uptime24h": "{value} over 24h",
   "status.history24h": "over 24h",
-  "status.currentUnknown": "now — no data",
+  "status.currentUnknown": "no data",
   "status.hint": "Tap a server to see its details",
   "status.hintDismiss": "Got it",
   "status.legend": "Check sources",
@@ -286,5 +286,8 @@
   "onboarding.memberView": "Member sees",
   "onboarding.adminView": "Administrator sees",
   "onboarding.next": "Next command",
-  "server.failedBy": "Failure confirmed by: {by}"
+  "server.failedBy": "Failure confirmed by: {by}",
+  "status.sourceOn": "reporting",
+  "status.sourceOff": "not reporting",
+  "server.checksNone": "No probes connected — the state is confirmed by member connections"
 }

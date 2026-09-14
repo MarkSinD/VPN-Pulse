@@ -22,7 +22,7 @@ android.html?state=running&lang=en&theme=dark&showcase=hidden
 ```
 
 Scenarios: `loading`, `operational`, `degraded`, `unavailable`, `unknown`, `offline`, `auth`,
-`empty_events`, `long_note`, `conflict`, `demo`, `clean_install`, `partial_coverage`.
+`empty_events`, `long_note`, `conflict`, `demo`, `clean_install`, `partial_coverage`, `no_pc`.
 Screens: `status`, `events`, `keys`, `help`, `admin`, `server:s1..s3`.
 
 ## Design rules encoded here
@@ -41,8 +41,12 @@ Screens: `status`, `events`, `keys`, `help`, `admin`, `server:s1..s3`.
   reserved for states; the interface accent is silver. Two font weights (400 and 700), body
   line-height 1.5. Every text pair is ≥ 4.5:1 and every control boundary ≥ 3:1 — checked by
   `scripts/check_contrast.py`.
-- Source labels live in a three-cell legend plate above the list (icon over a one-line label) and
-  inside the rows only in the wide layout (≥ 1024 px); narrower screens show icon + lamp per source.
+- Check sources are dynamic: a source exists only after its probe's first accepted report
+  (`/status.sources`). The legend plate shows each existing source as a lamp — green = reporting,
+  hollow = enrolled but silent — and disappears when there are none; rows and the server's
+  "Checks" group list only existing sources. Members are never warned about missing probes; the
+  administrator sees them under Probes. Labels sit under the icons in the plate and inside the rows
+  only in the wide layout (≥ 1024 px).
 - Three check sources: 💻 full VPN check from a computer inside the country, 📶 mobile network
   outside the VPN, 🌍 cross-check from another server abroad.
 - User screens never show IPs, domains, ports or hosting providers.

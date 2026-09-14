@@ -54,7 +54,7 @@
     const raw = FX.scenarios[id] || FX.scenarios.operational;
     const base = raw.inherit ? resolve(raw.inherit) : null;
     const sc = Object.assign({}, base || {}, raw);
-    if (raw.inherit) { sc.servers = Object.assign({}, base.servers); if (raw.events === undefined) sc.events = base.events; }
+    if (raw.inherit) { sc.servers = Object.assign({}, base.servers); Object.keys(raw.servers || {}).forEach(id => { sc.servers[id] = Object.assign({}, base.servers[id] || {}, raw.servers[id]); }); if (raw.events === undefined) sc.events = base.events; }
     sc.id = id;
     // events
     let ev = sc.events;
@@ -89,8 +89,18 @@
         doctor: a.doctor || A.doctor, enrollCode: A.enrollCode, nextCommand: a.nextCommand || null
       };
     } else sc.adminData = null;
+    // a check source exists only after its probe reported at least once: none = not enrolled (hidden),
+    // silent = enrolled but no fresh report, active = reporting. Scenarios may override via `sources`.
+    const kindProbe = { pc: 'pc', mobile: 'android', abroad: 'abroad' }, over = sc.sources || {};
+    sc.presence = {};
+    ['pc', 'mobile', 'abroad'].forEach(k => {
+      if (over[k]) { sc.presence[k] = over[k]; return; }
+      const p = sc.adminData ? sc.adminData.probes[kindProbe[k]] : null;
+      sc.presence[k] = !p || p.enrolled === false ? 'none' : (p.state === 'unknown' ? 'silent' : 'active');
+    });
     return sc;
   }
+  const kinds = () => ['pc', 'mobile', 'abroad'].filter(k => SC.presence[k] !== 'none');
   let SC = resolve(S.scenario);
   const byId = id => SC.list.find(s => s.id === id);
   const sname = s => L((typeof s === 'string' ? (FX.servers.find(x => x.id === s) || {}).name : s.name) || { ru: '—', en: '—' });
@@ -162,7 +172,7 @@
   const sevIcon = { high: 'x', medium: 'alert', low: 'info' };
   const srcIcon = { pc: 'pc', mobile: 'signal', abroad: 'globe' };
   function sources(s, withLabels) {
-    return '<span class="srcs">' + ['pc', 'mobile', 'abroad'].map(k => { const r = s.sources[k].r; return '<span class="src s-' + r + '"><span class="sr-only">' + esc(t('source.' + k)) + ': ' + esc(t('source.result.' + r)) + '</span>' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span>' + (withLabels ? '<span class="lbl">' + esc(t('source.' + k)) + '</span>' : '') + '</span>'; }).join('') + '</span>';
+    return '<span class="srcs">' + kinds().map(k => { const r = s.sources[k].r; return '<span class="src s-' + r + '"><span class="sr-only">' + esc(t('source.' + k)) + ': ' + esc(t('source.result.' + r)) + '</span>' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span>' + (withLabels ? '<span class="lbl">' + esc(t('source.' + k)) + '</span>' : '') + '</span>'; }).join('') + '</span>';
   }
   function segsHtml(segs, extra) { return '<span class="segs ' + (extra || '') + '" aria-hidden="true">' + segs.map(x => '<i class="' + x + '"></i>').join('') + '</span>'; }
   function chart(s, big) {
@@ -222,7 +232,7 @@
     const parts = [];
     if (SC.api === 'offline') parts.push('<div class="banner banner-warn" role="status">' + ico('offline') + '<div><b>' + esc(t('status.offline')) + '</b><br>' + esc(t('status.offlineBody', { time: SC.lastKnownTime })) + '</div><div class="act"><button type="button" class="btn btn-ghost" data-retry="status" data-event="retry_pressed">' + ico('refresh') + esc(t('action.retry')) + '</button></div></div>');
     parts.push(overallBlock());
-    if (SC.coverageMissing) parts.push('<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('status.coveragePartial', { missing: SC.coverageMissing.map(k => t('status.coverage.' + k)).join(', ') })) + '</div></div>');
+    if (SC.coverageMissing && S.role === 'admin') parts.push('<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('status.coveragePartial', { missing: SC.coverageMissing.map(k => t('status.coverage.' + k)).join(', ') })) + '</div></div>');
     parts.push(noteBlock());
     if (SC.empty) {
       parts.push('<div class="empty">' + ico('pulse') + '<p>' + esc(t('status.settingUpBody')) + '</p></div>');
@@ -230,10 +240,11 @@
       return '<div class="screen">' + parts.join('') + '</div>';
     }
     if (!S.hintDismissed) parts.push('<div class="hint" id="hint"><span>' + esc(t('status.hint')) + '</span><button type="button" class="btn btn-text" id="hint-ok">' + esc(t('status.hintDismiss')) + '</button></div>');
-    parts.push('<div class="legend" aria-label="' + esc(t('status.legend')) + '">' + ['pc', 'mobile', 'abroad'].map(k => '<span>' + ico(srcIcon[k]) + esc(t('source.' + k)) + '</span>').join('') + '</div>');
+    const ks = kinds();
+    if (ks.length) parts.push('<div class="legend" role="list" aria-label="' + esc(t('status.legend')) + '">' + ks.map(k => { const on = SC.presence[k] === 'active'; return '<span role="listitem"><span class="src ' + (on ? 's-ok' : 's-unknown') + '">' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span></span><span class="lg-t">' + esc(t('source.' + k)) + '</span><span class="sr-only">' + esc(t(on ? 'status.sourceOn' : 'status.sourceOff')) + '</span></span>'; }).join('') + '</div>');
     parts.push('<div class="servers" id="servers">' + SC.list.map(serverRow).join('') + '</div>');
     parts.push('<div class="axis" aria-hidden="true"><span></span><div><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div><span class="spacer"></span></div>');
-    const ctx = window.innerWidth >= 1024 ? '<aside class="ctx">' + (SC.eventsList.length ? '<div class="panel"><h3>' + esc(t('events.title')) + '</h3>' + eventRow(SC.eventsList[0]) + '</div>' : '') + '<div class="panel"><h3>' + esc(t('status.legend')) + '</h3><div class="stack small muted">' + ['pc', 'mobile', 'abroad'].map(k => '<span>' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k + '.full')) + '</span>').join('') + '</div></div></aside>' : '';
+    const ctx = window.innerWidth >= 1024 ? '<aside class="ctx">' + (SC.eventsList.length ? '<div class="panel"><h3>' + esc(t('events.title')) + '</h3>' + eventRow(SC.eventsList[0]) + '</div>' : '') + '<div class="panel"><h3>' + esc(t('status.legend')) + '</h3><div class="stack small muted">' + kinds().map(k => '<span>' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k + '.full')) + '</span>').join('') + '</div></div></aside>' : '';
     return '<div class="status-layout"><div class="screen">' + parts.join('') + '</div>' + ctx + '</div>';
   }
   function skeleton() {
@@ -280,7 +291,8 @@
     const stale = s.staleMin ? '<div class="banner banner-info">' + ico('clock') + '<div>' + esc(t('server.stale', { duration: dur(s.staleMin) })) + '</div></div>' : '';
     const conflict = s.conflict ? '<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('server.conflict', { a: t(s.conflict.a), b: t(s.conflict.b) })) + '</div></div>' : '';
     const diag = s.diag && S.role === 'admin' ? '<div class="diag"><b>' + esc(t('admin.diag.blocked')) + '</b><span>' + esc(t('admin.diag.action')) + '</span></div>' : '';
-    const checks = '<div class="kv">' + ['pc', 'mobile', 'abroad'].map(k => srcRow(s, k)).join('') + '</div><p class="small muted">' + esc(by) + '</p>';
+    const ks = kinds();
+    const checks = (ks.length ? '<div class="kv">' + ks.map(k => srcRow(s, k)).join('') + '</div>' : '<p class="small muted">' + esc(t('server.checksNone')) + '</p>') + '<p class="small muted">' + esc(by) + '</p>';
     const ld = s.load, xr = s.protocols.includes('xray');
     const load = '<div class="metrics"><div class="metric"><div class="k">' + esc(t('server.connections')) + '</div><div class="v num">' + (xr && !ld.xrayKnown ? ld.awg + '+' : ld.awg + (ld.xray || 0)) + '</div><div class="s">' + esc(t('server.awg')) + ' ' + ld.awg + (xr ? ' · ' + esc(t('server.xray')) + ' ' + (ld.xrayKnown ? ld.xray : '—') : '') + '</div></div>' +
       '<div class="metric"><div class="k">' + esc(t('server.traffic')) + '</div><div class="v num">' + ld.mbit + '<small>' + esc(t('server.mbit')) + '</small></div><div class="s">' + esc(t('server.peak', { n: ld.peak })) + '</div></div>' +

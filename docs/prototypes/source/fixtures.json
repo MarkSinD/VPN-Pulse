@@ -867,6 +867,28 @@
         },
         "nextCommand": "vpn-pulse probe enroll pc"
       }
+    },
+    "no_pc": {
+      "inherit": "operational",
+      "servers": {
+        "s1": {
+          "confirmedBy": "humans"
+        },
+        "s2": {
+          "confirmedBy": "humans"
+        },
+        "s3": {
+          "confirmedBy": "humans"
+        }
+      },
+      "admin": {
+        "probes": {
+          "pc": {
+            "state": "unknown",
+            "enrolled": false
+          }
+        }
+      }
     }
   }
 }

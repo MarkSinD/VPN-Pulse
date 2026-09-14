@@ -35,7 +35,7 @@
   "status.noRecommendation": "Пока нет сервера с подтверждённой работой",
   "status.uptime24h": "{value} за 24 ч",
   "status.history24h": "за 24 ч",
-  "status.currentUnknown": "сейчас — нет данных",
+  "status.currentUnknown": "нет данных",
   "status.hint": "Нажмите на сервер, чтобы посмотреть показатели",
   "status.hintDismiss": "Понятно",
   "status.legend": "Источники проверки",
@@ -286,5 +286,8 @@
   "onboarding.memberView": "Участник видит",
   "onboarding.adminView": "Администратор видит",
   "onboarding.next": "Следующая команда",
-  "server.failedBy": "Отказ подтверждён: {by}"
+  "server.failedBy": "Отказ подтверждён: {by}",
+  "status.sourceOn": "работает",
+  "status.sourceOff": "не выходит на связь",
+  "server.checksNone": "Пробники не подключены — состояние подтверждается подключениями участников"
 }

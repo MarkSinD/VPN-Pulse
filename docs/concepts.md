@@ -14,6 +14,13 @@ state from the server alone. State comes from **evidence**:
 | `human_activity` | members are actually connected right now | the collector, from aggregate handshake data |
 | `collector` | the service process, port and configuration look right on the server | a read-only helper on the server |
 
+A source **exists** only after its probe has delivered its first accepted report. Until then it
+is not shown to members at all — not in the legend, not in the rows, not in the server checks —
+and it does not count against coverage. You can run with one probe, two or all three; fewer
+probes means less evidence, never a worse state. An enrolled probe that stops reporting stays
+visible as *silent* until the administrator revokes it. `GET /status` lists the existing sources
+in `sources[]`.
+
 ## Four states
 
 | State | Meaning | Never means |

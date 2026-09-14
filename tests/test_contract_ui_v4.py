@@ -8,6 +8,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import jsonschema
+import pytest
 import yaml
 
 
@@ -128,3 +129,18 @@ def test_analytics_allowlist_contains_ui_events():
                  "events_viewed", "events_filter_changed", "help_viewed", "help_step_opened", "contact_admin_pressed",
                  "language_changed", "retry_pressed", "ui_error_shown", "quick_start_opened"):
         assert used in names, used
+
+
+def test_status_lists_only_reporting_sources():
+    payload = {
+        "state": "operational", "freshness": FRESH, "coverage": 0.67, "mode": "live",
+        "observing_since": "2026-09-01T00:00:00Z", "recommended_server_id": "s1", "note": None,
+        "servers": [card(state="operational", recommended=True, uptime_24h=1.0, coverage_24h=1.0)],
+        "sources": [
+            {"source": "mobile", "state": "active", "last_report_at": "2026-09-13T14:30:00Z"},
+            {"source": "abroad", "state": "silent", "last_report_at": "2026-09-13T13:10:00Z"},
+        ],
+    }
+    validate("StatusResponse", payload)
+    with pytest.raises(jsonschema.ValidationError):
+        validate("SourceAvailability", {"source": "pc", "state": "missing", "last_report_at": None})

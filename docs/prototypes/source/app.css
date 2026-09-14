@@ -157,9 +157,11 @@ p { margin: 0; }
 .hint { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); align-items: center; font-size: var(--text-sm); color: var(--color-muted); background: var(--color-surface); box-shadow: var(--card-edge); border-radius: var(--radius-md); padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3); }
 .hint .btn { min-height: 40px; color: var(--color-text); }
 /* legend plate: three equal cells, icon above the label, so long labels never break mid-row */
-.legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); font-size: var(--text-xs); line-height: var(--lh-caption); color: var(--color-muted); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
-.legend span { display: grid; justify-items: center; gap: 2px; text-align: center; min-width: 0; }
-.legend .i { width: 18px; height: 18px; }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: var(--space-2); font-size: var(--text-xs); line-height: var(--lh-caption); color: var(--color-muted); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+.legend > span { display: grid; justify-items: center; gap: 3px; text-align: center; min-width: 0; }
+.legend .src { gap: 5px; }
+.legend .src .i { width: 18px; height: 18px; }
+.legend .lg-t { max-width: 100%; }
 @media (min-width: 1024px) { .legend { display: none; } }
 .servers { display: grid; }
 .srow {

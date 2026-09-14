@@ -8,6 +8,9 @@ release is cut.
 
 ### Added
 
+- API contract v1.2.0 (`contracts/openapi.yaml`): `StatusResponse.sources` / `SourceAvailability` —
+  check sources that exist right now (a source appears after its probe's first report); the UI hides
+  missing sources instead of warning members about them.
 - API contract v1.1.0 (`contracts/openapi.yaml`): additive fields required by the accepted UI —
   `StatusResponse.mode` and `observing_since`, empty server list on a clean install,
   `ServerDetail.components / resources / profiles / service_checks / uptime_7d / coverage_7d`,
