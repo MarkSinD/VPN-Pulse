@@ -1,0 +1,60 @@
+<title>VPN Pulse — first run</title>
+<style>
+/*__TOKENS__*/
+/*__APP_CSS__*/
+/* onboarding guide chrome (documentation scenario, not product UI) */
+body { flex-direction: column; }
+@media (min-width: 900px) { body { flex-direction: row; } }
+.guide { flex: none; background: #1f2430; color: #e6e9ef; border-bottom: 3px dashed #4b5568; font-family: var(--font-sans); overflow: auto; }
+@media (min-width: 900px) { .guide { width: 360px; height: 100%; border-bottom: 0; border-right: 3px dashed #4b5568; } }
+.guide .in { padding: 16px; display: grid; gap: 14px; }
+.guide h1 { font-size: 18px; margin: 0; }
+.guide p { font-size: 13px; line-height: 1.45; color: #b6bfcc; max-width: none; }
+.guide .card { border: 1px solid #3a4355; border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+.guide .card[data-active="true"] { border-color: #4b7bec; box-shadow: inset 0 0 0 1px #4b7bec; }
+.guide .card h2 { font-size: 14px; margin: 0; }
+.guide .row { display: flex; gap: 6px; flex-wrap: wrap; }
+.guide .g-btn { background: #2b3242; color: #e6e9ef; border: 1px solid #4b5568; border-radius: 8px; padding: 0 10px; min-height: 36px; font: inherit; font-size: 13px; cursor: pointer; }
+.guide .g-btn[aria-pressed="true"] { background: #4b7bec; border-color: #4b7bec; color: #fff; }
+.guide code { font-family: var(--font-mono); font-size: 12px; background: #11151b; border-radius: 6px; padding: 6px 8px; display: block; color: #e6e9ef; overflow-x: auto; }
+.guide .lang { margin-left: auto; }
+.guide .foot { font-size: 11px; color: #8d97a8; }
+</style>
+/*__ICONS__*/
+<aside class="guide" id="guide" aria-label="First-run scenarios"></aside>
+<div class="app" id="app">
+  <header class="app-header" id="app-header"></header>
+  <main class="app-scroll" id="app-scroll" tabindex="-1"></main>
+  <nav class="app-nav" id="app-nav" aria-label="Sections"></nav>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>window.__I18N=/*__I18N__*/;window.__FIXTURES=/*__FIXTURES__*/;</script>
+<script>
+/*__APP_JS__*/
+</script>
+<script>
+(function () {
+  const I = window.__I18N; let lang = (window.VPNPulseShowcase.state().lang) || 'ru'; let active = 'demo';
+  const t = k => (I[lang][k] !== undefined ? I[lang][k] : k);
+  const states = {
+    demo: { cmd: './install.sh demo', views: [['member', { scenario: 'demo', role: 'member', screen: 'status' }], ['admin', { scenario: 'demo', role: 'admin', screen: 'admin' }]] },
+    clean: { cmd: 'vpn-pulse server add', views: [['member', { scenario: 'clean_install', role: 'member', screen: 'status' }], ['admin', { scenario: 'clean_install', role: 'admin', screen: 'status' }]] },
+    partial: { cmd: 'vpn-pulse probe enroll pc', views: [['member', { scenario: 'partial_coverage', role: 'member', screen: 'status' }], ['admin', { scenario: 'partial_coverage', role: 'admin', screen: 'admin' }]] },
+    doctor: { cmd: 'vpn-pulse doctor', views: [['ok', { scenario: 'operational', role: 'admin', screen: 'admin' }], ['warn', { scenario: 'partial_coverage', role: 'admin', screen: 'admin' }], ['fail', { scenario: 'clean_install', role: 'admin', screen: 'admin' }]] }
+  };
+  let activeView = 'member';
+  function render() {
+    const g = document.getElementById('guide');
+    g.innerHTML = '<div class="in"><div style="display:flex;align-items:center;gap:8px"><h1>' + t('onboarding.title') + '</h1><button type="button" class="g-btn lang" id="g-lang">' + (lang === 'ru' ? 'EN' : 'RU') + '</button></div><p>' + t('onboarding.intro') + '</p>' +
+      Object.keys(states).map(id => '<section class="card" data-active="' + (active === id) + '"><h2>' + t('onboarding.' + id) + '</h2><p>' + t('onboarding.' + id + 'Body') + '</p><div class="row">' +
+        states[id].views.map(([v, cfg]) => '<button type="button" class="g-btn" data-state="' + id + '" data-view="' + v + '" aria-pressed="' + (active === id && activeView === v) + '">' + (v === 'member' ? t('onboarding.memberView') : v === 'admin' ? t('onboarding.adminView') : t('admin.doctor.' + v)) + '</button>').join('') +
+        '</div><div><div class="foot">' + t('onboarding.next') + '</div><code>' + states[id].cmd + '</code></div></section>').join('') +
+      '<p class="foot">Showcase · fixtures only · ' + t('app.demo') + '</p></div>';
+    g.querySelectorAll('[data-state]').forEach(b => b.addEventListener('click', () => { active = b.getAttribute('data-state'); activeView = b.getAttribute('data-view'); const cfg = states[active].views.find(x => x[0] === activeView)[1]; window.VPNPulseShowcase.apply(Object.assign({ lang }, cfg)); render(); }));
+    document.getElementById('g-lang').addEventListener('click', () => { lang = lang === 'ru' ? 'en' : 'ru'; window.VPNPulseShowcase.apply({ lang }); render(); });
+  }
+  document.addEventListener('vpnpulse:render', e => { if (e.detail && e.detail.lang !== lang) { lang = e.detail.lang; render(); } });
+  window.VPNPulseShowcase.apply({ scenario: 'demo', role: 'member', screen: 'status', showcase: 'hidden' });
+  render();
+})();
+</script>

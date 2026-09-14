@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>VPN Pulse — first run</title>
+</head>
+<body>
+
+<style>
+/* VPN Pulse — shared UI tokens (Mini App, onboarding showcase, Android web mock).
+   Source of truth for spacing, radius, type scale, motion and semantic colors.
+   Colors come from Telegram theme variables with light/dark fallbacks.
+   Type scale uses rem so system text scaling (200%) is respected. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;   /* 12 */
+  --text-sm: 0.875rem;  /* 14 */
+  --text-md: 1rem;      /* 16 */
+  --text-lg: 1.25rem;   /* 20 */
+  --text-xl: 1.75rem;   /* 28 */
+  --lh-tight: 1.2;
+  --lh-normal: 1.4;
+  --control-min: 44px;
+  --row-min: 72px;
+  --accordion-min: 48px;
+  --focus-width: 2px;
+  --motion-fast: 140ms;
+  --motion-normal: 180ms;
+  --content-max: 560px;
+  --content-wide: 960px;
+
+  --color-bg: var(--tg-theme-secondary-bg-color, #f5f7fa);
+  --color-surface: var(--tg-theme-bg-color, #ffffff);
+  --color-text: var(--tg-theme-text-color, #111827);
+  --color-muted: var(--tg-theme-hint-color, #667085);
+  --color-accent: var(--tg-theme-link-color, #1976d2);
+  --color-accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --color-border: color-mix(in srgb, var(--color-muted) 28%, transparent);
+  --color-border-strong: color-mix(in srgb, var(--color-muted) 45%, transparent);
+  --color-operational: #14845a;
+  --color-degraded: #a86100;
+  --color-unavailable: #c33232;
+  --color-unknown: #697386;
+  --color-admin: #6b4fd8;
+  --tint: 10%;
+  --color-focus: var(--color-accent);
+  --shadow-float: 0 8px 24px rgba(17, 24, 39, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: var(--tg-theme-secondary-bg-color, #11151b);
+    --color-surface: var(--tg-theme-bg-color, #1a2029);
+    --color-text: var(--tg-theme-text-color, #f4f7fb);
+    --color-muted: var(--tg-theme-hint-color, #a8b3c2);
+    --color-accent: var(--tg-theme-link-color, #67b3ff);
+    --color-accent-text: var(--tg-theme-button-text-color, #0b1118);
+    --color-operational: #42d39a;
+    --color-degraded: #ffb84d;
+    --color-unavailable: #ff7474;
+    --color-unknown: #a6afbd;
+    --color-admin: #a893ff;
+    --tint: 16%;
+    --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: var(--tg-theme-secondary-bg-color, #11151b);
+  --color-surface: var(--tg-theme-bg-color, #1a2029);
+  --color-text: var(--tg-theme-text-color, #f4f7fb);
+  --color-muted: var(--tg-theme-hint-color, #a8b3c2);
+  --color-accent: var(--tg-theme-link-color, #67b3ff);
+  --color-accent-text: var(--tg-theme-button-text-color, #0b1118);
+  --color-operational: #42d39a;
+  --color-degraded: #ffb84d;
+  --color-unavailable: #ff7474;
+  --color-unknown: #a6afbd;
+  --color-admin: #a893ff;
+  --tint: 16%;
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-normal: 1ms;
+  }
+}
+
+/* VPN Pulse — Mini App v4 styles. Tokens come from ui-tokens.css (inlined at build). */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--color-bg); color: var(--color-text);
+  font-family: var(--font-sans); font-size: var(--text-md); line-height: var(--lh-normal);
+  overflow: hidden; display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased; -webkit-text-size-adjust: 100%;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; padding: 0; }
+button:disabled { cursor: default; opacity: .55; }
+:focus { outline: none; }
+:focus-visible { outline: var(--focus-width) solid var(--color-focus); outline-offset: 2px; border-radius: var(--radius-sm); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+svg.i { width: 1.25em; height: 1.25em; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -0.28em; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--color-muted); }
+.small { font-size: var(--text-sm); }
+.xs { font-size: var(--text-xs); }
+
+/* ---------- showcase (not part of the product) ---------- */
+.showcase {
+  flex: none; background: #1f2430; color: #e6e9ef; font-size: 13px; line-height: 1.3;
+  padding: 8px 12px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  border-bottom: 3px dashed #4b5568; font-family: var(--font-mono);
+}
+.showcase .sc-label { font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; color: #9aa4b5; }
+.showcase label { display: inline-flex; align-items: center; gap: 6px; }
+.showcase select, .showcase button.sc-btn { background: #2b3242; color: #e6e9ef; border: 1px solid #4b5568; border-radius: 6px; padding: 4px 8px; min-height: 32px; font: inherit; }
+.showcase button.sc-btn[aria-pressed="true"] { background: #4b7bec; border-color: #4b7bec; color: #fff; }
+.showcase .sc-hide { margin-left: auto; }
+body[data-showcase="hidden"] .showcase { display: none; }
+
+/* ---------- app shell ---------- */
+.app {
+  flex: 1; min-height: 0; width: 100%; max-width: var(--content-max); margin: 0 auto;
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--color-bg);
+}
+@media (min-width: 1024px) { .app { max-width: var(--content-wide); } }
+.app-header {
+  display: grid; grid-template-columns: var(--control-min) minmax(0, 1fr) auto; align-items: center; gap: var(--space-2);
+  padding: calc(var(--space-1) + env(safe-area-inset-top, 0px)) var(--space-3) var(--space-1);
+  min-height: 56px; border-bottom: 1px solid var(--color-border); background: var(--color-bg);
+}
+.app-header .ttl { font-size: var(--text-md); font-weight: 650; line-height: var(--lh-tight); min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
+.app-header .ttl .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-header .ttl .st { font-size: var(--text-xs); color: var(--color-muted); font-weight: 500; white-space: nowrap; }
+.demo-mark { font-size: var(--text-xs); font-weight: 600; color: var(--color-degraded); border: 1px solid currentColor; border-radius: var(--radius-sm); padding: 1px 6px; white-space: nowrap; }
+.icon-btn {
+  width: var(--control-min); height: var(--control-min); display: inline-grid; place-items: center;
+  border-radius: var(--radius-md); color: var(--color-accent); font-size: 20px; transition: background var(--motion-fast);
+}
+.icon-btn .i { width: 22px; height: 22px; }
+.icon-btn:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.icon-btn:active { background: color-mix(in srgb, var(--color-accent) 18%, transparent); }
+.icon-btn.hidden { visibility: hidden; }
+.lang-btn { min-width: var(--control-min); height: var(--control-min); padding: 0 var(--space-3); border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 700; color: var(--color-accent); letter-spacing: .04em; border: 1px solid var(--color-border); }
+.lang-btn:hover { background: color-mix(in srgb, var(--color-accent) 10%, transparent); }
+.app-scroll {
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; -ms-overflow-style: none;
+  padding: var(--space-3) var(--space-4) var(--space-5);
+}
+.app-scroll::-webkit-scrollbar { width: 0; height: 0; }
+@media (max-width: 359px) { .app-scroll { padding-left: var(--space-3); padding-right: var(--space-3); } .app-header { padding-left: var(--space-2); padding-right: var(--space-2); } }
+.app-nav {
+  display: grid; grid-template-columns: repeat(var(--nav-count, 4), minmax(0, 1fr)); gap: var(--space-1);
+  padding: var(--space-1) var(--space-2) calc(var(--space-1) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--color-border); background: var(--color-bg);
+}
+.app-nav button {
+  min-height: var(--control-min); display: grid; justify-items: center; align-content: center; gap: 2px;
+  color: var(--color-muted); font-size: clamp(0.6875rem, var(--text-xs), 14px); font-weight: 600; border-radius: var(--radius-md); padding: 4px 2px; position: relative;
+}
+.app-nav button .i { width: 22px; height: 22px; }
+.app-nav button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-nav button[aria-current="page"] { color: var(--color-accent); }
+.app-nav button[aria-current="page"]::after { content: ""; position: absolute; left: 30%; right: 30%; top: 0; height: 2px; background: var(--color-accent); border-radius: 2px; }
+.app-nav button:hover { background: color-mix(in srgb, var(--color-accent) 8%, transparent); }
+
+/* ---------- common blocks ---------- */
+.screen { display: grid; gap: var(--space-4); align-content: start; }
+h1.title { font-size: var(--text-xl); line-height: 1.2; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+h2.sub { font-size: var(--text-lg); line-height: 1.3; font-weight: 650; margin: 0; }
+p { margin: 0; }
+.stack { display: grid; gap: var(--space-2); }
+.divider { border-top: 1px solid var(--color-border); }
+.btn {
+  min-height: var(--control-min); padding: 0 var(--space-4); border-radius: var(--radius-md); font-weight: 600; font-size: var(--text-md);
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); transition: background var(--motion-fast), transform var(--motion-fast);
+  border: 1px solid transparent; text-align: center;
+}
+.btn:active { transform: scale(.99); }
+.btn-primary { background: var(--color-accent); color: var(--color-accent-text); }
+.btn-primary:hover { filter: brightness(1.05); }
+.btn-ghost { border-color: var(--color-border-strong); color: var(--color-text); }
+.btn-ghost:hover { background: color-mix(in srgb, var(--color-muted) 10%, transparent); }
+.btn-text { color: var(--color-accent); padding: 0 var(--space-2); }
+.btn-danger { color: var(--color-unavailable); border-color: color-mix(in srgb, var(--color-unavailable) 40%, transparent); }
+.btn-block { width: 100%; }
+.btn.loading { pointer-events: none; opacity: .7; }
+.panel { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); }
+.banner { border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); display: grid; grid-template-columns: auto 1fr; gap: var(--space-3); align-items: start; font-size: var(--text-sm); }
+.banner .i { width: 20px; height: 20px; margin-top: 1px; }
+.banner-warn { background: color-mix(in srgb, var(--color-degraded) var(--tint), transparent); color: var(--color-text); }
+.banner-warn .i { color: var(--color-degraded); }
+.banner-bad { background: color-mix(in srgb, var(--color-unavailable) var(--tint), transparent); }
+.banner-bad .i { color: var(--color-unavailable); }
+.banner-info { background: color-mix(in srgb, var(--color-muted) var(--tint), transparent); }
+.banner-info .i { color: var(--color-muted); }
+.banner .act { grid-column: 2; display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1); }
+.kv { display: grid; font-size: var(--text-sm); }
+.kv > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); align-items: baseline; }
+.kv > div:first-child { border-top: 0; }
+.kv .k { min-width: 0; }
+.kv .k small { display: block; color: var(--color-muted); font-size: var(--text-xs); line-height: 1.35; margin-top: 1px; }
+.kv .v { text-align: right; color: var(--color-muted); white-space: nowrap; font-variant-numeric: tabular-nums; display: inline-flex; align-items: center; gap: 6px; }
+.kv .v.ok { color: var(--color-operational); font-weight: 600; }
+.kv .v.bad { color: var(--color-unavailable); font-weight: 600; }
+.kv .v.warn { color: var(--color-degraded); font-weight: 600; }
+.kv .v.unk { color: var(--color-unknown); font-weight: 600; }
+.state-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; display: inline-block; flex: none; }
+.c-operational { color: var(--color-operational); } .c-degraded { color: var(--color-degraded); } .c-unavailable { color: var(--color-unavailable); } .c-unknown { color: var(--color-unknown); }
+.c-ok { color: var(--color-operational); } .c-fail { color: var(--color-unavailable); } .c-partial { color: var(--color-degraded); }
+.copy-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; }
+.copy-row code { font-family: var(--font-mono); font-size: var(--text-sm); background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 10px var(--space-3); overflow-x: auto; white-space: nowrap; min-height: var(--control-min); display: flex; align-items: center; }
+.toast { position: fixed; left: 50%; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--color-text); color: var(--color-bg); padding: 10px 14px; border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: var(--shadow-float); max-width: calc(100% - 32px); opacity: 0; pointer-events: none; transition: opacity var(--motion-normal); z-index: 20; }
+.toast.show { opacity: 1; }
+
+/* ---------- status screen ---------- */
+.overall { display: grid; gap: var(--space-1); }
+.overall .fresh { color: var(--color-muted); font-size: var(--text-sm); display: flex; align-items: center; gap: 6px; }
+.overall .rec { font-size: var(--text-md); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.overall .rec .i { color: var(--color-accent); }
+.note-box { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-1); border-left: 3px solid var(--color-accent); }
+.note-box .txt { font-size: var(--text-sm); line-height: 1.45; }
+.note-box .txt.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.note-box .who { font-size: var(--text-xs); color: var(--color-muted); }
+.note-box .btn-text { justify-self: start; min-height: 36px; margin-left: calc(-1 * var(--space-2)); }
+.hint { display: grid; grid-template-columns: 1fr auto; gap: var(--space-2); align-items: center; font-size: var(--text-sm); color: var(--color-muted); background: color-mix(in srgb, var(--color-accent) 8%, transparent); border-radius: var(--radius-md); padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3); }
+.hint .btn { min-height: 40px; color: var(--color-accent); }
+.legend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: var(--text-xs); color: var(--color-muted); }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.servers { display: grid; }
+.srow {
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; width: 100%;
+  min-height: 112px; padding: var(--space-3) var(--space-1); text-align: left; border-top: 1px solid var(--color-border);
+  border-radius: var(--radius-md); transition: background var(--motion-fast), transform var(--motion-fast); position: relative;
+}
+.srow:first-child { border-top: 0; }
+@media (hover: hover) and (pointer: fine) { .srow:hover { background: var(--color-surface); } .srow:hover .chev, .srow:hover .side .up { color: var(--color-accent); } }
+.srow:active { background: var(--color-surface); transform: scale(.99); }
+.srow:focus-visible { outline-offset: -2px; }
+.srow:focus-visible .chev { color: var(--color-accent); }
+.srow .main { display: grid; gap: 6px; min-width: 0; }
+.srow .name { font-size: var(--text-lg); font-weight: 650; line-height: 1.25; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.srow .name .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow .name .i { color: var(--color-accent); width: 18px; height: 18px; }
+.srow .stl { font-size: var(--text-sm); color: var(--color-muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.srow .stl b { font-weight: 600; color: var(--color-text); }
+.srow .side { display: grid; justify-items: end; align-items: center; gap: 2px; grid-template-columns: auto 20px; column-gap: var(--space-1); }
+.srow .side .up { font-size: var(--text-lg); font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.srow .side .cap { font-size: var(--text-xs); color: var(--color-muted); grid-column: 1; white-space: nowrap; }
+.srow .side .chev { grid-column: 2; grid-row: 1 / span 2; color: var(--color-muted); width: 20px; height: 20px; transition: color var(--motion-fast); }
+.srcs { display: flex; gap: var(--space-3); align-items: center; }
+.src { display: inline-flex; align-items: center; gap: 4px; color: var(--color-muted); }
+.src .i { width: 16px; height: 16px; }
+.src .d { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.src.s-unknown .d { background: transparent; border: 1.5px solid currentColor; width: 7px; height: 7px; }
+.src.s-ok { color: var(--color-operational); } .src.s-fail { color: var(--color-unavailable); } .src.s-partial { color: var(--color-degraded); } .src.s-unknown { color: var(--color-unknown); }
+.src .lbl { font-size: var(--text-xs); color: var(--color-muted); }
+@media (max-width: 479px) { .src .lbl { display: none; } }
+.chart { position: relative; height: 30px; }
+.chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.segs { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; display: grid; grid-template-columns: repeat(48, 1fr); gap: 1px; }
+.segs i { border-radius: 1px; background: var(--color-operational); }
+.segs i.degraded { background: var(--color-degraded); } .segs i.unavailable { background: var(--color-unavailable); } .segs i.unknown { background: transparent; border-bottom: 1px dotted var(--color-unknown); border-radius: 0; }
+.axis { display: grid; grid-template-columns: 56px 1fr auto; gap: var(--space-3); padding: 0 var(--space-1); }
+.axis div { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-muted); font-variant-numeric: tabular-nums; }
+.axis .spacer { width: 60px; }
+.ring { position: relative; width: 56px; height: 56px; display: grid; place-items: center; }
+.ring svg.r { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ring .track { fill: none; stroke: var(--color-border); stroke-width: 4; }
+.ring .arc { fill: none; stroke: currentColor; stroke-width: 4; stroke-linecap: round; }
+.ring .flag { font-size: 24px; line-height: 1; }
+.ring.r-operational { color: var(--color-operational); }
+.ring.r-degraded { color: var(--color-degraded); } .ring.r-degraded .arc { stroke-dasharray: 118 170; }
+.ring.r-unavailable { color: var(--color-unavailable); } .ring.r-unavailable .arc { stroke-dasharray: 140 170; }
+.ring.r-unknown { color: var(--color-unknown); } .ring.r-unknown .arc { stroke-dasharray: 3 6; }
+.ring .mark { position: absolute; right: -2px; bottom: -2px; width: 18px; height: 18px; border-radius: 50%; background: var(--color-bg); display: grid; place-items: center; }
+.ring .mark .i { width: 14px; height: 14px; stroke-width: 2.4; }
+.ring.sm { width: 44px; height: 44px; } .ring.sm .flag { font-size: 18px; }
+.skeleton .sk { background: color-mix(in srgb, var(--color-muted) 18%, transparent); border-radius: var(--radius-sm); }
+.skeleton .srow { pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) { .skeleton .sk { animation: sk 1.2s ease-in-out infinite; } @keyframes sk { 0%, 100% { opacity: .6; } 50% { opacity: 1; } } }
+.empty { display: grid; gap: var(--space-2); padding: var(--space-5) 0; text-align: center; justify-items: center; }
+.empty .i { width: 40px; height: 40px; color: var(--color-muted); stroke-width: 1.4; }
+.empty p { max-width: 36ch; color: var(--color-muted); font-size: var(--text-sm); }
+.status-layout { display: grid; gap: var(--space-4); }
+@media (min-width: 1024px) { .status-layout { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; } .status-layout .ctx { position: sticky; top: 0; display: grid; gap: var(--space-3); } }
+.ctx .panel h3 { margin: 0 0 var(--space-1); font-size: var(--text-sm); color: var(--color-muted); font-weight: 600; }
+
+/* ---------- server screen ---------- */
+.detail-top { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: var(--space-3); align-items: center; }
+.detail-top .h { min-width: 0; }
+.detail-top h1 { font-size: var(--text-lg); font-weight: 650; margin: 0; line-height: 1.25; display: flex; align-items: center; gap: 6px; }
+.detail-top .st { font-size: var(--text-sm); color: var(--color-muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.detail-top .st b { color: var(--color-text); font-weight: 600; }
+.acc { border-top: 1px solid var(--color-border); }
+.acc:last-of-type { border-bottom: 1px solid var(--color-border); }
+.acc-btn { width: 100%; min-height: var(--accordion-min); display: grid; grid-template-columns: 24px minmax(0, 1fr) auto 24px; gap: var(--space-2); align-items: center; text-align: left; padding: var(--space-2) var(--space-1); border-radius: var(--radius-sm); font-weight: 650; font-size: var(--text-md); }
+.acc-btn .i.lead { width: 20px; height: 20px; color: var(--color-muted); }
+.acc-btn .mini { font-size: var(--text-sm); color: var(--color-muted); font-weight: 500; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.acc-btn .chev { width: 20px; height: 20px; color: var(--color-muted); transition: transform var(--motion-normal); }
+.acc-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.acc-btn:hover { background: var(--color-surface); }
+.acc-btn:active { background: var(--color-surface); }
+.acc-panel { padding: 0 var(--space-1) var(--space-4); display: grid; gap: var(--space-3); }
+.acc-panel[hidden] { display: none; }
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3) var(--space-4); }
+.metric .k { font-size: var(--text-xs); color: var(--color-muted); }
+.metric .v { font-size: var(--text-lg); font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.metric .v small { font-size: var(--text-xs); color: var(--color-muted); font-weight: 500; margin-left: 3px; }
+.metric .s { font-size: var(--text-xs); color: var(--color-muted); }
+.seg-ctl { display: inline-grid; grid-auto-flow: column; gap: 2px; background: color-mix(in srgb, var(--color-muted) 12%, transparent); border-radius: var(--radius-md); padding: 2px; }
+.seg-ctl button { min-height: 40px; padding: 0 var(--space-3); border-radius: 10px; font-size: var(--text-sm); font-weight: 600; color: var(--color-muted); }
+.seg-ctl button[aria-pressed="true"] { background: var(--color-surface); color: var(--color-text); }
+.bigchart { position: relative; height: 84px; }
+.bigchart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bigchart .segs { height: 8px; }
+.axis2 { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-muted); }
+.diag { border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); background: color-mix(in srgb, var(--color-unavailable) var(--tint), transparent); display: grid; gap: var(--space-1); font-size: var(--text-sm); }
+.diag b { font-size: var(--text-md); }
+.admin-block { border-left: 3px solid var(--color-admin); padding-left: var(--space-3); display: grid; gap: var(--space-3); }
+.admin-tag { font-size: var(--text-xs); font-weight: 700; color: var(--color-admin); text-transform: uppercase; letter-spacing: .04em; }
+@media (min-width: 768px) { .detail-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-5); align-items: start; } }
+
+/* ---------- events ---------- */
+.evday { font-size: var(--text-xs); color: var(--color-muted); font-weight: 600; padding: var(--space-3) 0 var(--space-1); }
+.ev { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center; padding: var(--space-2) 0; border-top: 1px solid var(--color-border); font-size: var(--text-sm); min-height: 44px; }
+.ev .ic { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.ev .ic .i { width: 14px; height: 14px; stroke-width: 2.4; }
+.ev .ic.ok { background: var(--color-operational); } .ev .ic.problem { background: var(--color-unavailable); } .ev .ic.note { background: var(--color-accent); } .ev .ic.info { background: var(--color-unknown); }
+.ev .t { min-width: 0; }
+.ev .t b { font-weight: 600; }
+.ev time { font-size: var(--text-xs); color: var(--color-muted); font-variant-numeric: tabular-nums; }
+
+/* ---------- help ---------- */
+.step { border-top: 1px solid var(--color-border); }
+.step:last-of-type { border-bottom: 1px solid var(--color-border); }
+.step-btn { width: 100%; min-height: var(--accordion-min); display: grid; grid-template-columns: 28px minmax(0, 1fr) 20px; gap: var(--space-3); align-items: center; text-align: left; padding: var(--space-2) var(--space-1); border-radius: var(--radius-sm); font-weight: 600; }
+.step-btn .n { width: 28px; height: 28px; border-radius: 50%; background: color-mix(in srgb, var(--color-accent) 12%, transparent); color: var(--color-accent); display: grid; place-items: center; font-size: var(--text-sm); font-weight: 700; }
+.step-btn .chev { width: 20px; height: 20px; color: var(--color-muted); transition: transform var(--motion-normal); }
+.step-btn[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.step-body { padding: 0 var(--space-1) var(--space-3) 44px; font-size: var(--text-sm); color: var(--color-muted); }
+.step-body[hidden] { display: none; }
+.why summary { list-style: none; cursor: pointer; min-height: var(--control-min); display: flex; align-items: center; gap: 6px; color: var(--color-accent); font-weight: 600; font-size: var(--text-sm); }
+.why summary::-webkit-details-marker { display: none; }
+.why p { font-size: var(--text-sm); color: var(--color-muted); padding-bottom: var(--space-2); }
+
+/* ---------- admin ---------- */
+.attn { display: grid; }
+.attn > div { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); font-size: var(--text-sm); align-items: start; }
+.attn > div:first-child { border-top: 0; }
+.attn i { width: 10px; height: 10px; border-radius: 50%; margin-top: 6px; }
+.attn i.high { background: var(--color-unavailable); } .attn i.medium { background: var(--color-degraded); } .attn i.low { background: var(--color-unknown); }
+.attn .sev { font-size: var(--text-xs); color: var(--color-muted); }
+.svc { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-2); }
+.svc .st { white-space: nowrap; margin-left: auto; }
+.svc div { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); padding: var(--space-2) var(--space-3); background: var(--color-surface); border-radius: var(--radius-sm); min-height: 40px; }
+.doctor { display: grid; gap: var(--space-2); }
+.doctor .res { display: flex; align-items: center; gap: 8px; font-weight: 650; }
+.doctor .item { display: grid; gap: var(--space-1); padding: var(--space-2) 0; border-top: 1px solid var(--color-border); font-size: var(--text-sm); }
+.probe-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); align-items: center; padding: var(--space-2) 0; border-top: 1px solid var(--color-border); }
+.probe-row:first-child { border-top: 0; }
+.probe-row .pn { font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.probe-row .pm { font-size: var(--text-xs); color: var(--color-muted); }
+.probe-row .btn { min-height: 44px; padding: 0 var(--space-3); font-size: var(--text-sm); }
+.probe-row .btn-revoke { color: var(--color-unavailable); border-color: transparent; }
+textarea.note-input { width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--color-border-strong); border-radius: var(--radius-md); padding: var(--space-3); background: var(--color-surface); font-size: var(--text-sm); }
+.sheet-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; align-items: end; justify-items: center; z-index: 30; }
+.sheet { width: 100%; max-width: var(--content-max); background: var(--color-surface); border-radius: var(--radius-lg) var(--radius-lg) 0 0; padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px)); display: grid; gap: var(--space-3); box-shadow: var(--shadow-float); }
+.sheet h2 { margin: 0; font-size: var(--text-lg); }
+.sheet .code { font-family: var(--font-mono); font-size: 28px; font-weight: 700; letter-spacing: .08em; text-align: center; padding: var(--space-3); background: var(--color-bg); border-radius: var(--radius-md); font-variant-numeric: tabular-nums; }
+.sheet .acts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.error-screen { display: grid; gap: var(--space-3); justify-items: center; text-align: center; padding: var(--space-6) 0; }
+.error-screen .i { width: 44px; height: 44px; color: var(--color-muted); stroke-width: 1.4; }
+.error-screen p { color: var(--color-muted); font-size: var(--text-sm); max-width: 36ch; }
+
+/* onboarding guide chrome (documentation scenario, not product UI) */
+body { flex-direction: column; }
+@media (min-width: 900px) { body { flex-direction: row; } }
+.guide { flex: none; background: #1f2430; color: #e6e9ef; border-bottom: 3px dashed #4b5568; font-family: var(--font-sans); overflow: auto; }
+@media (min-width: 900px) { .guide { width: 360px; height: 100%; border-bottom: 0; border-right: 3px dashed #4b5568; } }
+.guide .in { padding: 16px; display: grid; gap: 14px; }
+.guide h1 { font-size: 18px; margin: 0; }
+.guide p { font-size: 13px; line-height: 1.45; color: #b6bfcc; max-width: none; }
+.guide .card { border: 1px solid #3a4355; border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+.guide .card[data-active="true"] { border-color: #4b7bec; box-shadow: inset 0 0 0 1px #4b7bec; }
+.guide .card h2 { font-size: 14px; margin: 0; }
+.guide .row { display: flex; gap: 6px; flex-wrap: wrap; }
+.guide .g-btn { background: #2b3242; color: #e6e9ef; border: 1px solid #4b5568; border-radius: 8px; padding: 0 10px; min-height: 36px; font: inherit; font-size: 13px; cursor: pointer; }
+.guide .g-btn[aria-pressed="true"] { background: #4b7bec; border-color: #4b7bec; color: #fff; }
+.guide code { font-family: var(--font-mono); font-size: 12px; background: #11151b; border-radius: 6px; padding: 6px 8px; display: block; color: #e6e9ef; overflow-x: auto; }
+.guide .lang { margin-left: auto; }
+.guide .foot { font-size: 11px; color: #8d97a8; }
+</style>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
+  <symbol id="i-pc" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="1.5"/><path d="M2 19.5h20"/></symbol>
+  <symbol id="i-signal" viewBox="0 0 24 24"><path d="M4 19v-3M9 19v-7M14 19V8M19 19V4"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></symbol>
+  <symbol id="i-pulse" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M15 8l2 2M18 5l2 2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4l9 16H3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 4h16v12H8l-4 4z"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></symbol>
+  <symbol id="i-offline" viewBox="0 0 24 24"><path d="M3 3l18 18M5 10a11 11 0 0 1 4-2.6M9 13.5a6 6 0 0 1 2-1.2M15.5 13.6A6 6 0 0 0 14 12.7M19 10a11 11 0 0 0-5-2.6M12 18h.01"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 3l9 5-9 5-9-5zM3 13l9 5 9-5"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/><path d="M7 7h.01M7 17h.01"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1.5"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+</svg>
+
+<aside class="guide" id="guide" aria-label="First-run scenarios"></aside>
+<div class="app" id="app">
+  <header class="app-header" id="app-header"></header>
+  <main class="app-scroll" id="app-scroll" tabindex="-1"></main>
+  <nav class="app-nav" id="app-nav" aria-label="Sections"></nav>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>window.__I18N={"ru":{"action.back":"Назад","action.retry":"Повторить","action.copy":"Копировать","action.copied":"Скопировано","action.more":"Ещё","action.less":"Свернуть","action.confirm":"Подтвердить","action.cancel":"Отмена","action.save":"Сохранить","action.close":"Закрыть","action.quickStart":"Открыть quick start","app.title":"VPN Pulse","app.nav.status":"Статус","app.nav.events":"События","app.nav.keys":"Профили","app.nav.help":"Помощь","app.nav.admin":"Админ","app.lang.switch":"Переключить язык на {language}","app.lang.other":"EN","app.demo":"Демо-данные","app.showcase":"Демонстрационные переключатели — не часть приложения","app.loading":"Загружаем статус…","duration.now":"только что","duration.min":"{n} мин","duration.hour":"{n} ч","duration.day":"{n} дн","status.operational":"Всё работает","status.degraded":"Есть проблемы","status.unavailable":"Подключение не проходит","status.unknown":"Нет свежих данных","status.updatedAgo":"Обновлено {duration} назад","status.recommended":"Советуем","status.recommendedServer":"Советуем: {server}","status.noRecommendation":"Пока нет сервера с подтверждённой работой","status.uptime24h":"{value} за 24 ч","status.history24h":"за 24 ч","status.currentUnknown":"сейчас — нет данных","status.hint":"Нажмите на сервер, чтобы посмотреть показатели","status.hintDismiss":"Понятно","status.legend":"Источники проверки","status.coveragePartial":"Проверки настроены не полностью: {missing}","status.coverage.pc":"нет проверки с компьютера","status.coverage.mobile":"нет проверки из мобильной сети","status.coverage.abroad":"нет проверки из-за границы","status.settingUp":"Мониторинг настраивается","status.settingUpBody":"Администратор подключает серверы. Как только появятся первые данные, они будут здесь.","status.offline":"Нет связи с сервисом","status.offlineBody":"Показаны последние данные от {time}. Они могли устареть.","status.axisStart":"−24 ч","status.axisEnd":"сейчас","status.noteFrom":"Заметка администратора · {time}","status.rowLabel":"{server}, {state}, доступность за 24 часа {uptime}. Открыть показатели","status.rowLabelUnknown":"{server}, нет свежих данных. Открыть показатели","status.state.operational":"Работает","status.state.degraded":"Есть проблемы","status.state.unavailable":"Не проходит проверка","status.state.unknown":"Нет свежих данных","source.pc":"Компьютер","source.mobile":"Мобильная сеть","source.abroad":"Из-за границы","source.pc.full":"Полная проверка VPN с компьютера в РФ","source.mobile.full":"Мобильная сеть в РФ вне VPN; туннель не проверяется","source.abroad.full":"Проверка с другого сервера, из-за границы","source.result.ok":"прошла","source.result.fail":"не прошла","source.result.partial":"частично","source.result.unknown":"нет данных","source.ago":"{duration} назад","source.detail.handshakeHttps":"подключение и HTTPS через туннель","source.detail.dnsReach":"DNS оператора и доступность","source.detail.handshake":"подключение","source.detail.timeout2":"два таймаута подряд","source.detail.timeout":"таймаут","source.detail.pcSilent":"компьютер не выходит на связь","source.detail.sessionStopped":"сессия на телефоне остановлена","source.detail.notEnrolled":"пробник не привязан","source.detail.viaServer":"с сервера {server}","server.open":"Открыть показатели {server}","server.checks":"Проверки","server.load":"Нагрузка","server.software":"Что работает","server.keys":"Профили","server.system":"Сервер","server.events":"События","server.admin":"Администратору","server.connections":"Подключений","server.awg":"AmneziaWG","server.xray":"Xray","server.xrayUnknown":"нет данных по Xray","server.traffic":"Трафик","server.mbit":"Мбит/с","server.cpu":"Процессор","server.memory":"Память","server.swap":"swap","server.peak":"пик за сутки: {n}","server.lastConn":"Последнее подключение","server.uptime24":"Доступность за 24 ч","server.uptime7":"Доступность за 7 дней","server.range24":"24 ч","server.range7d":"7 дней","server.chartSummary":"Подключения за {range}. Полоса под графиком показывает состояние: зелёный — работает, жёлтый — проблемы, красный — не проходит проверка, разрыв — нет данных.","server.keysIssued":"выпущено","server.keysEver":"подключались","server.keysActive":"активны за сутки","server.sshOk":"Отвечает по SSH","server.moduleOk":"Модуль VPN","server.containerOk":"Контейнер VPN","server.portOk":"VPN-порт слушается","server.dnsOk":"Домен резолвится","server.ddnsOk":"Адрес в DNS совпадает","server.yes":"да","server.no":"нет","server.confirmedBy":"Подтверждено: {by}","server.by.pc":"тестом с компьютера","server.by.humans":"подключениями участников","server.by.both":"подключениями и тестом","server.by.none":"свидетельств нет","server.by.stale":"данные устарели","server.conflict":"Источники расходятся: {a}, но {b}. Показываем осторожное состояние.","server.conflict.pcFail":"проверка с компьютера не прошла","server.conflict.humansOk":"участники подключены","server.conflict.abroadOk":"из-за границы доступен","server.stale":"Данные устарели: последнее свидетельство {duration} назад","server.freshness":"Свежесть","server.software.kernel":"модуль ядра","server.software.docker":"в контейнере","server.software.ddns":"автообновление адреса","server.software.panel":"панель","server.software.tuning":"тюнинг сети","events.title":"События","events.filter.all":"Все","events.filter.problems":"Проблемы","events.filter.notes":"Заметки","events.empty":"За этот период событий нет","events.emptyBody":"Наблюдение ведётся с {date}. Как только состояние изменится, здесь появится запись.","events.error":"Не удалось загрузить события","events.more":"Показать ещё","events.loading":"Загрузка…","events.today":"Сегодня","events.yesterday":"Вчера","events.stateChanged":"{server}: {state}","events.sourceFailed":"{server}: проверка «{source}» не прошла","events.recovered":"{server}: работа подтверждена","events.note":"Заметка администратора","events.addressUpdated":"{server}: адрес обновлён","events.keysIssued":"{server}: выданы новые профили","events.probeSilent":"Пробник «{source}» не выходит на связь","keys.title":"VPN-профили","keys.mvp":"Новые профили пока выдаёт администратор","keys.body":"Напишите ему — он пришлёт файл или QR лично. Это займёт пару минут.","keys.reserveTitle":"Резервный профиль","keys.reserve":"Если есть резервный профиль, выберите его в Amnezia","keys.reserveBody":"Он использует тот же ключ, но другой адрес. Держите его импортированным и выключенным.","help.title":"Помощь","help.contact":"Написать администратору","help.current":"Сейчас","help.step1.title":"Проверьте статус","help.step1.body":"Если кольцо сервера зелёное, проблема на вашей стороне: сеть, приложение или профиль.","help.step2.title":"Переподключитесь","help.step2.body":"Выключите и включите VPN. Клиент заново найдёт адрес сервера.","help.step3.title":"Смените сервер","help.step3.body":"Выберите сервер с пометкой «Советуем» — его работа подтверждена.","help.step4.title":"Включите резервный профиль","help.step4.body":"Если он есть — выберите его в Amnezia. Если нет — напишите администратору.","help.why":"Почему так?","help.whyIncident":"Сервер жив и доступен из-за границы, но проверки из России не проходят при рабочем обычном интернете. Обычно это блокировка адреса. Администратор запрашивает новый; профили менять не нужно.","help.whyOk":"Все проверки проходят. Если у вас не работает, причина на устройстве или в вашей сети.","help.whyUnknown":"Свежих проверок нет: пробники не выходят на связь. Сервер может работать — мы просто не можем это подтвердить прямо сейчас.","admin.title":"Администратор","admin.attention":"Требует внимания","admin.noAttention":"Срочных задач нет","admin.probes":"Пробники","admin.services":"Сервисы","admin.doctor":"Doctor","admin.doctor.ok":"Всё в порядке","admin.doctor.warn":"Есть предупреждения","admin.doctor.fail":"Есть ошибки","admin.doctor.next":"Следующий шаг","admin.note":"Заметка для участников","admin.note.empty":"Заметки нет. Она появится над списком серверов у всех участников.","admin.note.edit":"Изменить","admin.note.delete":"Удалить","admin.note.expires":"Действует до {time}","admin.note.chars":"{n} / {max}","admin.note.placeholder":"Что происходит и что делать участникам","admin.note.deleteConfirm":"Удалить заметку? Участники перестанут её видеть.","admin.enroll":"Привязать устройство","admin.enroll.title":"Код привязки","admin.enroll.body":"Введите код в приложении в течение 10 минут. Код одноразовый и не является постоянным токеном.","admin.revoke":"Отозвать","admin.revokeConfirm":"Отозвать доступ устройства «{name}»? Оно перестанет присылать отчёты.","admin.demoAction":"Демонстрационное действие: в макете ничего не меняется","admin.service.collector":"Сборщик","admin.service.api":"API","admin.service.bot":"Бот","admin.service.storage":"Хранилище","admin.service.queue":"Очередь","admin.service.https":"HTTPS","admin.service.telegram":"Telegram","admin.probe.pc":"Компьютер","admin.probe.android":"Android","admin.probe.abroad":"Перекрёстные проверки","admin.lastReport":"отчёт {duration} назад","admin.notEnrolled":"не привязан","admin.stale":"устарел","admin.routeOk":"маршрут подтверждён","admin.routeBad":"маршрут не подтверждён","admin.queue":"очередь {n}","admin.version":"версия {v}","admin.serverAdd":"Добавьте первый сервер","admin.serverAddBody":"Команда выполняется там, где установлен VPN Pulse. Мастер спросит тип сервера, имя и SSH-доступ.","admin.command":"Команда","admin.severity.high":"срочно","admin.severity.medium":"важно","admin.severity.low":"заметка","admin.state.ok":"в порядке","admin.state.warn":"предупреждение","admin.state.fail":"ошибка","admin.state.unknown":"нет данных","admin.diag.blocked":"Заблокирован в России: из РФ два таймаута подряд, из-за границы доступен, SSH отвечает.","admin.diag.action":"Запросить у хостера смену адреса. DDNS подхватит его сам; профили участников не меняются.","android.title":"VPN Pulse Probe","android.subtitle":"Проверка мобильной сети из России","android.step.bind":"Привязка","android.step.exclude":"Исключение из VPN","android.step.cellular":"Проверка сети","android.step.done":"Готово","android.bind.title":"Привяжите телефон","android.bind.body":"Введите код из раздела «Админ» в Mini App. Код действует 10 минут.","android.bind.code":"Код привязки","android.bind.action":"Привязать","android.bind.error":"Код не подошёл или истёк. Запросите новый.","android.exclude":"Исключите VPN Pulse Probe в Split App Tunneling","android.exclude.body":"Откройте Amnezia → Split App Tunneling → добавьте VPN Pulse Probe в список приложений, работающих без VPN. Затем переподключите Amnezia.","android.exclude.confirm":"Я исключил приложение","android.exclude.why":"Иначе проверки пойдут через туннель и покажут доступность из-за границы, а не из России.","android.cellularReady":"Проверка идёт через мобильную сеть вне VPN","android.cellular.checking":"Проверяем путь через мобильную сеть…","android.cellular.ok":"Путь подтверждён: запросы идут через мобильную сеть, мимо VPN","android.cellular.fail":"Запросы всё ещё идут через VPN или Wi-Fi","android.cellular.noSim":"Нет мобильного интернета","android.cellular.retry":"Проверить ещё раз","android.cellular.fix":"Проверьте исключение в Amnezia и включите мобильные данные","android.pcChecksVpn":"VPN-туннели проверяет компьютер","android.done.body":"Телефон будет проверять мобильную сеть из России. Нажмите «Начать», когда удобно.","android.main.running":"Идёт проверка","android.main.stopped":"Остановлено","android.main.everyMinute":"раз в минуту, пока экран открыт","android.main.background":"в фоне — не чаще раза в 15 минут","android.start":"Начать","android.stop":"Остановить","android.network":"Сеть","android.route":"Маршрут вне VPN","android.route.ok":"подтверждён","android.route.bad":"не подтверждён","android.lastCheck":"Последняя проверка","android.queue":"Очередь","android.queued":"ожидает отправки: {n}","android.offline":"Нет связи — результаты сохраняются и отправятся позже","android.stale":"Давно не было проверок","android.permission":"Нужно разрешение на доступ к сети","android.permission.action":"Открыть настройки","android.results":"Результаты","android.result.ok":"доступен","android.result.fail":"не отвечает","android.result.unknown":"нет данных","android.sent":"Отправлено","android.bound":"Привязано","android.unbind":"Отвязать","android.wifiOn":"Wi-Fi и Amnezia включены — не мешают","error.offline":"Не удалось получить данные","error.auth":"Доступ только для участников группы","error.authBody":"Откройте приложение из чата, куда добавлен бот. Код: {code}","error.generic":"Что-то пошло не так. Код: {code}","onboarding.title":"Первый запуск VPN Pulse","onboarding.intro":"Так выглядит приложение сразу после установки из открытого репозитория — до подключения серверов и пробников.","onboarding.demo":"Демо-режим","onboarding.demoBody":"install.sh demo поднимает интерфейс на вымышленных данных. Метка «Демо-данные» видна всегда.","onboarding.clean":"Чистая установка","onboarding.cleanBody":"Серверов ещё нет. Участник видит спокойное «настраивается», администратор — одну команду.","onboarding.partial":"Частичная настройка","onboarding.partialBody":"Сервер подключён, пробников нет. Система показывает неполное покрытие, а не зелёный успех.","onboarding.doctor":"Doctor","onboarding.doctorBody":"vpn-pulse doctor проверяет цепочку и даёт один следующий шаг на каждое предупреждение.","onboarding.memberView":"Участник видит","onboarding.adminView":"Администратор видит","onboarding.next":"Следующая команда","server.failedBy":"Отказ подтверждён: {by}"},"en":{"action.back":"Back","action.retry":"Retry","action.copy":"Copy","action.copied":"Copied","action.more":"More","action.less":"Less","action.confirm":"Confirm","action.cancel":"Cancel","action.save":"Save","action.close":"Close","action.quickStart":"Open quick start","app.title":"VPN Pulse","app.nav.status":"Status","app.nav.events":"Events","app.nav.keys":"Profiles","app.nav.help":"Help","app.nav.admin":"Admin","app.lang.switch":"Switch language to {language}","app.lang.other":"RU","app.demo":"Demo data","app.showcase":"Showcase controls — not part of the app","app.loading":"Loading status…","duration.now":"just now","duration.min":"{n} min","duration.hour":"{n} h","duration.day":"{n} d","status.operational":"Everything works","status.degraded":"Some checks failed","status.unavailable":"Connection check failed","status.unknown":"No recent data","status.updatedAgo":"Updated {duration} ago","status.recommended":"Recommended","status.recommendedServer":"Recommended: {server}","status.noRecommendation":"No server with a confirmed check yet","status.uptime24h":"{value} over 24h","status.history24h":"over 24h","status.currentUnknown":"now — no data","status.hint":"Tap a server to see its details","status.hintDismiss":"Got it","status.legend":"Check sources","status.coveragePartial":"Checks are not fully configured: {missing}","status.coverage.pc":"no computer check","status.coverage.mobile":"no mobile-network check","status.coverage.abroad":"no check from abroad","status.settingUp":"Monitoring is being set up","status.settingUpBody":"The administrator is connecting servers. The first data will appear here as soon as it arrives.","status.offline":"Service unreachable","status.offlineBody":"Showing the last data from {time}. It may be outdated.","status.axisStart":"−24 h","status.axisEnd":"now","status.noteFrom":"Administrator note · {time}","status.rowLabel":"{server}, {state}, 24-hour availability {uptime}. Open details","status.rowLabelUnknown":"{server}, no recent data. Open details","status.state.operational":"Working","status.state.degraded":"Some checks failed","status.state.unavailable":"Check failed","status.state.unknown":"No recent data","source.pc":"Computer","source.mobile":"Mobile network","source.abroad":"From abroad","source.pc.full":"Full VPN check from a computer in Russia","source.mobile.full":"Mobile network in Russia outside the VPN; the tunnel is not tested","source.abroad.full":"Check from another server, from abroad","source.result.ok":"passed","source.result.fail":"failed","source.result.partial":"partial","source.result.unknown":"no data","source.ago":"{duration} ago","source.detail.handshakeHttps":"handshake and HTTPS through the tunnel","source.detail.dnsReach":"carrier DNS and reachability","source.detail.handshake":"handshake","source.detail.timeout2":"two timeouts in a row","source.detail.timeout":"timeout","source.detail.pcSilent":"the computer is not reporting","source.detail.sessionStopped":"phone session stopped","source.detail.notEnrolled":"probe not enrolled","source.detail.viaServer":"via {server}","server.open":"Open {server} details","server.checks":"Checks","server.load":"Load","server.software":"Software","server.keys":"Profiles","server.system":"Server","server.events":"Events","server.admin":"For administrator","server.connections":"Connections","server.awg":"AmneziaWG","server.xray":"Xray","server.xrayUnknown":"no Xray data","server.traffic":"Traffic","server.mbit":"Mbit/s","server.cpu":"CPU","server.memory":"Memory","server.swap":"swap","server.peak":"24h peak: {n}","server.lastConn":"Last connection","server.uptime24":"24-hour availability","server.uptime7":"7-day availability","server.range24":"24 h","server.range7d":"7 days","server.chartSummary":"Connections over {range}. The bar under the chart shows state: green — working, amber — issues, red — check failed, gap — no data.","server.keysIssued":"issued","server.keysEver":"ever connected","server.keysActive":"active today","server.sshOk":"SSH reachable","server.moduleOk":"VPN module","server.containerOk":"VPN container","server.portOk":"VPN port listening","server.dnsOk":"Domain resolves","server.ddnsOk":"DNS address matches","server.yes":"yes","server.no":"no","server.confirmedBy":"Confirmed by: {by}","server.by.pc":"computer check","server.by.humans":"member connections","server.by.both":"connections and check","server.by.none":"no evidence","server.by.stale":"data is stale","server.conflict":"Sources disagree: {a}, but {b}. Showing a cautious state.","server.conflict.pcFail":"the computer check failed","server.conflict.humansOk":"members are connected","server.conflict.abroadOk":"reachable from abroad","server.stale":"Data is stale: last evidence {duration} ago","server.freshness":"Freshness","server.software.kernel":"kernel module","server.software.docker":"in a container","server.software.ddns":"dynamic DNS","server.software.panel":"panel","server.software.tuning":"network tuning","events.title":"Events","events.filter.all":"All","events.filter.problems":"Problems","events.filter.notes":"Notes","events.empty":"No events in this period","events.emptyBody":"Monitoring has been running since {date}. A record will appear here as soon as a state changes.","events.error":"Could not load events","events.more":"Show more","events.loading":"Loading…","events.today":"Today","events.yesterday":"Yesterday","events.stateChanged":"{server}: {state}","events.sourceFailed":"{server}: “{source}” check failed","events.recovered":"{server}: service confirmed","events.note":"Administrator note","events.addressUpdated":"{server}: address updated","events.keysIssued":"{server}: new profiles issued","events.probeSilent":"“{source}” probe is not reporting","keys.title":"VPN profiles","keys.mvp":"New profiles are currently issued by the administrator","keys.body":"Message them — you will get a file or a QR code personally. It takes a couple of minutes.","keys.reserveTitle":"Backup profile","keys.reserve":"If you have a backup profile, select it in Amnezia","keys.reserveBody":"It uses the same key with a different address. Keep it imported and switched off.","help.title":"Help","help.contact":"Contact administrator","help.current":"Right now","help.step1.title":"Check the status","help.step1.body":"If the server ring is green, the problem is on your side: network, app or profile.","help.step2.title":"Reconnect","help.step2.body":"Turn the VPN off and on. The client will look up the server address again.","help.step3.title":"Switch server","help.step3.body":"Pick the server marked “Recommended” — its check has passed.","help.step4.title":"Enable the backup profile","help.step4.body":"If you have one, select it in Amnezia. If not, contact the administrator.","help.why":"Why is that?","help.whyIncident":"The server is alive and reachable from abroad, but checks from Russia fail while regular internet works. Usually this means the address is blocked. The administrator requests a new one; profiles do not change.","help.whyOk":"All checks pass. If it does not work for you, the cause is on your device or in your network.","help.whyUnknown":"There are no recent checks: the probes are not reporting. The server may be working — we just cannot confirm it right now.","admin.title":"Administrator","admin.attention":"Needs attention","admin.noAttention":"No urgent tasks","admin.probes":"Probes","admin.services":"Services","admin.doctor":"Doctor","admin.doctor.ok":"All good","admin.doctor.warn":"Warnings","admin.doctor.fail":"Errors","admin.doctor.next":"Next step","admin.note":"Note for members","admin.note.empty":"No note. It will appear above the server list for all members.","admin.note.edit":"Edit","admin.note.delete":"Delete","admin.note.expires":"Valid until {time}","admin.note.chars":"{n} / {max}","admin.note.placeholder":"What is happening and what members should do","admin.note.deleteConfirm":"Delete the note? Members will stop seeing it.","admin.enroll":"Enroll a device","admin.enroll.title":"Enrollment code","admin.enroll.body":"Enter the code in the app within 10 minutes. It is single-use and is not a permanent token.","admin.revoke":"Revoke","admin.revokeConfirm":"Revoke access for “{name}”? It will stop sending reports.","admin.demoAction":"Demo action: nothing changes in the mockup","admin.service.collector":"Collector","admin.service.api":"API","admin.service.bot":"Bot","admin.service.storage":"Storage","admin.service.queue":"Queue","admin.service.https":"HTTPS","admin.service.telegram":"Telegram","admin.probe.pc":"Computer","admin.probe.android":"Android","admin.probe.abroad":"Cross-server checks","admin.lastReport":"report {duration} ago","admin.notEnrolled":"not enrolled","admin.stale":"stale","admin.routeOk":"route verified","admin.routeBad":"route not verified","admin.queue":"queue {n}","admin.version":"version {v}","admin.serverAdd":"Add the first server","admin.serverAddBody":"Run the command where VPN Pulse is installed. The wizard asks for the server type, a name and SSH access.","admin.command":"Command","admin.severity.high":"urgent","admin.severity.medium":"important","admin.severity.low":"note","admin.state.ok":"ok","admin.state.warn":"warning","admin.state.fail":"error","admin.state.unknown":"no data","admin.diag.blocked":"Blocked in Russia: two timeouts in a row from Russia, reachable from abroad, SSH responds.","admin.diag.action":"Ask the host for a new address. DDNS will pick it up; member profiles do not change.","android.title":"VPN Pulse Probe","android.subtitle":"Mobile-network check from Russia","android.step.bind":"Enrollment","android.step.exclude":"VPN exclusion","android.step.cellular":"Network check","android.step.done":"Done","android.bind.title":"Enroll this phone","android.bind.body":"Enter the code from the Admin section of the Mini App. The code is valid for 10 minutes.","android.bind.code":"Enrollment code","android.bind.action":"Enroll","android.bind.error":"The code did not match or has expired. Request a new one.","android.exclude":"Exclude VPN Pulse Probe in Split App Tunneling","android.exclude.body":"Open Amnezia → Split App Tunneling → add VPN Pulse Probe to the apps that work without VPN. Then reconnect Amnezia.","android.exclude.confirm":"I have excluded the app","android.exclude.why":"Otherwise the checks go through the tunnel and show reachability from abroad, not from Russia.","android.cellularReady":"Checks use the mobile network outside the VPN","android.cellular.checking":"Checking the path through the mobile network…","android.cellular.ok":"Path confirmed: requests go through the mobile network, bypassing the VPN","android.cellular.fail":"Requests still go through the VPN or Wi-Fi","android.cellular.noSim":"No mobile internet","android.cellular.retry":"Check again","android.cellular.fix":"Check the exclusion in Amnezia and turn on mobile data","android.pcChecksVpn":"VPN tunnels are checked by the computer","android.done.body":"This phone will check the mobile network from Russia. Tap “Start” whenever convenient.","android.main.running":"Checking","android.main.stopped":"Stopped","android.main.everyMinute":"every minute while the screen is on","android.main.background":"in background — at most every 15 minutes","android.start":"Start","android.stop":"Stop","android.network":"Network","android.route":"Route outside VPN","android.route.ok":"verified","android.route.bad":"not verified","android.lastCheck":"Last check","android.queue":"Queue","android.queued":"waiting to send: {n}","android.offline":"Offline — results are saved and will be sent later","android.stale":"No checks for a long time","android.permission":"Network access permission is required","android.permission.action":"Open settings","android.results":"Results","android.result.ok":"reachable","android.result.fail":"not responding","android.result.unknown":"no data","android.sent":"Sent","android.bound":"Enrolled","android.unbind":"Unenroll","android.wifiOn":"Wi-Fi and Amnezia are on — not interfering","error.offline":"Could not load data","error.auth":"Members of the group only","error.authBody":"Open the app from the chat where the bot was added. Code: {code}","error.generic":"Something went wrong. Code: {code}","onboarding.title":"VPN Pulse first run","onboarding.intro":"This is what the app looks like right after installing it from the open repository — before any servers or probes are connected.","onboarding.demo":"Demo mode","onboarding.demoBody":"install.sh demo starts the interface on fictional data. The “Demo data” label is always visible.","onboarding.clean":"Clean install","onboarding.cleanBody":"No servers yet. A member sees a calm “being set up”; the administrator sees one command.","onboarding.partial":"Partial setup","onboarding.partialBody":"A server is connected but there are no probes. The system shows incomplete coverage, not a green success.","onboarding.doctor":"Doctor","onboarding.doctorBody":"vpn-pulse doctor checks the whole chain and gives one next step for every warning.","onboarding.memberView":"Member sees","onboarding.adminView":"Administrator sees","onboarding.next":"Next command","server.failedBy":"Failure confirmed by: {by}"}};window.__FIXTURES={"meta":{"note":"Fictional demo data for the VPN Pulse prototypes. No real hosts, addresses or people.","since":"2026-06-06","noteMax":240},"servers":[{"id":"s1","name":{"ru":"Сервер 1","en":"Server 1"},"flag":"🇱🇻","country":{"ru":"Латвия","en":"Latvia"},"protocols":["awg"],"seed":1,"abroadFrom":"s2","software":[{"name":"AmneziaWG","noteKey":"server.software.kernel"},{"name":"BBR + fq","noteKey":"server.software.tuning"}],"keys":{"issued":10,"ever":7,"active":4},"system":{"ssh":true,"engine":"module","port":true}},{"id":"s2","name":{"ru":"Сервер 2","en":"Server 2"},"flag":"🇳🇱","country":{"ru":"Нидерланды","en":"Netherlands"},"protocols":["awg"],"seed":3,"abroadFrom":"s1","software":[{"name":"AmneziaWG","noteKey":"server.software.docker"},{"name":"DDNS","noteKey":"server.software.ddns"}],"keys":{"issued":50,"ever":17,"active":10},"system":{"ssh":true,"engine":"container","port":true,"dns":true,"ddns":true}},{"id":"s3","name":{"ru":"Сервер 3","en":"Server 3"},"flag":"🇫🇮","country":{"ru":"Финляндия","en":"Finland"},"protocols":["awg","xray"],"seed":5,"abroadFrom":"s1","software":[{"name":"Hiddify Manager","noteKey":"server.software.panel"},{"name":"Xray 26.2","note":"VLESS · Reality"},{"name":"AmneziaWG","noteKey":"server.software.docker"}],"keys":{"issued":26,"ever":19,"active":9},"system":{"ssh":true,"engine":"container","port":true}}],"eventSets":{"base":[{"kind":"recovered","server":"s3","day":0,"time":"08:02","sev":"ok"},{"kind":"sourceFailed","server":"s3","source":"mobile","day":0,"time":"07:41","sev":"problem"},{"kind":"recovered","server":"s2","day":1,"time":"09:24","sev":"ok"},{"kind":"sourceFailed","server":"s2","source":"mobile","day":1,"time":"09:10","sev":"problem"},{"kind":"note","day":1,"time":"09:12","sev":"note","text":{"ru":"Проблемы у одного оператора, остальные в порядке","en":"One carrier has issues, others are fine"}},{"kind":"keysIssued","server":"s2","day":"2026-09-09","time":"10:35","sev":"info"},{"kind":"addressUpdated","server":"s2","day":"2026-09-08","time":"12:18","sev":"info"},{"kind":"stateChanged","server":"s2","state":"unavailable","day":"2026-09-07","time":"11:03","sev":"problem"}]},"defaults":{"load":{"s1":{"awg":0,"xray":null,"xrayKnown":true,"mbit":0,"cpu":4,"ram":20,"swap":2,"peak":5,"lastConnMin":180},"s2":{"awg":7,"xray":null,"xrayKnown":true,"mbit":11,"cpu":12,"ram":47,"swap":5,"peak":10,"lastConnMin":0},"s3":{"awg":5,"xray":null,"xrayKnown":false,"mbit":18,"cpu":21,"ram":54,"swap":17,"peak":14,"lastConnMin":0}},"sourcesOk":{"pc":{"r":"ok","age":1,"detailKey":"source.detail.handshakeHttps"},"mobile":{"r":"ok","age":4,"detailKey":"source.detail.dnsReach"},"abroad":{"r":"ok","age":1,"detailKey":"source.detail.handshake"}},"admin":{"probes":{"pc":{"state":"ok","lastMin":1,"route":true,"queue":0,"version":"0.1"},"android":{"state":"ok","lastMin":4,"session":"active","queue":0,"version":"0.1"},"abroad":{"state":"ok","lastMin":1,"queue":0}},"services":{"collector":"ok","api":"ok","bot":"ok","storage":"ok","queue":"ok","https":"ok","telegram":"ok"},"doctor":{"result":"ok","items":[]},"enrollCode":"7K4Q-2M9X","attention":[{"sev":"high","server":"s1","text":{"ru":"Ядро обновлено, модуль VPN собран только под текущее ядро. Перезагрузка оставит сервер без VPN.","en":"Kernel updated; the VPN module is built only for the current kernel. A reboot would leave the server without VPN."}},{"sev":"medium","server":"s3","text":{"ru":"Диск 82%, swap 332 МБ. Есть что освободить.","en":"Disk 82%, swap 332 MB. There is space to reclaim."}},{"sev":"low","server":"s3","text":{"ru":"Нет доступа к данным Xray — нагрузка показана без него.","en":"No access to Xray data — load is shown without it."}}]}},"scenarios":{"loading":{"overall":"unknown","loading":true,"freshnessMin":null,"recommended":null,"servers":{},"events":[],"admin":null},"operational":{"overall":"operational","freshnessMin":1,"recommended":"s1","servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"operational","uptime24":"100%","uptime7":"99,1%","confirmedBy":"both","marks":[[18,18,"degraded"]]},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"both"}},"events":"base"},"degraded":{"overall":"degraded","freshnessMin":1,"recommended":"s1","servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"operational","uptime24":"100%","uptime7":"99,1%","confirmedBy":"both"},"s3":{"state":"degraded","uptime24":"99,2%","uptime7":"99,8%","confirmedBy":"both","scope":"mobile","sources":{"mobile":{"r":"fail","age":2,"detailKey":"source.detail.timeout"}},"marks":[[44,47,"degraded"]]}},"events":[{"kind":"sourceFailed","server":"s3","source":"mobile","day":0,"time":"14:31","sev":"problem"}],"eventsAppend":"base"},"unavailable":{"overall":"unavailable","freshnessMin":1,"recommended":"s1","note":{"text":{"ru":"Похоже на блокировку адреса. Запросил у хостера новый — обычно около часа. Пока подключайтесь к Серверу 1.","en":"Looks like the address is blocked. I asked the host for a new one — usually about an hour. Use Server 1 for now."},"time":"14:40","expires":"18:00"},"servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"unavailable","uptime24":"96,2%","uptime7":"98,9%","confirmedBy":"pc","sources":{"pc":{"r":"fail","age":1,"detailKey":"source.detail.timeout2"},"mobile":{"r":"fail","age":3,"detailKey":"source.detail.timeout"}},"load":{"awg":0,"mbit":0,"cpu":3,"lastConnMin":18},"marks":[[46,47,"unavailable"]],"diag":"blocked"},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"both"}},"events":[{"kind":"stateChanged","server":"s2","state":"unavailable","day":0,"time":"14:32","sev":"problem"},{"kind":"note","day":0,"time":"14:40","sev":"note","text":{"ru":"Запросил новый адрес у хостера","en":"Requested a new address from the host"}}],"eventsAppend":"base","admin":{"attentionPrepend":[{"sev":"high","server":"s2","text":{"ru":"Не проходит проверка из России 18 минут; из-за границы доступен. Похоже на блокировку адреса.","en":"Failing checks from Russia for 18 minutes; reachable from abroad. Looks like the address is blocked."}}]}},"unknown":{"overall":"unknown","freshnessMin":25,"recommended":null,"servers":{"s1":{"state":"unknown","uptime24":"—","uptime7":"99,6%","confirmedBy":"none","staleMin":25,"gapFrom":30,"sources":{"pc":{"r":"unknown","age":25,"detailKey":"source.detail.pcSilent"},"mobile":{"r":"unknown","age":120,"detailKey":"source.detail.sessionStopped"}}},"s2":{"state":"operational","uptime24":"100%","uptime7":"99,1%","confirmedBy":"humans","sources":{"pc":{"r":"unknown","age":25,"detailKey":"source.detail.pcSilent"},"mobile":{"r":"unknown","age":120,"detailKey":"source.detail.sessionStopped"}}},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"humans","sources":{"pc":{"r":"unknown","age":25,"detailKey":"source.detail.pcSilent"},"mobile":{"r":"unknown","age":120,"detailKey":"source.detail.sessionStopped"}}}},"events":[{"kind":"probeSilent","source":"pc","day":0,"time":"14:10","sev":"problem"}],"eventsAppend":"base","admin":{"probes":{"pc":{"state":"unknown","lastMin":25,"route":true,"queue":0,"version":"0.1"},"android":{"state":"unknown","lastMin":120,"session":"stopped","queue":3,"version":"0.1"}},"attentionPrepend":[{"sev":"medium","text":{"ru":"Пробник на компьютере молчит 25 минут. Компьютер спит или без сети.","en":"The computer probe has been silent for 25 minutes. The computer is asleep or offline."}}],"doctor":{"result":"warn","items":[{"name":"probes","state":"warn","next":{"ru":"Разбудите компьютер или проверьте сеть; пробник продолжит сам","en":"Wake the computer or check its network; the probe resumes on its own"},"cmd":"vpn-pulse doctor probes"}]}}},"offline":{"overall":"operational","api":"offline","lastKnownTime":"14:03","freshnessMin":31,"recommended":"s1","inherit":"operational"},"auth":{"overall":"unknown","api":"auth","code":"MEMBERSHIP_REQUIRED","servers":{},"events":[],"admin":null},"empty_events":{"inherit":"operational","events":[],"eventsAppend":null},"long_note":{"inherit":"operational","note":{"text":{"ru":"Сегодня ночью с 02:00 до 03:00 хостер обновляет сеть в Латвии. Сервер 1 может быть недоступен до часа. Ничего делать не нужно: приложение само восстановит подключение, а если нет — выключите и включите VPN. Сервер 2 и Сервер 3 работают как обычно, при желании переключитесь на них заранее. Если после 03:30 подключение не восстановилось, напишите мне.","en":"Tonight from 02:00 to 03:00 the host is upgrading its network in Latvia. Server 1 may be unavailable for up to an hour. Nothing to do: the app will reconnect on its own; if not, turn the VPN off and on. Server 2 and Server 3 work as usual — switch to them in advance if you like. If the connection is not back after 03:30, message me."},"time":"20:15","expires":"04:00"}},"conflict":{"overall":"degraded","freshnessMin":1,"recommended":"s1","servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"degraded","uptime24":"99,7%","uptime7":"99,1%","confirmedBy":"humans","conflict":{"a":"server.conflict.pcFail","b":"server.conflict.humansOk"},"sources":{"pc":{"r":"fail","age":1,"detailKey":"source.detail.timeout"}},"marks":[[47,47,"degraded"]]},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"both"}},"events":[{"kind":"sourceFailed","server":"s2","source":"pc","day":0,"time":"14:32","sev":"problem"}],"eventsAppend":"base"},"demo":{"inherit":"operational","demo":true},"clean_install":{"overall":"unknown","freshnessMin":null,"recommended":null,"empty":true,"servers":{},"events":[],"admin":{"attention":[],"probes":{"pc":{"state":"unknown","enrolled":false},"android":{"state":"unknown","enrolled":false},"abroad":{"state":"unknown","enrolled":false}},"services":{"collector":"unknown","api":"ok","bot":"ok","storage":"ok","queue":"ok","https":"ok","telegram":"ok"},"doctor":{"result":"fail","items":[{"name":"servers","state":"fail","next":{"ru":"Подключите первый сервер","en":"Connect the first server"},"cmd":"vpn-pulse server add"},{"name":"probes","state":"warn","next":{"ru":"После сервера привяжите пробники","en":"After the server, enroll the probes"},"cmd":"vpn-pulse probe enroll pc"}]},"nextCommand":"vpn-pulse server add"}},"partial_coverage":{"overall":"unknown","freshnessMin":1,"recommended":null,"coverageMissing":["pc","mobile","abroad"],"servers":{"s1":{"state":"unknown","uptime24":"—","uptime7":"—","confirmedBy":"none","gapFrom":0,"sources":{"pc":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"mobile":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"abroad":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"}}},"s2":{"state":"operational","uptime24":"—","uptime7":"—","confirmedBy":"humans","gapFrom":0,"sources":{"pc":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"mobile":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"abroad":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"}}}},"events":[],"admin":{"attention":[{"sev":"medium","text":{"ru":"Пробники не привязаны: состояние серверов подтверждают только подключения участников.","en":"Probes are not enrolled: server state is confirmed only by member connections."}}],"probes":{"pc":{"state":"unknown","enrolled":false},"android":{"state":"unknown","enrolled":false},"abroad":{"state":"unknown","enrolled":false}},"doctor":{"result":"warn","items":[{"name":"probes","state":"warn","next":{"ru":"Привяжите пробник на компьютере","en":"Enroll the computer probe"},"cmd":"vpn-pulse probe enroll pc"},{"name":"servers","state":"warn","next":{"ru":"Подключите остальные серверы","en":"Connect the remaining servers"},"cmd":"vpn-pulse server add"}]},"nextCommand":"vpn-pulse probe enroll pc"}}}};</script>
+<script>
+/* VPN Pulse — Mini App v4 prototype logic.
+   Self-contained: i18n dictionaries and fixtures are inlined at build time as
+   window.__I18N and window.__FIXTURES. No network, no secrets. */
+(function () {
+  'use strict';
+  const I18N = window.__I18N, FX = window.__FIXTURES;
+  const q = new URLSearchParams(location.search);
+  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+
+  // ---------- state ----------
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem('vpnpulse.' + k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem('vpnpulse.' + k, v); } catch (e) { /* private mode */ } }
+  };
+  const S = {
+    scenario: q.get('scenario') || 'operational',
+    role: q.get('role') || 'member',
+    theme: q.get('theme') || 'auto',
+    lang: q.get('lang') || store.get('lang', (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code || navigator.language || 'ru').slice(0, 2) === 'en' ? 'en' : 'ru'),
+    tab: 'status', server: null,
+    filter: 'all', range: '24h', open: 'checks',
+    hintDismissed: store.get('hint', '') === '1',
+    scrollPos: 0, originRow: null, eventsPage: 1, noteExpanded: false, eventsState: 'ok',
+    text200: q.get('text') === '200'
+  };
+  if (!I18N[S.lang]) S.lang = 'ru';
+  const screenParam = q.get('screen');
+  if (screenParam) { const m = screenParam.match(/^server:(\w+)$/); if (m) { S.tab = 'status'; S.server = m[1]; } else if (['status', 'events', 'keys', 'help', 'admin'].includes(screenParam)) S.tab = screenParam; }
+  if (q.get('showcase') === 'hidden') document.body.setAttribute('data-showcase', 'hidden');
+
+  // ---------- analytics (allowlisted, no identity) ----------
+  const events = window.__vpnPulseEvents = [];
+  function track(name, props) { const e = { name, at: Date.now(), props: props || {} }; events.push(e); if (window.console && q.get('debug')) console.debug('analytics', e); const c = document.getElementById('sc-events'); if (c) c.textContent = String(events.length); }
+
+  // ---------- i18n ----------
+  function t(key, params) {
+    let s = I18N[S.lang][key];
+    if (s === undefined) { s = I18N.ru[key] !== undefined ? I18N.ru[key] : key; }
+    if (params) Object.keys(params).forEach(k => { s = s.split('{' + k + '}').join(String(params[k])); });
+    return s;
+  }
+  const L = o => (o && typeof o === 'object') ? (o[S.lang] || o.ru) : o;
+  function dur(min) { if (min === null || min === undefined) return '—'; if (min < 1) return t('duration.now'); if (min < 60) return t('duration.min', { n: min }); if (min < 48 * 60) return t('duration.hour', { n: Math.round(min / 60) }); return t('duration.day', { n: Math.round(min / 1440) }); }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const ico = (n, cls) => '<svg class="i ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+  function dayLabel(d) {
+    if (d === 0) return t('events.today'); if (d === 1) return t('events.yesterday');
+    try { return new Intl.DateTimeFormat(S.lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long' }).format(new Date(d + 'T12:00:00')); } catch (e) { return String(d); }
+  }
+
+  // ---------- fixtures ----------
+  function seeded(seed, base, amp) { const a = []; for (let i = 0; i < 48; i++) { const h = i / 2, day = Math.max(0, Math.sin((h - 6) / 24 * Math.PI * 2)); a.push(Math.max(0, Math.round((base + amp * day + ((i * 7 + seed) % 5) * 0.3 - 0.6) * 10) / 10)); } return a; }
+  function resolve(id) {
+    const raw = FX.scenarios[id] || FX.scenarios.operational;
+    const base = raw.inherit ? resolve(raw.inherit) : null;
+    const sc = Object.assign({}, base || {}, raw);
+    if (raw.inherit) { sc.servers = Object.assign({}, base.servers); if (raw.events === undefined) sc.events = base.events; }
+    sc.id = id;
+    // events
+    let ev = sc.events;
+    if (typeof ev === 'string') ev = FX.eventSets[ev];
+    ev = (ev || []).slice();
+    if (raw.eventsAppend) ev = ev.concat(FX.eventSets[raw.eventsAppend]);
+    sc.eventsList = ev;
+    // servers
+    sc.list = [];
+    if (!sc.empty && !sc.loading && sc.api !== 'auth') {
+      FX.servers.forEach(base_s => {
+        const o = sc.servers[base_s.id]; if (!o) return;
+        const s = Object.assign({}, base_s, o);
+        s.load = Object.assign({}, FX.defaults.load[s.id], o.load || {});
+        s.sources = {};
+        ['pc', 'mobile', 'abroad'].forEach(k => { s.sources[k] = Object.assign({}, FX.defaults.sourcesOk[k], (o.sources || {})[k] || {}); });
+        s.series = seeded(s.seed, s.load.awg ? 1 + s.load.awg / 4 : 0.3, 3 + s.load.awg);
+        if (s.state === 'unavailable') { s.series[46] = 0; s.series[47] = 0; }
+        s.segs = []; for (let i = 0; i < 48; i++) s.segs.push('operational');
+        (o.marks || []).forEach(m => { for (let i = m[0]; i <= m[1]; i++) s.segs[i] = m[2]; });
+        if (o.gapFrom !== undefined) { for (let i = o.gapFrom; i < 48; i++) { s.segs[i] = 'unknown'; s.series[i] = null; } }
+        sc.list.push(s);
+      });
+    }
+    // admin
+    const A = FX.defaults.admin, a = sc.admin === null ? null : (sc.admin || {});
+    if (a !== null) {
+      sc.adminData = {
+        attention: (a.attentionPrepend || []).concat(a.attention !== undefined ? a.attention : A.attention),
+        probes: Object.assign({}, A.probes, a.probes || {}),
+        services: Object.assign({}, A.services, a.services || {}),
+        doctor: a.doctor || A.doctor, enrollCode: A.enrollCode, nextCommand: a.nextCommand || null
+      };
+    } else sc.adminData = null;
+    return sc;
+  }
+  let SC = resolve(S.scenario);
+  const byId = id => SC.list.find(s => s.id === id);
+  const sname = s => L((typeof s === 'string' ? (FX.servers.find(x => x.id === s) || {}).name : s.name) || { ru: '—', en: '—' });
+
+  // ---------- DOM ----------
+  const $ = sel => document.querySelector(sel);
+  const root = $('#app-scroll'), header = $('#app-header'), nav = $('#app-nav');
+  let noteDraft = null;
+
+  function applyTheme() {
+    const html = document.documentElement;
+    if (S.theme === 'auto') html.removeAttribute('data-theme'); else html.setAttribute('data-theme', S.theme);
+    html.style.fontSize = S.text200 ? '200%' : '';
+    document.documentElement.lang = S.lang;
+  }
+
+  // ---------- header / nav ----------
+  function renderHeader() {
+    const inServer = S.tab === 'status' && S.server;
+    const s = inServer ? byId(S.server) : null;
+    const titleHtml = inServer && s
+      ? '<span class="t">' + esc(sname(s)) + '</span><span class="st">' + esc(t('status.state.' + s.state)) + '</span>'
+      : '<span class="t">' + esc(t('app.title')) + '</span>' + (SC.demo ? '<span class="demo-mark">' + esc(t('app.demo')) + '</span>' : '');
+    header.innerHTML =
+      '<button type="button" class="icon-btn ' + (inServer ? '' : 'hidden') + '" id="back-btn" aria-label="' + esc(t('action.back')) + '" data-event="back">' + ico('back') + '</button>' +
+      '<div class="ttl">' + titleHtml + '</div>' +
+      '<button type="button" class="lang-btn" id="lang-btn" aria-label="' + esc(t('app.lang.switch', { language: S.lang === 'ru' ? 'English' : 'русский' })) + '" data-event="language_changed">' + esc(t('app.lang.other')) + '</button>';
+    $('#back-btn').addEventListener('click', () => history.back());
+    $('#lang-btn').addEventListener('click', () => { const from = S.lang; S.lang = S.lang === 'ru' ? 'en' : 'ru'; store.set('lang', S.lang); track('language_changed', { from, to: S.lang }); render(); });
+    if (tg) { if (inServer) { tg.BackButton.show(); } else { tg.BackButton.hide(); } }
+  }
+  function renderNav() {
+    const tabs = [['status', 'pulse'], ['events', 'clock'], ['keys', 'key'], ['help', 'help']];
+    if (S.role === 'admin') tabs.push(['admin', 'shield']);
+    nav.style.setProperty('--nav-count', tabs.length);
+    nav.innerHTML = tabs.map(([id, ic]) => '<button type="button" data-tab="' + id + '" ' + (S.tab === id ? 'aria-current="page"' : '') + '>' + ico(ic) + '<span>' + esc(t('app.nav.' + id)) + '</span></button>').join('');
+    nav.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const id = b.getAttribute('data-tab'); if (S.tab === id && !S.server) { root.scrollTop = 0; return; } S.tab = id; S.server = null; history.replaceState({ tab: id }, ''); render(); root.scrollTop = 0; if (id === 'events') track('events_viewed', { filter: S.filter, result_bucket: SC.eventsList.length ? 'some' : 'empty' }); if (id === 'help') track('help_viewed', { entry_point: 'nav', overall_state: SC.overall }); }));
+  }
+
+  // ---------- components ----------
+  function ring(s, cls) {
+    const mark = s.state === 'unavailable' ? '<span class="mark">' + ico('x') + '</span>' : s.state === 'degraded' ? '<span class="mark">' + ico('alert') + '</span>' : '';
+    return '<span class="ring r-' + s.state + ' ' + (cls || '') + '" aria-hidden="true"><svg class="r" viewBox="0 0 60 60"><circle class="track" cx="30" cy="30" r="27"/><circle class="arc" cx="30" cy="30" r="27"/></svg><span class="flag">' + s.flag + '</span>' + mark + '</span>';
+  }
+  const srcIcon = { pc: 'pc', mobile: 'signal', abroad: 'globe' };
+  function sources(s, withLabels) {
+    return '<span class="srcs">' + ['pc', 'mobile', 'abroad'].map(k => { const r = s.sources[k].r; return '<span class="src s-' + r + '"><span class="sr-only">' + esc(t('source.' + k)) + ': ' + esc(t('source.result.' + r)) + '</span>' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span>' + (withLabels ? '<span class="lbl">' + esc(t('source.' + k)) + '</span>' : '') + '</span>'; }).join('') + '</span>';
+  }
+  function segsHtml(segs, extra) { return '<span class="segs ' + (extra || '') + '" aria-hidden="true">' + segs.map(x => '<i class="' + x + '"></i>').join('') + '</span>'; }
+  function chart(s, big) {
+    return '<span class="' + (big ? 'bigchart' : 'chart') + '" role="img" aria-label="' + esc(t('server.chartSummary', { range: t(S.range === '7d' ? 'server.range7d' : 'server.range24') })) + '"><canvas data-series="' + s.series.map(v => v === null ? '' : v).join(',') + '" data-state="' + s.state + '"></canvas>' + segsHtml(s.segs) + '</span>';
+  }
+  function drawCharts() {
+    const cs = getComputedStyle(document.documentElement);
+    const col = { operational: cs.getPropertyValue('--color-operational').trim(), degraded: cs.getPropertyValue('--color-degraded').trim(), unavailable: cs.getPropertyValue('--color-unavailable').trim(), unknown: cs.getPropertyValue('--color-unknown').trim() };
+    root.querySelectorAll('canvas[data-series]').forEach(c => {
+      const w = c.clientWidth, h = c.clientHeight; if (!w || !h) return;
+      const dpr = window.devicePixelRatio || 1; c.width = w * dpr; c.height = h * dpr;
+      const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+      const raw = c.getAttribute('data-series').split(','), series = raw.map(v => v === '' ? null : Number(v));
+      const color = col[c.getAttribute('data-state')] || col.operational, bottom = h - 9, pad = 1;
+      const max = Math.max(1, ...series.filter(v => v !== null));
+      const x = i => pad + i * (w - pad * 2) / (series.length - 1), y = v => bottom - (v / max) * (bottom - 3);
+      ctx.lineWidth = 1.5; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineJoin = 'round';
+      let run = [];
+      const flush = () => { if (run.length < 2) { run = []; return; } ctx.beginPath(); run.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.lineTo(run[run.length - 1][0], bottom); ctx.lineTo(run[0][0], bottom); ctx.closePath(); ctx.globalAlpha = .10; ctx.fill(); ctx.globalAlpha = 1; ctx.beginPath(); run.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); run = []; };
+      series.forEach((v, i) => { if (v === null) flush(); else run.push([x(i), y(v)]); }); flush();
+      const last = series[series.length - 1]; if (last !== null) { ctx.beginPath(); ctx.arc(x(series.length - 1), y(last), 2.5, 0, Math.PI * 2); ctx.fill(); }
+    });
+  }
+  function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove('show'), 2200); }
+  function copy(text, ev) { try { navigator.clipboard && navigator.clipboard.writeText(text); } catch (e) { /* mock */ } toast(t('action.copied')); }
+  function copyRow(cmd) { return '<div class="copy-row"><code>' + esc(cmd) + '</code><button type="button" class="btn btn-ghost" data-copy="' + esc(cmd) + '">' + ico('copy') + esc(t('action.copy')) + '</button></div>'; }
+  function bindCopy() { root.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copy(b.getAttribute('data-copy')))); }
+
+  // ---------- status ----------
+  function overallBlock() {
+    const rec = SC.recommended ? byId(SC.recommended) : null;
+    const fresh = SC.freshnessMin === null || SC.freshnessMin === undefined ? '' : '<div class="fresh">' + ico('clock') + '<span>' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span></div>';
+    const recHtml = SC.empty ? '' : (rec ? '<div class="rec">' + ico('star') + '<span>' + esc(t('status.recommendedServer', { server: sname(rec) })) + '</span></div>' : (SC.list.length ? '<div class="rec muted">' + esc(t('status.noRecommendation')) + '</div>' : ''));
+    const title = SC.empty ? t('status.settingUp') : SC.api === 'offline' ? t('status.' + SC.overall) : t('status.' + SC.overall);
+    return '<div class="overall"><h1 class="title" id="screen-title" tabindex="-1">' + esc(title) + '</h1>' + fresh + recHtml + '</div>';
+  }
+  function noteBlock() {
+    if (!SC.note) return '';
+    const txt = L(SC.note.text), long = txt.length > 140;
+    return '<section class="note-box" aria-label="' + esc(t('events.note')) + '"><div class="txt ' + (long && !S.noteExpanded ? 'clamp' : '') + '" id="note-txt">' + esc(txt) + '</div><div class="who">' + esc(t('status.noteFrom', { time: SC.note.time })) + '</div>' + (long ? '<button type="button" class="btn btn-text" id="note-more" aria-expanded="' + S.noteExpanded + '" aria-controls="note-txt">' + esc(t(S.noteExpanded ? 'action.less' : 'action.more')) + '</button>' : '') + '</section>';
+  }
+  function serverRow(s) {
+    const unk = s.state === 'unknown';
+    const label = unk ? t('status.rowLabelUnknown', { server: sname(s) }) : t('status.rowLabel', { server: sname(s), state: t('status.state.' + s.state), uptime: s.uptime24 });
+    const side = unk || s.uptime24 === '—'
+      ? '<span class="up num muted">—</span><span class="cap">' + esc(t('status.currentUnknown')) + '</span>'
+      : '<span class="up num">' + esc(s.uptime24) + '</span><span class="cap">' + esc(t('status.history24h')) + '</span>';
+    return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
+      '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? ico('star') + '<span class="sr-only">' + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
+      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>·</span><span>' + esc(L(s.country)) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
+      '<span class="side">' + side + ico('chevron', 'chev') + '</span></button>';
+  }
+  function statusScreen() {
+    if (SC.loading) return skeleton();
+    if (SC.api === 'auth') return errorScreen('auth');
+    const parts = [];
+    if (SC.api === 'offline') parts.push('<div class="banner banner-warn" role="status">' + ico('offline') + '<div><b>' + esc(t('status.offline')) + '</b><br>' + esc(t('status.offlineBody', { time: SC.lastKnownTime })) + '</div><div class="act"><button type="button" class="btn btn-ghost" data-retry="status" data-event="retry_pressed">' + ico('refresh') + esc(t('action.retry')) + '</button></div></div>');
+    parts.push(overallBlock());
+    if (SC.coverageMissing) parts.push('<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('status.coveragePartial', { missing: SC.coverageMissing.map(k => t('status.coverage.' + k)).join(', ') })) + '</div></div>');
+    parts.push(noteBlock());
+    if (SC.empty) {
+      parts.push('<div class="empty">' + ico('pulse') + '<p>' + esc(t('status.settingUpBody')) + '</p></div>');
+      if (S.role === 'admin' && SC.adminData) parts.push('<section class="admin-block"><span class="admin-tag">' + esc(t('app.nav.admin')) + '</span><h2 class="sub">' + esc(t('admin.serverAdd')) + '</h2><p class="small muted">' + esc(t('admin.serverAddBody')) + '</p>' + copyRow(SC.adminData.nextCommand || 'vpn-pulse server add') + '<a class="btn btn-text" href="#quick-start" data-event="quick_start_opened" style="justify-self:start">' + ico('ext') + esc(t('action.quickStart')) + '</a></section>');
+      return '<div class="screen">' + parts.join('') + '</div>';
+    }
+    if (!S.hintDismissed) parts.push('<div class="hint" id="hint"><span>' + esc(t('status.hint')) + '</span><button type="button" class="btn btn-text" id="hint-ok">' + esc(t('status.hintDismiss')) + '</button></div>');
+    parts.push('<div class="legend" aria-label="' + esc(t('status.legend')) + '">' + ['pc', 'mobile', 'abroad'].map(k => '<span>' + ico(srcIcon[k]) + esc(t('source.' + k)) + '</span>').join('') + '</div>');
+    parts.push('<div class="servers" id="servers">' + SC.list.map(serverRow).join('') + '</div>');
+    parts.push('<div class="axis" aria-hidden="true"><span></span><div><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div><span class="spacer"></span></div>');
+    const ctx = window.innerWidth >= 1024 ? '<aside class="ctx">' + (SC.eventsList.length ? '<div class="panel"><h3>' + esc(t('events.title')) + '</h3>' + eventRow(SC.eventsList[0]) + '</div>' : '') + '<div class="panel"><h3>' + esc(t('status.legend')) + '</h3><div class="stack small muted">' + ['pc', 'mobile', 'abroad'].map(k => '<span>' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k + '.full')) + '</span>').join('') + '</div></div></aside>' : '';
+    return '<div class="status-layout"><div class="screen">' + parts.join('') + '</div>' + ctx + '</div>';
+  }
+  function skeleton() {
+    const row = '<div class="srow" aria-hidden="true"><span class="sk" style="width:56px;height:56px;border-radius:50%"></span><span class="main"><span class="sk" style="height:20px;width:40%"></span><span class="sk" style="height:14px;width:60%"></span><span class="sk" style="height:30px;width:100%"></span></span><span class="sk" style="width:48px;height:20px"></span></div>';
+    return '<div class="screen skeleton" aria-busy="true" aria-live="polite"><div class="overall"><span class="sk" style="height:34px;width:60%"></span><span class="sk" style="height:16px;width:40%"></span></div><p class="sr-only">' + esc(t('app.loading')) + '</p><div class="servers">' + row + row + row + '</div></div>';
+  }
+  function errorScreen(kind) {
+    const code = SC.code || 'MEMBERSHIP_REQUIRED';
+    track('ui_error_shown', { surface: 'status', error_code: code, recoverable: kind !== 'auth' });
+    return '<div class="error-screen" role="alert">' + ico('lock') + '<h1 class="title" id="screen-title" tabindex="-1">' + esc(t('error.auth')) + '</h1><p>' + esc(t('error.authBody', { code })) + '</p></div>';
+  }
+  function bindStatus() {
+    root.querySelectorAll('.srow[data-server]').forEach(b => b.addEventListener('click', e => openServer(b.getAttribute('data-server'), e.detail === 0 ? 'keyboard' : 'pointer', b)));
+    const hk = $('#hint-ok'); if (hk) hk.addEventListener('click', () => { S.hintDismissed = true; store.set('hint', '1'); $('#hint').remove(); });
+    const nm = $('#note-more'); if (nm) nm.addEventListener('click', () => { S.noteExpanded = !S.noteExpanded; render(); });
+    root.querySelectorAll('[data-retry]').forEach(b => b.addEventListener('click', () => { track('retry_pressed', { surface: b.getAttribute('data-retry'), error_code: 'STATUS_UNAVAILABLE' }); b.classList.add('loading'); setTimeout(() => { b.classList.remove('loading'); toast(t('error.offline')); }, 700); }));
+    bindCopy();
+  }
+
+  // ---------- server ----------
+  function openServer(id, input, rowEl) {
+    const s = byId(id); if (!s) return;
+    S.scrollPos = root.scrollTop; S.originRow = id; S.open = 'checks';
+    if (!S.hintDismissed) { S.hintDismissed = true; store.set('hint', '1'); }
+    track('server_row_pressed', { server_public_id: id, state: s.state, recommended: SC.recommended === id, input });
+    history.pushState({ tab: 'status', server: id }, '');
+    S.server = id; render(); root.scrollTop = 0;
+    const h = $('#screen-title'); if (h) h.focus({ preventScroll: true });
+    track('server_detail_viewed', { server_public_id: id, state: s.state, load_ms: 0 });
+  }
+  function acc(id, icon, title, mini, body) {
+    const open = S.open === id;
+    return '<section class="acc"><button type="button" class="acc-btn" id="acc-' + id + '" aria-expanded="' + open + '" aria-controls="panel-' + id + '" data-acc="' + id + '" data-event="detail_group_toggled">' + ico(icon, 'lead') + '<span>' + esc(title) + '</span><span class="mini">' + esc(mini || '') + '</span>' + ico('chevron-down', 'chev') + '</button><div class="acc-panel" id="panel-' + id + '" role="region" aria-labelledby="acc-' + id + '" ' + (open ? '' : 'hidden') + '>' + body + '</div></section>';
+  }
+  function srcRow(s, k) {
+    const src = s.sources[k], r = src.r, cls = { ok: 'ok', fail: 'bad', partial: 'warn', unknown: 'unk' }[r];
+    const via = k === 'abroad' ? t('source.detail.viaServer', { server: sname(s.abroadFrom) }) + ' · ' : '';
+    const detail = via + t(src.detailKey) + (src.age === null || src.age === undefined ? '' : ' · ' + t('source.ago', { duration: dur(src.age) }));
+    return '<div><span class="k">' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k)) + '<small>' + esc(t('source.' + k + '.full')) + '</small><small>' + esc(detail) + '</small></span><span class="v ' + cls + '">' + { ok: ico('check'), fail: ico('x'), partial: ico('alert'), unknown: '—' }[r] + esc(t('source.result.' + r)) + '</span></div>';
+  }
+  function serverScreen(id) {
+    const s = byId(id); if (!s) { S.server = null; return statusScreen(); }
+    const by = t(s.state === 'unavailable' ? 'server.failedBy' : 'server.confirmedBy', { by: t('server.by.' + s.confirmedBy) });
+    const stale = s.staleMin ? '<div class="banner banner-info">' + ico('clock') + '<div>' + esc(t('server.stale', { duration: dur(s.staleMin) })) + '</div></div>' : '';
+    const conflict = s.conflict ? '<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('server.conflict', { a: t(s.conflict.a), b: t(s.conflict.b) })) + '</div></div>' : '';
+    const diag = s.diag && S.role === 'admin' ? '<div class="diag"><b>' + esc(t('admin.diag.blocked')) + '</b><span>' + esc(t('admin.diag.action')) + '</span></div>' : '';
+    const checks = '<div class="kv">' + ['pc', 'mobile', 'abroad'].map(k => srcRow(s, k)).join('') + '</div><p class="small muted">' + esc(by) + '</p>';
+    const ld = s.load, xr = s.protocols.includes('xray');
+    const load = '<div class="metrics"><div class="metric"><div class="k">' + esc(t('server.connections')) + '</div><div class="v num">' + (xr && !ld.xrayKnown ? ld.awg + '+' : ld.awg + (ld.xray || 0)) + '</div><div class="s">' + esc(t('server.awg')) + ' ' + ld.awg + (xr ? ' · ' + esc(t('server.xray')) + ' ' + (ld.xrayKnown ? ld.xray : '—') : '') + '</div></div>' +
+      '<div class="metric"><div class="k">' + esc(t('server.traffic')) + '</div><div class="v num">' + ld.mbit + '<small>' + esc(t('server.mbit')) + '</small></div><div class="s">' + esc(t('server.peak', { n: ld.peak })) + '</div></div>' +
+      '<div class="metric"><div class="k">' + esc(t('server.cpu')) + '</div><div class="v num">' + ld.cpu + '<small>%</small></div></div>' +
+      '<div class="metric"><div class="k">' + esc(t('server.memory')) + '</div><div class="v num">' + ld.ram + '<small>%</small></div><div class="s">' + esc(t('server.swap')) + ' ' + ld.swap + '%</div></div></div>' +
+      (xr && !ld.xrayKnown ? '<p class="small muted">' + esc(t('server.xrayUnknown')) + '</p>' : '') +
+      '<div class="seg-ctl" role="group"><button type="button" data-range="24h" aria-pressed="' + (S.range === '24h') + '">' + esc(t('server.range24')) + '</button><button type="button" data-range="7d" aria-pressed="' + (S.range === '7d') + '">' + esc(t('server.range7d')) + '</button></div>' +
+      chart(s, true) + '<div class="axis2"><span>' + esc(S.range === '7d' ? '−7 d'.replace('d', S.lang === 'ru' ? 'дн' : 'd') : t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div>' +
+      '<div class="kv"><div><span class="k">' + esc(t('server.uptime24')) + '</span><span class="v">' + esc(s.uptime24) + '</span></div><div><span class="k">' + esc(t('server.uptime7')) + '</span><span class="v">' + esc(s.uptime7) + '</span></div><div><span class="k">' + esc(t('server.lastConn')) + '</span><span class="v">' + esc(dur(ld.lastConnMin)) + '</span></div></div>';
+    const soft = '<div class="kv">' + s.software.map(w => '<div><span class="k">' + esc(w.name) + '<small>' + esc(w.noteKey ? t(w.noteKey) : w.note) + '</small></span><span></span></div>').join('') + '</div>';
+    const keys = '<div class="metrics" style="grid-template-columns:repeat(3,1fr)"><div class="metric"><div class="k">' + esc(t('server.keysIssued')) + '</div><div class="v num">' + s.keys.issued + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysEver')) + '</div><div class="v num">' + s.keys.ever + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysActive')) + '</div><div class="v num">' + s.keys.active + '</div></div></div>';
+    const yes = '<span class="v ok">' + ico('check') + esc(t('server.yes')) + '</span>';
+    const sys = '<div class="kv"><div><span class="k">' + esc(t('server.sshOk')) + '</span>' + yes + '</div><div><span class="k">' + esc(t(s.system.engine === 'module' ? 'server.moduleOk' : 'server.containerOk')) + '</span>' + yes + '</div><div><span class="k">' + esc(t('server.portOk')) + '</span>' + yes + '</div>' + (s.system.dns ? '<div><span class="k">' + esc(t('server.dnsOk')) + '</span>' + yes + '</div><div><span class="k">' + esc(t('server.ddnsOk')) + '</span>' + yes + '</div>' : '') + '</div>';
+    const evs = SC.eventsList.filter(e => e.server === s.id);
+    const evHtml = evs.length ? '<div>' + evs.slice(0, 5).map(eventRow).join('') + '</div>' : '<p class="small muted">' + esc(t('events.empty')) + '</p>';
+    let adminHtml = '';
+    if (S.role === 'admin' && SC.adminData) {
+      const att = SC.adminData.attention.filter(a => a.server === s.id);
+      adminHtml = acc('admin', 'shield', t('server.admin'), att.length ? String(att.length) : '', '<div class="admin-block">' + (att.length ? '<div class="attn">' + att.map(a => '<div><i class="' + a.sev + '"></i><span>' + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>') + '</div>');
+    }
+    return '<div class="screen">' +
+      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? ico('star') : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>·</span><span>' + esc(L(s.country)) + '</span><span>·</span><span>' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>·</span><span>' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
+      stale + conflict + diag +
+      '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))), load) + '</div><div>' + acc('software', 'layers', t('server.software'), String(s.protocols.length), soft) + acc('keys', 'key', t('server.keys'), String(s.keys.active), keys) + acc('system', 'server', t('server.system'), s.state === 'unknown' ? '—' : s.uptime7, sys) + acc('events', 'clock', t('server.events'), String(evs.length), evHtml) + adminHtml + '</div></div></div>';
+  }
+  function bindServer() {
+    root.querySelectorAll('.acc-btn').forEach(b => b.addEventListener('click', () => toggleAcc(b)));
+    root.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => { S.range = b.getAttribute('data-range'); render(); const nb = root.querySelector('[data-range="' + S.range + '"]'); if (nb) nb.focus({ preventScroll: true }); }));
+  }
+  function toggleAcc(btn) {
+    const id = btn.getAttribute('data-acc'), wasOpen = S.open === id;
+    const topBefore = btn.getBoundingClientRect().top;
+    S.open = wasOpen ? null : id;
+    root.querySelectorAll('.acc-btn').forEach(b => { const on = b.getAttribute('data-acc') === S.open; b.setAttribute('aria-expanded', String(on)); const p = document.getElementById('panel-' + b.getAttribute('data-acc')); if (p) p.hidden = !on; });
+    drawCharts();
+    btn.focus({ preventScroll: true });
+    // keep the pressed header where it was: a group above may have collapsed
+    const shift = btn.getBoundingClientRect().top - topBefore;
+    if (shift) root.scrollTop = Math.max(0, root.scrollTop + shift);
+    const r = btn.getBoundingClientRect(), sr = root.getBoundingClientRect();
+    if (r.top < sr.top || r.bottom > sr.bottom) btn.scrollIntoView({ block: 'nearest' });
+    track('detail_group_toggled', { group: id, expanded: !wasOpen, input: 'pointer' });
+  }
+
+  // ---------- events ----------
+  function eventText(e) {
+    if (e.kind === 'note') return '<b>' + esc(t('events.note')) + '</b> · ' + esc(L(e.text));
+    if (e.kind === 'probeSilent') return esc(t('events.probeSilent', { source: t('source.' + e.source) }));
+    const p = { server: ' ', state: e.state ? t('status.state.' + e.state) : '', source: e.source ? t('source.' + e.source) : '' };
+    return esc(t('events.' + e.kind, p)).replace(' ', '<b>' + esc(sname(e.server)) + '</b>');
+  }
+  function eventRow(e) { const ic = { ok: 'check', problem: 'x', note: 'note', info: 'info' }[e.sev]; return '<div class="ev"><span class="ic ' + e.sev + '" aria-hidden="true">' + ico(ic) + '</span><span class="t">' + eventText(e) + '</span><time>' + esc(e.time) + '</time></div>'; }
+  function eventsScreen() {
+    if (SC.api === 'auth') return errorScreen('auth');
+    const filters = ['all', 'problems', 'notes'];
+    const ctl = '<div class="seg-ctl" role="group" aria-label="' + esc(t('events.title')) + '">' + filters.map(f => '<button type="button" data-filter="' + f + '" aria-pressed="' + (S.filter === f) + '" data-event="events_filter_changed">' + esc(t('events.filter.' + f)) + '</button>').join('') + '</div>';
+    let body;
+    if (S.eventsState === 'loading') body = '<p class="small muted" aria-live="polite">' + esc(t('events.loading')) + '</p>';
+    else if (S.eventsState === 'error' || SC.api === 'offline') body = '<div class="banner banner-bad" role="alert">' + ico('alert') + '<div>' + esc(t('events.error')) + '<br><span class="xs">STATUS_UNAVAILABLE</span></div><div class="act"><button type="button" class="btn btn-ghost" id="ev-retry" data-event="retry_pressed">' + ico('refresh') + esc(t('action.retry')) + '</button></div></div>';
+    else {
+      const list = SC.eventsList.filter(e => S.filter === 'all' || (S.filter === 'problems' && e.sev === 'problem') || (S.filter === 'notes' && e.sev === 'note'));
+      if (!list.length) body = '<div class="empty">' + ico('clock') + '<h2 class="sub">' + esc(t('events.empty')) + '</h2><p>' + esc(t('events.emptyBody', { date: dayLabel(FX.meta.since) })) + '</p></div>';
+      else {
+        const page = list.slice(0, S.eventsPage * 6); let day = null, h = '';
+        page.forEach(e => { const dl = dayLabel(e.day); if (dl !== day) { day = dl; h += '<div class="evday">' + esc(dl) + '</div>'; } h += eventRow(e); });
+        if (list.length > page.length) h += '<button type="button" class="btn btn-ghost btn-block" id="ev-more" style="margin-top:12px">' + esc(t('events.more')) + '</button>';
+        body = '<div>' + h + '</div>';
+      }
+    }
+    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('events.title')) + '</h1>' + ctl + body + '</div>';
+  }
+  function bindEvents() {
+    root.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { const from = S.filter; S.filter = b.getAttribute('data-filter'); S.eventsPage = 1; track('events_filter_changed', { from, to: S.filter }); render(); const nb = root.querySelector('[data-filter="' + S.filter + '"]'); if (nb) nb.focus({ preventScroll: true }); }));
+    const more = $('#ev-more'); if (more) more.addEventListener('click', () => { S.eventsPage++; render(); });
+    const rt = $('#ev-retry'); if (rt) rt.addEventListener('click', () => { track('retry_pressed', { surface: 'events', error_code: 'STATUS_UNAVAILABLE' }); S.eventsState = 'loading'; render(); setTimeout(() => { S.eventsState = SC.api === 'offline' ? 'error' : 'ok'; render(); }, 700); });
+  }
+
+  // ---------- keys / help ----------
+  function keysScreen() {
+    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1><div class="stack"><p><b>' + esc(t('keys.mvp')) + '</b></p><p class="muted small">' + esc(t('keys.body')) + '</p></div><button type="button" class="btn btn-primary" data-contact="keys" data-event="contact_admin_pressed">' + ico('send') + esc(t('help.contact')) + '</button><div class="divider"></div><div class="stack"><h2 class="sub">' + esc(t('keys.reserveTitle')) + '</h2><p>' + esc(t('keys.reserve')) + '</p><p class="muted small">' + esc(t('keys.reserveBody')) + '</p></div></div>';
+  }
+  function helpScreen() {
+    const steps = [1, 2, 3, 4].map(n => '<div class="step"><button type="button" class="step-btn" aria-expanded="' + (S.open === 'h' + n) + '" aria-controls="hs-' + n + '" data-step="' + n + '" data-event="help_step_opened"><span class="n">' + n + '</span><span>' + esc(t('help.step' + n + '.title')) + '</span>' + ico('chevron-down', 'chev') + '</button><div class="step-body" id="hs-' + n + '" ' + (S.open === 'h' + n ? '' : 'hidden') + '>' + esc(t('help.step' + n + '.body')) + '</div></div>').join('');
+    const why = SC.overall === 'unavailable' ? t('help.whyIncident') : SC.overall === 'unknown' ? t('help.whyUnknown') : t('help.whyOk');
+    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('help.title')) + '</h1><div class="small"><span class="muted">' + esc(t('help.current')) + ':</span> <span class="c-' + SC.overall + '"><span class="state-dot"></span></span> <b>' + esc(t('status.' + SC.overall)) + '</b></div><div>' + steps + '</div><button type="button" class="btn btn-primary btn-block" data-contact="help" data-event="contact_admin_pressed">' + ico('send') + esc(t('help.contact')) + '</button><details class="why"><summary>' + ico('help') + esc(t('help.why')) + '</summary><p>' + esc(why) + '</p></details></div>';
+  }
+  function bindHelp() {
+    root.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => { const id = 'h' + b.getAttribute('data-step'); const was = S.open === id; S.open = was ? null : id; root.querySelectorAll('.step-btn').forEach(x => { const on = 'h' + x.getAttribute('data-step') === S.open; x.setAttribute('aria-expanded', String(on)); document.getElementById('hs-' + x.getAttribute('data-step')).hidden = !on; }); if (!was) track('help_step_opened', { step_id: id }); b.focus({ preventScroll: true }); }));
+    root.querySelectorAll('[data-contact]').forEach(b => b.addEventListener('click', () => { track('contact_admin_pressed', { entry_point: b.getAttribute('data-contact'), overall_state: SC.overall }); toast(t('admin.demoAction')); }));
+  }
+
+  // ---------- admin ----------
+  function adminScreen() {
+    const A = SC.adminData; if (!A) return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1><p class="muted">' + esc(t('status.unknown')) + '</p></div>';
+    const sevOrder = { high: 0, medium: 1, low: 2 };
+    const att = A.attention.slice().sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
+    const attHtml = att.length ? '<div class="attn">' + att.map(a => '<div><i class="' + a.sev + '"></i><span>' + (a.server ? '<b>' + esc(sname(a.server)) + '</b> · ' : '') + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>';
+    const pr = A.probes;
+    function probeRow(k, name) {
+      const p = pr[k] || {}, enrolled = p.enrolled !== false, stateCls = { ok: 'ok', warn: 'warn', fail: 'bad', unknown: 'unk' }[p.state || 'unknown'];
+      const meta = enrolled ? [p.lastMin !== undefined ? t('admin.lastReport', { duration: dur(p.lastMin) }) : '', p.route !== undefined ? t(p.route ? 'admin.routeOk' : 'admin.routeBad') : '', p.queue !== undefined ? t('admin.queue', { n: p.queue }) : '', p.version ? t('admin.version', { v: p.version }) : ''].filter(Boolean).join(' · ') : t('admin.notEnrolled');
+      const action = enrolled ? '<button type="button" class="btn btn-ghost btn-revoke" data-revoke="' + esc(name) + '">' + esc(t('admin.revoke')) + '</button>' : '<button type="button" class="btn btn-ghost" data-enroll="' + k + '">' + esc(t('admin.enroll')) + '</button>';
+      return '<div class="probe-row"><div><div class="pn"><span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable', unknown: 'unknown' }[p.state || 'unknown'] + '"><span class="state-dot"></span></span>' + esc(name) + ' <span class="xs muted">' + esc(t('admin.state.' + (p.state || 'unknown'))) + '</span></div><div class="pm">' + esc(meta) + '</div></div>' + action + '</div>';
+    }
+    const probes = probeRow('pc', t('admin.probe.pc')) + probeRow('android', t('admin.probe.android')) + probeRow('abroad', t('admin.probe.abroad'));
+    const svc = '<div class="svc">' + Object.keys(A.services).map(k => '<div><span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable', unknown: 'unknown' }[A.services[k]] + '"><span class="state-dot"></span></span><span>' + esc(t('admin.service.' + k)) + '</span><span class="xs muted" style="margin-left:auto">' + esc(t('admin.state.' + A.services[k])) + '</span></div>').join('') + '</div>';
+    const d = A.doctor, dc = { ok: 'operational', warn: 'degraded', fail: 'unavailable' }[d.result];
+    const doctor = '<div class="doctor"><div class="res c-' + dc + '">' + ico(d.result === 'ok' ? 'check' : d.result === 'warn' ? 'alert' : 'x') + '<span>' + esc(t('admin.doctor.' + d.result)) + '</span></div>' + d.items.map(it => '<div class="item"><div><b>' + esc(t('admin.service.' + it.name) === 'admin.service.' + it.name ? it.name : t('admin.service.' + it.name)) + '</b> · <span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable' }[it.state] + '">' + esc(t('admin.state.' + it.state)) + '</span></div><div class="muted">' + esc(t('admin.doctor.next')) + ': ' + esc(L(it.next)) + '</div>' + copyRow(it.cmd) + '</div>').join('') + (A.nextCommand && !d.items.length ? copyRow(A.nextCommand) : '') + '</div>';
+    const nt = SC.note, noteVal = noteDraft !== null ? noteDraft : (nt ? L(nt.text) : '');
+    const note = '<div class="stack"><textarea class="note-input" id="note-input" maxlength="' + FX.meta.noteMax + '" placeholder="' + esc(t('admin.note.placeholder')) + '" aria-label="' + esc(t('admin.note')) + '">' + esc(noteVal) + '</textarea><div class="small muted" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span id="note-count">' + esc(t('admin.note.chars', { n: noteVal.length, max: FX.meta.noteMax })) + '</span>' + (nt ? '<span>' + esc(t('admin.note.expires', { time: nt.expires })) + '</span>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="note-save">' + esc(t('action.save')) + '</button>' + (nt ? '<button type="button" class="btn btn-ghost btn-danger" id="note-del">' + esc(t('admin.note.delete')) + '</button>' : '') + '</div>' + (!nt && !noteVal ? '<p class="small muted">' + esc(t('admin.note.empty')) + '</p>' : '') + '</div>';
+    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1>' +
+      '<section class="stack"><h2 class="sub">' + esc(t('admin.attention')) + '</h2>' + attHtml + '</section>' +
+      '<section class="stack"><h2 class="sub">' + esc(t('admin.probes')) + '</h2><div>' + probes + '</div></section>' +
+      '<section class="stack"><h2 class="sub">' + esc(t('admin.services')) + '</h2>' + svc + '</section>' +
+      '<section class="stack"><h2 class="sub">' + esc(t('admin.doctor')) + '</h2>' + doctor + '</section>' +
+      '<section class="stack"><h2 class="sub">' + esc(t('admin.note')) + '</h2>' + note + '</section>' +
+      '<p class="xs muted">' + esc(t('admin.demoAction')) + '</p></div>';
+  }
+  function bindAdmin() {
+    bindCopy();
+    root.querySelectorAll('[data-enroll]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.enroll.title')) + '</h2><div class="code" aria-live="polite">' + esc(SC.adminData.enrollCode) + '</div><p class="small muted">' + esc(t('admin.enroll.body')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-copy="' + esc(SC.adminData.enrollCode) + '">' + ico('copy') + esc(t('action.copy')) + '</button><button type="button" class="btn btn-primary" data-close>' + esc(t('action.close')) + '</button></div>', b)));
+    root.querySelectorAll('[data-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.revoke')) + '</h2><p>' + esc(t('admin.revokeConfirm', { name: b.getAttribute('data-revoke') })) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b)));
+    const ni = $('#note-input'); if (ni) ni.addEventListener('input', () => { noteDraft = ni.value; $('#note-count').textContent = t('admin.note.chars', { n: ni.value.length, max: FX.meta.noteMax }); });
+    const ns = $('#note-save'); if (ns) ns.addEventListener('click', () => toast(t('admin.demoAction')));
+    const nd = $('#note-del'); if (nd) nd.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.note.delete')) + '</h2><p>' + esc(t('admin.note.deleteConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', nd));
+  }
+  function openSheet(html, origin) {
+    const bd = document.createElement('div'); bd.className = 'sheet-backdrop'; bd.innerHTML = '<div class="sheet" role="dialog" aria-modal="true">' + html + '</div>';
+    document.body.appendChild(bd);
+    const close = () => { bd.remove(); document.removeEventListener('keydown', onKey); if (origin) origin.focus({ preventScroll: true }); };
+    const onKey = e => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', onKey);
+    bd.addEventListener('click', e => { if (e.target === bd) close(); });
+    bd.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
+    bd.querySelectorAll('[data-confirm]').forEach(b => b.addEventListener('click', () => { toast(t('admin.demoAction')); close(); }));
+    bd.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copy(b.getAttribute('data-copy'))));
+    const f = bd.querySelector('button'); if (f) f.focus();
+  }
+
+  // ---------- render / routing ----------
+  function render() {
+    applyTheme(); renderHeader(); renderNav();
+    let html;
+    if (S.tab === 'status') html = S.server ? serverScreen(S.server) : statusScreen();
+    else if (S.tab === 'events') html = eventsScreen();
+    else if (S.tab === 'keys') html = keysScreen();
+    else if (S.tab === 'help') html = helpScreen();
+    else html = adminScreen();
+    root.innerHTML = html;
+    if (S.tab === 'status') { S.server ? bindServer() : bindStatus(); }
+    else if (S.tab === 'events') bindEvents(); else if (S.tab === 'help') bindHelp(); else if (S.tab === 'admin') bindAdmin(); else if (S.tab === 'keys') bindHelp();
+    drawCharts();
+    try { document.dispatchEvent(new CustomEvent('vpnpulse:render', { detail: { lang: S.lang, scenario: S.scenario, role: S.role, tab: S.tab, server: S.server } })); } catch (e) { /* old webview */ }
+  }
+  window.addEventListener('popstate', () => {
+    if (S.server) {
+      S.server = null; render();
+      root.scrollTop = S.scrollPos;
+      const row = root.querySelector('.srow[data-server="' + S.originRow + '"]'); if (row) row.focus({ preventScroll: true });
+    } else render();
+  });
+  if (tg) { try { tg.ready(); tg.expand(); tg.BackButton.onClick(() => history.back()); if (S.theme === 'auto' && tg.colorScheme) document.documentElement.setAttribute('data-theme', tg.colorScheme); } catch (e) { /* not in Telegram */ } }
+  window.addEventListener('resize', drawCharts);
+  const mq = window.matchMedia('(prefers-color-scheme: dark)'); if (mq.addEventListener) mq.addEventListener('change', drawCharts);
+
+  // ---------- showcase controls (not part of the product) ----------
+  function applyShowcase(o) {
+    if (o.scenario) { S.scenario = o.scenario; SC = resolve(S.scenario); S.eventsState = 'ok'; S.eventsPage = 1; noteDraft = null; if (S.server && !byId(S.server)) S.server = null; }
+    if (o.role) { S.role = o.role; if (S.role !== 'admin' && S.tab === 'admin') S.tab = 'status'; }
+    if (o.theme) S.theme = o.theme;
+    if (o.lang) { S.lang = o.lang; store.set('lang', S.lang); }
+    if (o.text200 !== undefined) S.text200 = o.text200;
+    if (o.showcase) document.body.setAttribute('data-showcase', o.showcase);
+    if (o.screen) { const m = o.screen.match(/^server:(\w+)$/); if (m) { S.tab = 'status'; S.server = m[1]; S.open = 'checks'; } else { S.tab = o.screen; S.server = null; } }
+    render(); syncShowcase();
+  }
+  function syncShowcase() {
+    const sc = document.getElementById('sc-scenario'); if (sc) sc.value = S.scenario;
+    document.querySelectorAll('[data-sc-role]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-sc-role') === S.role)));
+    document.querySelectorAll('[data-sc-theme]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-sc-theme') === S.theme)));
+    const tx = document.getElementById('sc-text'); if (tx) tx.setAttribute('aria-pressed', String(S.text200));
+  }
+  window.VPNPulseShowcase = { apply: applyShowcase, state: () => JSON.parse(JSON.stringify({ scenario: S.scenario, role: S.role, theme: S.theme, lang: S.lang, tab: S.tab, server: S.server, open: S.open, scrollPos: S.scrollPos })), events };
+  const scSel = document.getElementById('sc-scenario');
+  if (scSel) { Object.keys(FX.scenarios).forEach(id => { const o = document.createElement('option'); o.value = id; o.textContent = id; scSel.appendChild(o); }); scSel.addEventListener('change', () => applyShowcase({ scenario: scSel.value })); }
+  document.querySelectorAll('[data-sc-role]').forEach(b => b.addEventListener('click', () => applyShowcase({ role: b.getAttribute('data-sc-role') })));
+  document.querySelectorAll('[data-sc-theme]').forEach(b => b.addEventListener('click', () => applyShowcase({ theme: b.getAttribute('data-sc-theme') })));
+  const scText = document.getElementById('sc-text'); if (scText) scText.addEventListener('click', () => applyShowcase({ text200: !S.text200 }));
+  const scHide = document.getElementById('sc-hide'); if (scHide) scHide.addEventListener('click', () => applyShowcase({ showcase: 'hidden' }));
+
+  // ---------- boot ----------
+  history.replaceState({ tab: S.tab, server: S.server }, '');
+  if (S.server) history.pushState({ tab: 'status', server: S.server }, '');
+  render(); syncShowcase();
+  track('app_opened', { role: S.role, language: S.lang, theme: S.theme, viewport_bucket: window.innerWidth < 480 ? 'phone' : window.innerWidth < 1024 ? 'tablet' : 'desktop' });
+  if (!SC.loading && SC.api !== 'auth') track('status_ready', { overall_state: SC.overall, freshness_bucket: SC.freshnessMin === null ? 'none' : SC.freshnessMin <= 3 ? 'fresh' : 'stale', load_ms: 0, coverage: SC.coverageMissing ? 'partial' : 'full' });
+})();
+
+</script>
+<script>
+(function () {
+  const I = window.__I18N; let lang = (window.VPNPulseShowcase.state().lang) || 'ru'; let active = 'demo';
+  const t = k => (I[lang][k] !== undefined ? I[lang][k] : k);
+  const states = {
+    demo: { cmd: './install.sh demo', views: [['member', { scenario: 'demo', role: 'member', screen: 'status' }], ['admin', { scenario: 'demo', role: 'admin', screen: 'admin' }]] },
+    clean: { cmd: 'vpn-pulse server add', views: [['member', { scenario: 'clean_install', role: 'member', screen: 'status' }], ['admin', { scenario: 'clean_install', role: 'admin', screen: 'status' }]] },
+    partial: { cmd: 'vpn-pulse probe enroll pc', views: [['member', { scenario: 'partial_coverage', role: 'member', screen: 'status' }], ['admin', { scenario: 'partial_coverage', role: 'admin', screen: 'admin' }]] },
+    doctor: { cmd: 'vpn-pulse doctor', views: [['ok', { scenario: 'operational', role: 'admin', screen: 'admin' }], ['warn', { scenario: 'partial_coverage', role: 'admin', screen: 'admin' }], ['fail', { scenario: 'clean_install', role: 'admin', screen: 'admin' }]] }
+  };
+  let activeView = 'member';
+  function render() {
+    const g = document.getElementById('guide');
+    g.innerHTML = '<div class="in"><div style="display:flex;align-items:center;gap:8px"><h1>' + t('onboarding.title') + '</h1><button type="button" class="g-btn lang" id="g-lang">' + (lang === 'ru' ? 'EN' : 'RU') + '</button></div><p>' + t('onboarding.intro') + '</p>' +
+      Object.keys(states).map(id => '<section class="card" data-active="' + (active === id) + '"><h2>' + t('onboarding.' + id) + '</h2><p>' + t('onboarding.' + id + 'Body') + '</p><div class="row">' +
+        states[id].views.map(([v, cfg]) => '<button type="button" class="g-btn" data-state="' + id + '" data-view="' + v + '" aria-pressed="' + (active === id && activeView === v) + '">' + (v === 'member' ? t('onboarding.memberView') : v === 'admin' ? t('onboarding.adminView') : t('admin.doctor.' + v)) + '</button>').join('') +
+        '</div><div><div class="foot">' + t('onboarding.next') + '</div><code>' + states[id].cmd + '</code></div></section>').join('') +
+      '<p class="foot">Showcase · fixtures only · ' + t('app.demo') + '</p></div>';
+    g.querySelectorAll('[data-state]').forEach(b => b.addEventListener('click', () => { active = b.getAttribute('data-state'); activeView = b.getAttribute('data-view'); const cfg = states[active].views.find(x => x[0] === activeView)[1]; window.VPNPulseShowcase.apply(Object.assign({ lang }, cfg)); render(); }));
+    document.getElementById('g-lang').addEventListener('click', () => { lang = lang === 'ru' ? 'en' : 'ru'; window.VPNPulseShowcase.apply({ lang }); render(); });
+  }
+  document.addEventListener('vpnpulse:render', e => { if (e.detail && e.detail.lang !== lang) { lang = e.detail.lang; render(); } });
+  window.VPNPulseShowcase.apply({ scenario: 'demo', role: 'member', screen: 'status', showcase: 'hidden' });
+  render();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,90 @@
+/* VPN Pulse — shared UI tokens (Mini App, onboarding showcase, Android web mock).
+   Source of truth for spacing, radius, type scale, motion and semantic colors.
+   Colors come from Telegram theme variables with light/dark fallbacks.
+   Type scale uses rem so system text scaling (200%) is respected. */
+:root {
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --text-xs: 0.75rem;   /* 12 */
+  --text-sm: 0.875rem;  /* 14 */
+  --text-md: 1rem;      /* 16 */
+  --text-lg: 1.25rem;   /* 20 */
+  --text-xl: 1.75rem;   /* 28 */
+  --lh-tight: 1.2;
+  --lh-normal: 1.4;
+  --control-min: 44px;
+  --row-min: 72px;
+  --accordion-min: 48px;
+  --focus-width: 2px;
+  --motion-fast: 140ms;
+  --motion-normal: 180ms;
+  --content-max: 560px;
+  --content-wide: 960px;
+
+  --color-bg: var(--tg-theme-secondary-bg-color, #f5f7fa);
+  --color-surface: var(--tg-theme-bg-color, #ffffff);
+  --color-text: var(--tg-theme-text-color, #111827);
+  --color-muted: var(--tg-theme-hint-color, #667085);
+  --color-accent: var(--tg-theme-link-color, #1976d2);
+  --color-accent-text: var(--tg-theme-button-text-color, #ffffff);
+  --color-border: color-mix(in srgb, var(--color-muted) 28%, transparent);
+  --color-border-strong: color-mix(in srgb, var(--color-muted) 45%, transparent);
+  --color-operational: #14845a;
+  --color-degraded: #a86100;
+  --color-unavailable: #c33232;
+  --color-unknown: #697386;
+  --color-admin: #6b4fd8;
+  --tint: 10%;
+  --color-focus: var(--color-accent);
+  --shadow-float: 0 8px 24px rgba(17, 24, 39, 0.16);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg: var(--tg-theme-secondary-bg-color, #11151b);
+    --color-surface: var(--tg-theme-bg-color, #1a2029);
+    --color-text: var(--tg-theme-text-color, #f4f7fb);
+    --color-muted: var(--tg-theme-hint-color, #a8b3c2);
+    --color-accent: var(--tg-theme-link-color, #67b3ff);
+    --color-accent-text: var(--tg-theme-button-text-color, #0b1118);
+    --color-operational: #42d39a;
+    --color-degraded: #ffb84d;
+    --color-unavailable: #ff7474;
+    --color-unknown: #a6afbd;
+    --color-admin: #a893ff;
+    --tint: 16%;
+    --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg: var(--tg-theme-secondary-bg-color, #11151b);
+  --color-surface: var(--tg-theme-bg-color, #1a2029);
+  --color-text: var(--tg-theme-text-color, #f4f7fb);
+  --color-muted: var(--tg-theme-hint-color, #a8b3c2);
+  --color-accent: var(--tg-theme-link-color, #67b3ff);
+  --color-accent-text: var(--tg-theme-button-text-color, #0b1118);
+  --color-operational: #42d39a;
+  --color-degraded: #ffb84d;
+  --color-unavailable: #ff7474;
+  --color-unknown: #a6afbd;
+  --color-admin: #a893ff;
+  --tint: 16%;
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 1ms;
+    --motion-normal: 1ms;
+  }
+}

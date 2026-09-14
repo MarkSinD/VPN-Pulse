@@ -1,0 +1,869 @@
+{
+  "meta": {
+    "note": "Fictional demo data for the VPN Pulse prototypes. No real hosts, addresses or people.",
+    "since": "2026-06-06",
+    "noteMax": 240
+  },
+  "servers": [
+    {
+      "id": "s1",
+      "name": {
+        "ru": "Сервер 1",
+        "en": "Server 1"
+      },
+      "flag": "🇱🇻",
+      "country": {
+        "ru": "Латвия",
+        "en": "Latvia"
+      },
+      "protocols": [
+        "awg"
+      ],
+      "seed": 1,
+      "abroadFrom": "s2",
+      "software": [
+        {
+          "name": "AmneziaWG",
+          "noteKey": "server.software.kernel"
+        },
+        {
+          "name": "BBR + fq",
+          "noteKey": "server.software.tuning"
+        }
+      ],
+      "keys": {
+        "issued": 10,
+        "ever": 7,
+        "active": 4
+      },
+      "system": {
+        "ssh": true,
+        "engine": "module",
+        "port": true
+      }
+    },
+    {
+      "id": "s2",
+      "name": {
+        "ru": "Сервер 2",
+        "en": "Server 2"
+      },
+      "flag": "🇳🇱",
+      "country": {
+        "ru": "Нидерланды",
+        "en": "Netherlands"
+      },
+      "protocols": [
+        "awg"
+      ],
+      "seed": 3,
+      "abroadFrom": "s1",
+      "software": [
+        {
+          "name": "AmneziaWG",
+          "noteKey": "server.software.docker"
+        },
+        {
+          "name": "DDNS",
+          "noteKey": "server.software.ddns"
+        }
+      ],
+      "keys": {
+        "issued": 50,
+        "ever": 17,
+        "active": 10
+      },
+      "system": {
+        "ssh": true,
+        "engine": "container",
+        "port": true,
+        "dns": true,
+        "ddns": true
+      }
+    },
+    {
+      "id": "s3",
+      "name": {
+        "ru": "Сервер 3",
+        "en": "Server 3"
+      },
+      "flag": "🇫🇮",
+      "country": {
+        "ru": "Финляндия",
+        "en": "Finland"
+      },
+      "protocols": [
+        "awg",
+        "xray"
+      ],
+      "seed": 5,
+      "abroadFrom": "s1",
+      "software": [
+        {
+          "name": "Hiddify Manager",
+          "noteKey": "server.software.panel"
+        },
+        {
+          "name": "Xray 26.2",
+          "note": "VLESS · Reality"
+        },
+        {
+          "name": "AmneziaWG",
+          "noteKey": "server.software.docker"
+        }
+      ],
+      "keys": {
+        "issued": 26,
+        "ever": 19,
+        "active": 9
+      },
+      "system": {
+        "ssh": true,
+        "engine": "container",
+        "port": true
+      }
+    }
+  ],
+  "eventSets": {
+    "base": [
+      {
+        "kind": "recovered",
+        "server": "s3",
+        "day": 0,
+        "time": "08:02",
+        "sev": "ok"
+      },
+      {
+        "kind": "sourceFailed",
+        "server": "s3",
+        "source": "mobile",
+        "day": 0,
+        "time": "07:41",
+        "sev": "problem"
+      },
+      {
+        "kind": "recovered",
+        "server": "s2",
+        "day": 1,
+        "time": "09:24",
+        "sev": "ok"
+      },
+      {
+        "kind": "sourceFailed",
+        "server": "s2",
+        "source": "mobile",
+        "day": 1,
+        "time": "09:10",
+        "sev": "problem"
+      },
+      {
+        "kind": "note",
+        "day": 1,
+        "time": "09:12",
+        "sev": "note",
+        "text": {
+          "ru": "Проблемы у одного оператора, остальные в порядке",
+          "en": "One carrier has issues, others are fine"
+        }
+      },
+      {
+        "kind": "keysIssued",
+        "server": "s2",
+        "day": "2026-09-09",
+        "time": "10:35",
+        "sev": "info"
+      },
+      {
+        "kind": "addressUpdated",
+        "server": "s2",
+        "day": "2026-09-08",
+        "time": "12:18",
+        "sev": "info"
+      },
+      {
+        "kind": "stateChanged",
+        "server": "s2",
+        "state": "unavailable",
+        "day": "2026-09-07",
+        "time": "11:03",
+        "sev": "problem"
+      }
+    ]
+  },
+  "defaults": {
+    "load": {
+      "s1": {
+        "awg": 0,
+        "xray": null,
+        "xrayKnown": true,
+        "mbit": 0,
+        "cpu": 4,
+        "ram": 20,
+        "swap": 2,
+        "peak": 5,
+        "lastConnMin": 180
+      },
+      "s2": {
+        "awg": 7,
+        "xray": null,
+        "xrayKnown": true,
+        "mbit": 11,
+        "cpu": 12,
+        "ram": 47,
+        "swap": 5,
+        "peak": 10,
+        "lastConnMin": 0
+      },
+      "s3": {
+        "awg": 5,
+        "xray": null,
+        "xrayKnown": false,
+        "mbit": 18,
+        "cpu": 21,
+        "ram": 54,
+        "swap": 17,
+        "peak": 14,
+        "lastConnMin": 0
+      }
+    },
+    "sourcesOk": {
+      "pc": {
+        "r": "ok",
+        "age": 1,
+        "detailKey": "source.detail.handshakeHttps"
+      },
+      "mobile": {
+        "r": "ok",
+        "age": 4,
+        "detailKey": "source.detail.dnsReach"
+      },
+      "abroad": {
+        "r": "ok",
+        "age": 1,
+        "detailKey": "source.detail.handshake"
+      }
+    },
+    "admin": {
+      "probes": {
+        "pc": {
+          "state": "ok",
+          "lastMin": 1,
+          "route": true,
+          "queue": 0,
+          "version": "0.1"
+        },
+        "android": {
+          "state": "ok",
+          "lastMin": 4,
+          "session": "active",
+          "queue": 0,
+          "version": "0.1"
+        },
+        "abroad": {
+          "state": "ok",
+          "lastMin": 1,
+          "queue": 0
+        }
+      },
+      "services": {
+        "collector": "ok",
+        "api": "ok",
+        "bot": "ok",
+        "storage": "ok",
+        "queue": "ok",
+        "https": "ok",
+        "telegram": "ok"
+      },
+      "doctor": {
+        "result": "ok",
+        "items": []
+      },
+      "enrollCode": "7K4Q-2M9X",
+      "attention": [
+        {
+          "sev": "high",
+          "server": "s1",
+          "text": {
+            "ru": "Ядро обновлено, модуль VPN собран только под текущее ядро. Перезагрузка оставит сервер без VPN.",
+            "en": "Kernel updated; the VPN module is built only for the current kernel. A reboot would leave the server without VPN."
+          }
+        },
+        {
+          "sev": "medium",
+          "server": "s3",
+          "text": {
+            "ru": "Диск 82%, swap 332 МБ. Есть что освободить.",
+            "en": "Disk 82%, swap 332 MB. There is space to reclaim."
+          }
+        },
+        {
+          "sev": "low",
+          "server": "s3",
+          "text": {
+            "ru": "Нет доступа к данным Xray — нагрузка показана без него.",
+            "en": "No access to Xray data — load is shown without it."
+          }
+        }
+      ]
+    }
+  },
+  "scenarios": {
+    "loading": {
+      "overall": "unknown",
+      "loading": true,
+      "freshnessMin": null,
+      "recommended": null,
+      "servers": {},
+      "events": [],
+      "admin": null
+    },
+    "operational": {
+      "overall": "operational",
+      "freshnessMin": 1,
+      "recommended": "s1",
+      "servers": {
+        "s1": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "pc"
+        },
+        "s2": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "99,1%",
+          "confirmedBy": "both",
+          "marks": [
+            [
+              18,
+              18,
+              "degraded"
+            ]
+          ]
+        },
+        "s3": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "both"
+        }
+      },
+      "events": "base"
+    },
+    "degraded": {
+      "overall": "degraded",
+      "freshnessMin": 1,
+      "recommended": "s1",
+      "servers": {
+        "s1": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "pc"
+        },
+        "s2": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "99,1%",
+          "confirmedBy": "both"
+        },
+        "s3": {
+          "state": "degraded",
+          "uptime24": "99,2%",
+          "uptime7": "99,8%",
+          "confirmedBy": "both",
+          "scope": "mobile",
+          "sources": {
+            "mobile": {
+              "r": "fail",
+              "age": 2,
+              "detailKey": "source.detail.timeout"
+            }
+          },
+          "marks": [
+            [
+              44,
+              47,
+              "degraded"
+            ]
+          ]
+        }
+      },
+      "events": [
+        {
+          "kind": "sourceFailed",
+          "server": "s3",
+          "source": "mobile",
+          "day": 0,
+          "time": "14:31",
+          "sev": "problem"
+        }
+      ],
+      "eventsAppend": "base"
+    },
+    "unavailable": {
+      "overall": "unavailable",
+      "freshnessMin": 1,
+      "recommended": "s1",
+      "note": {
+        "text": {
+          "ru": "Похоже на блокировку адреса. Запросил у хостера новый — обычно около часа. Пока подключайтесь к Серверу 1.",
+          "en": "Looks like the address is blocked. I asked the host for a new one — usually about an hour. Use Server 1 for now."
+        },
+        "time": "14:40",
+        "expires": "18:00"
+      },
+      "servers": {
+        "s1": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "pc"
+        },
+        "s2": {
+          "state": "unavailable",
+          "uptime24": "96,2%",
+          "uptime7": "98,9%",
+          "confirmedBy": "pc",
+          "sources": {
+            "pc": {
+              "r": "fail",
+              "age": 1,
+              "detailKey": "source.detail.timeout2"
+            },
+            "mobile": {
+              "r": "fail",
+              "age": 3,
+              "detailKey": "source.detail.timeout"
+            }
+          },
+          "load": {
+            "awg": 0,
+            "mbit": 0,
+            "cpu": 3,
+            "lastConnMin": 18
+          },
+          "marks": [
+            [
+              46,
+              47,
+              "unavailable"
+            ]
+          ],
+          "diag": "blocked"
+        },
+        "s3": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "both"
+        }
+      },
+      "events": [
+        {
+          "kind": "stateChanged",
+          "server": "s2",
+          "state": "unavailable",
+          "day": 0,
+          "time": "14:32",
+          "sev": "problem"
+        },
+        {
+          "kind": "note",
+          "day": 0,
+          "time": "14:40",
+          "sev": "note",
+          "text": {
+            "ru": "Запросил новый адрес у хостера",
+            "en": "Requested a new address from the host"
+          }
+        }
+      ],
+      "eventsAppend": "base",
+      "admin": {
+        "attentionPrepend": [
+          {
+            "sev": "high",
+            "server": "s2",
+            "text": {
+              "ru": "Не проходит проверка из России 18 минут; из-за границы доступен. Похоже на блокировку адреса.",
+              "en": "Failing checks from Russia for 18 minutes; reachable from abroad. Looks like the address is blocked."
+            }
+          }
+        ]
+      }
+    },
+    "unknown": {
+      "overall": "unknown",
+      "freshnessMin": 25,
+      "recommended": null,
+      "servers": {
+        "s1": {
+          "state": "unknown",
+          "uptime24": "—",
+          "uptime7": "99,6%",
+          "confirmedBy": "none",
+          "staleMin": 25,
+          "gapFrom": 30,
+          "sources": {
+            "pc": {
+              "r": "unknown",
+              "age": 25,
+              "detailKey": "source.detail.pcSilent"
+            },
+            "mobile": {
+              "r": "unknown",
+              "age": 120,
+              "detailKey": "source.detail.sessionStopped"
+            }
+          }
+        },
+        "s2": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "99,1%",
+          "confirmedBy": "humans",
+          "sources": {
+            "pc": {
+              "r": "unknown",
+              "age": 25,
+              "detailKey": "source.detail.pcSilent"
+            },
+            "mobile": {
+              "r": "unknown",
+              "age": 120,
+              "detailKey": "source.detail.sessionStopped"
+            }
+          }
+        },
+        "s3": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "humans",
+          "sources": {
+            "pc": {
+              "r": "unknown",
+              "age": 25,
+              "detailKey": "source.detail.pcSilent"
+            },
+            "mobile": {
+              "r": "unknown",
+              "age": 120,
+              "detailKey": "source.detail.sessionStopped"
+            }
+          }
+        }
+      },
+      "events": [
+        {
+          "kind": "probeSilent",
+          "source": "pc",
+          "day": 0,
+          "time": "14:10",
+          "sev": "problem"
+        }
+      ],
+      "eventsAppend": "base",
+      "admin": {
+        "probes": {
+          "pc": {
+            "state": "unknown",
+            "lastMin": 25,
+            "route": true,
+            "queue": 0,
+            "version": "0.1"
+          },
+          "android": {
+            "state": "unknown",
+            "lastMin": 120,
+            "session": "stopped",
+            "queue": 3,
+            "version": "0.1"
+          }
+        },
+        "attentionPrepend": [
+          {
+            "sev": "medium",
+            "text": {
+              "ru": "Пробник на компьютере молчит 25 минут. Компьютер спит или без сети.",
+              "en": "The computer probe has been silent for 25 minutes. The computer is asleep or offline."
+            }
+          }
+        ],
+        "doctor": {
+          "result": "warn",
+          "items": [
+            {
+              "name": "probes",
+              "state": "warn",
+              "next": {
+                "ru": "Разбудите компьютер или проверьте сеть; пробник продолжит сам",
+                "en": "Wake the computer or check its network; the probe resumes on its own"
+              },
+              "cmd": "vpn-pulse doctor probes"
+            }
+          ]
+        }
+      }
+    },
+    "offline": {
+      "overall": "operational",
+      "api": "offline",
+      "lastKnownTime": "14:03",
+      "freshnessMin": 31,
+      "recommended": "s1",
+      "inherit": "operational"
+    },
+    "auth": {
+      "overall": "unknown",
+      "api": "auth",
+      "code": "MEMBERSHIP_REQUIRED",
+      "servers": {},
+      "events": [],
+      "admin": null
+    },
+    "empty_events": {
+      "inherit": "operational",
+      "events": [],
+      "eventsAppend": null
+    },
+    "long_note": {
+      "inherit": "operational",
+      "note": {
+        "text": {
+          "ru": "Сегодня ночью с 02:00 до 03:00 хостер обновляет сеть в Латвии. Сервер 1 может быть недоступен до часа. Ничего делать не нужно: приложение само восстановит подключение, а если нет — выключите и включите VPN. Сервер 2 и Сервер 3 работают как обычно, при желании переключитесь на них заранее. Если после 03:30 подключение не восстановилось, напишите мне.",
+          "en": "Tonight from 02:00 to 03:00 the host is upgrading its network in Latvia. Server 1 may be unavailable for up to an hour. Nothing to do: the app will reconnect on its own; if not, turn the VPN off and on. Server 2 and Server 3 work as usual — switch to them in advance if you like. If the connection is not back after 03:30, message me."
+        },
+        "time": "20:15",
+        "expires": "04:00"
+      }
+    },
+    "conflict": {
+      "overall": "degraded",
+      "freshnessMin": 1,
+      "recommended": "s1",
+      "servers": {
+        "s1": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "pc"
+        },
+        "s2": {
+          "state": "degraded",
+          "uptime24": "99,7%",
+          "uptime7": "99,1%",
+          "confirmedBy": "humans",
+          "conflict": {
+            "a": "server.conflict.pcFail",
+            "b": "server.conflict.humansOk"
+          },
+          "sources": {
+            "pc": {
+              "r": "fail",
+              "age": 1,
+              "detailKey": "source.detail.timeout"
+            }
+          },
+          "marks": [
+            [
+              47,
+              47,
+              "degraded"
+            ]
+          ]
+        },
+        "s3": {
+          "state": "operational",
+          "uptime24": "100%",
+          "uptime7": "100%",
+          "confirmedBy": "both"
+        }
+      },
+      "events": [
+        {
+          "kind": "sourceFailed",
+          "server": "s2",
+          "source": "pc",
+          "day": 0,
+          "time": "14:32",
+          "sev": "problem"
+        }
+      ],
+      "eventsAppend": "base"
+    },
+    "demo": {
+      "inherit": "operational",
+      "demo": true
+    },
+    "clean_install": {
+      "overall": "unknown",
+      "freshnessMin": null,
+      "recommended": null,
+      "empty": true,
+      "servers": {},
+      "events": [],
+      "admin": {
+        "attention": [],
+        "probes": {
+          "pc": {
+            "state": "unknown",
+            "enrolled": false
+          },
+          "android": {
+            "state": "unknown",
+            "enrolled": false
+          },
+          "abroad": {
+            "state": "unknown",
+            "enrolled": false
+          }
+        },
+        "services": {
+          "collector": "unknown",
+          "api": "ok",
+          "bot": "ok",
+          "storage": "ok",
+          "queue": "ok",
+          "https": "ok",
+          "telegram": "ok"
+        },
+        "doctor": {
+          "result": "fail",
+          "items": [
+            {
+              "name": "servers",
+              "state": "fail",
+              "next": {
+                "ru": "Подключите первый сервер",
+                "en": "Connect the first server"
+              },
+              "cmd": "vpn-pulse server add"
+            },
+            {
+              "name": "probes",
+              "state": "warn",
+              "next": {
+                "ru": "После сервера привяжите пробники",
+                "en": "After the server, enroll the probes"
+              },
+              "cmd": "vpn-pulse probe enroll pc"
+            }
+          ]
+        },
+        "nextCommand": "vpn-pulse server add"
+      }
+    },
+    "partial_coverage": {
+      "overall": "unknown",
+      "freshnessMin": 1,
+      "recommended": null,
+      "coverageMissing": [
+        "pc",
+        "mobile",
+        "abroad"
+      ],
+      "servers": {
+        "s1": {
+          "state": "unknown",
+          "uptime24": "—",
+          "uptime7": "—",
+          "confirmedBy": "none",
+          "gapFrom": 0,
+          "sources": {
+            "pc": {
+              "r": "unknown",
+              "age": null,
+              "detailKey": "source.detail.notEnrolled"
+            },
+            "mobile": {
+              "r": "unknown",
+              "age": null,
+              "detailKey": "source.detail.notEnrolled"
+            },
+            "abroad": {
+              "r": "unknown",
+              "age": null,
+              "detailKey": "source.detail.notEnrolled"
+            }
+          }
+        },
+        "s2": {
+          "state": "operational",
+          "uptime24": "—",
+          "uptime7": "—",
+          "confirmedBy": "humans",
+          "gapFrom": 0,
+          "sources": {
+            "pc": {
+              "r": "unknown",
+              "age": null,
+              "detailKey": "source.detail.notEnrolled"
+            },
+            "mobile": {
+              "r": "unknown",
+              "age": null,
+              "detailKey": "source.detail.notEnrolled"
+            },
+            "abroad": {
+              "r": "unknown",
+              "age": null,
+              "detailKey": "source.detail.notEnrolled"
+            }
+          }
+        }
+      },
+      "events": [],
+      "admin": {
+        "attention": [
+          {
+            "sev": "medium",
+            "text": {
+              "ru": "Пробники не привязаны: состояние серверов подтверждают только подключения участников.",
+              "en": "Probes are not enrolled: server state is confirmed only by member connections."
+            }
+          }
+        ],
+        "probes": {
+          "pc": {
+            "state": "unknown",
+            "enrolled": false
+          },
+          "android": {
+            "state": "unknown",
+            "enrolled": false
+          },
+          "abroad": {
+            "state": "unknown",
+            "enrolled": false
+          }
+        },
+        "doctor": {
+          "result": "warn",
+          "items": [
+            {
+              "name": "probes",
+              "state": "warn",
+              "next": {
+                "ru": "Привяжите пробник на компьютере",
+                "en": "Enroll the computer probe"
+              },
+              "cmd": "vpn-pulse probe enroll pc"
+            },
+            {
+              "name": "servers",
+              "state": "warn",
+              "next": {
+                "ru": "Подключите остальные серверы",
+                "en": "Connect the remaining servers"
+              },
+              "cmd": "vpn-pulse server add"
+            }
+          ]
+        },
+        "nextCommand": "vpn-pulse probe enroll pc"
+      }
+    }
+  }
+}
