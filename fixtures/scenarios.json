@@ -1,0 +1,14 @@
+[
+  {"id":"all-operational","expected":"operational","observations":[{"source":"pc","result":"success","age":20,"full":true,"control":true}]},
+  {"id":"confirmed-pc-failure","expected":"unavailable","observations":[{"source":"pc","result":"failure","age":80,"full":true,"control":true},{"source":"pc","result":"failure","age":20,"full":true,"control":true}]},
+  {"id":"one-pc-failure","expected":"degraded","observations":[{"source":"pc","result":"failure","age":20,"full":true,"control":true}]},
+  {"id":"probe-internet-down","expected":"degraded","observations":[{"source":"pc","result":"failure","age":20,"full":true,"control":false}]},
+  {"id":"no-human-handshakes-pc-success","expected":"operational","observations":[{"source":"pc","result":"success","age":20,"full":true,"control":true}]},
+  {"id":"human-success-collector-failure","expected":"degraded","observations":[{"source":"human_activity","result":"success","age":20,"full":false,"control":null},{"source":"collector","result":"failure","age":10,"full":false,"control":null}]},
+  {"id":"all-stale","expected":"unknown","observations":[{"source":"pc","result":"success","age":400,"full":true,"control":true}]},
+  {"id":"android-stopped","expected":"unknown","observations":[{"source":"mobile","result":"not_run","age":20,"full":false,"control":null}]},
+  {"id":"conflicting-pc-and-human","expected":"degraded","observations":[{"source":"human_activity","result":"success","age":25,"full":false,"control":null},{"source":"pc","result":"failure","age":20,"full":true,"control":true},{"source":"pc","result":"failure","age":5,"full":true,"control":true}]},
+  {"id":"partial-dns-failure","expected":"degraded","observations":[{"source":"mobile","result":"failure","age":20,"full":false,"control":true}]},
+  {"id":"empty-observations","expected":"unknown","observations":[]},
+  {"id":"not-run-only","expected":"unknown","observations":[{"source":"pc","result":"not_run","age":20,"full":true,"control":null}]}
+]

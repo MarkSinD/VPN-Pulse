@@ -1,0 +1,45 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: tests, contracts, links, private-data scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package with dev dependencies
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]"
+      - name: Backend and contract tests
+        run: python -m pytest
+      - name: Contracts and RU/EN dictionaries
+        run: python scripts/validate_specs.py
+      - name: Prototypes rebuild is reproducible
+        run: python scripts/build_prototypes.py && git diff --exit-code -- docs/prototypes
+      - name: Relative Markdown links
+        run: python scripts/check_links.py
+      - name: Private data scan (tree and history)
+        run: python scripts/check_public_tree.py --history
+
+  secret-scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

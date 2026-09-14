@@ -1,0 +1,44 @@
+version: 1
+
+app:
+  default_language: en
+  languages:
+    - en
+    - ru
+  timezone: UTC
+  admin_contact_url: https://t.me/example_admin
+
+servers:
+  - id: primary-vpn
+    type: awg-host
+    name:
+      ru: Основной сервер
+      en: Primary server
+    country_code: NL
+    enabled: true
+    recommended_priority: 10
+    collector_ref: collector-primary
+
+  - id: backup-vpn
+    type: awg-docker
+    name:
+      ru: Резервный сервер
+      en: Backup server
+    country_code: FI
+    enabled: true
+    recommended_priority: 20
+    collector_ref: collector-backup
+
+monitoring:
+  collection_interval_seconds: 60
+  pc_target_interval_seconds: 60
+  probe_deadline_seconds: 20
+  confirmations: 2
+  freshness_seconds: 180
+
+retention:
+  observations_days: 7
+  aggregates_days: 90
+  events_days: 180
+  analytics_raw_days: 30
+  audit_days: 365

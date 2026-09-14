@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/vpn-pulse/analytics-events.schema.json",
+  "title": "VPN Pulse product analytics event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id",
+    "name",
+    "occurred_at",
+    "schema_version",
+    "session_id",
+    "surface",
+    "properties"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "name": {
+      "enum": [
+        "app_opened",
+        "status_ready",
+        "server_row_pressed",
+        "server_detail_viewed",
+        "detail_group_toggled",
+        "events_viewed",
+        "events_filter_changed",
+        "help_viewed",
+        "help_step_opened",
+        "contact_admin_pressed",
+        "language_changed",
+        "quick_start_opened",
+        "retry_pressed",
+        "ui_error_shown",
+        "android_onboarding_step",
+        "android_probe_started",
+        "android_probe_stopped",
+        "android_report_result",
+        "android_route_check"
+      ]
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "session_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "surface": {
+      "type": "string",
+      "enum": [
+        "mini_app",
+        "android"
+      ]
+    },
+    "properties": {
+      "type": "object",
+      "maxProperties": 12,
+      "propertyNames": {
+        "enum": [
+          "role",
+          "language",
+          "theme",
+          "viewport_bucket",
+          "overall_state",
+          "freshness_bucket",
+          "load_ms",
+          "coverage",
+          "server_public_id",
+          "state",
+          "recommended",
+          "input",
+          "group",
+          "expanded",
+          "filter",
+          "result_bucket",
+          "from",
+          "to",
+          "entry_point",
+          "step_id",
+          "surface",
+          "error_code",
+          "recoverable",
+          "step",
+          "result",
+          "network_type",
+          "vpn_excluded_confirmed",
+          "reason",
+          "duration_bucket",
+          "queue_bucket",
+          "ip_family",
+          "not_run_reason"
+        ]
+      },
+      "additionalProperties": {
+        "type": [
+          "string",
+          "number",
+          "boolean",
+          "null"
+        ]
+      }
+    }
+  }
+}

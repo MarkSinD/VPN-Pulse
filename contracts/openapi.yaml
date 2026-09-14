@@ -1,0 +1,686 @@
+openapi: 3.1.0
+info:
+  title: VPN Pulse API
+  version: 1.1.0
+  description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
+servers:
+  - url: /api/v1
+tags:
+  - name: Session
+  - name: Status
+  - name: Admin
+  - name: Probes
+  - name: Analytics
+  - name: Health
+paths:
+  /sessions:
+    post:
+      tags: [Session]
+      summary: Exchange verified Telegram initData for a short web session
+      operationId: createSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [init_data]
+              properties:
+                init_data: { type: string, minLength: 1, maxLength: 8192 }
+      responses:
+        "204":
+          description: Session cookie created
+          headers:
+            Set-Cookie: { schema: { type: string } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+  /sessions/current:
+    delete:
+      tags: [Session]
+      summary: Revoke current web session
+      operationId: deleteSession
+      security: [{ webSession: [] }]
+      responses:
+        "204": { description: Session revoked }
+  /status:
+    get:
+      tags: [Status]
+      summary: Current member-safe system status
+      operationId: getStatus
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Current snapshot
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StatusResponse" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /servers/{serverId}:
+    get:
+      tags: [Status]
+      summary: Member-safe server details
+      operationId: getServer
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ServerId"
+      responses:
+        "200":
+          description: Server details
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ServerDetail" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /servers/{serverId}/metrics:
+    get:
+      tags: [Status]
+      summary: Aggregated availability and connection series
+      operationId: getServerMetrics
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ServerId"
+        - name: period
+          in: query
+          schema: { type: string, enum: [24h, 7d], default: 24h }
+      responses:
+        "200":
+          description: Time series
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [server_id, period, coverage, points]
+                properties:
+                  server_id: { $ref: "#/components/schemas/PublicId" }
+                  period: { type: string, enum: [24h, 7d] }
+                  coverage: { type: number, minimum: 0, maximum: 1 }
+                  points:
+                    type: array
+                    maxItems: 672
+                    items: { $ref: "#/components/schemas/MetricPoint" }
+  /events:
+    get:
+      tags: [Status]
+      summary: Paginated member-safe event history
+      operationId: getEvents
+      security: [{ webSession: [] }]
+      parameters:
+        - name: filter
+          in: query
+          schema: { type: string, enum: [all, problems, notes], default: all }
+        - name: cursor
+          in: query
+          schema: { type: string, maxLength: 512 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Event page
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EventPage" }
+  /help:
+    get:
+      tags: [Status]
+      summary: Localized help content keys and contact action
+      operationId: getHelp
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Help model
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [step_keys, contact_available]
+                properties:
+                  step_keys:
+                    type: array
+                    minItems: 4
+                    maxItems: 4
+                    items: { type: string, pattern: "^help\\." }
+                  contact_available: { type: boolean }
+                  contact_url: { type: [string, "null"], format: uri, description: Telegram deep link for "Contact administrator"; null when contact_available is false }
+  /admin/servers/{serverId}:
+    get:
+      tags: [Admin]
+      summary: Admin-only diagnostic projection
+      operationId: getAdminServer
+      security: [{ webSession: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ServerId"
+      responses:
+        "200":
+          description: Diagnostics
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminServerDetail" }
+        "403": { $ref: "#/components/responses/Problem" }
+  /admin/probes:
+    get:
+      tags: [Admin]
+      summary: Probe coverage and freshness
+      operationId: getAdminProbes
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Probe list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ProbeSummary" }
+  /admin/probe-enrollments:
+    post:
+      tags: [Admin]
+      summary: Create a single-use ten-minute enrollment code
+      operationId: createProbeEnrollment
+      security: [{ webSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EnrollmentRequest" }
+      responses:
+        "201":
+          description: Enrollment code, shown once
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [code, expires_at]
+                properties:
+                  code: { type: string, minLength: 20 }
+                  expires_at: { type: string, format: date-time }
+  /admin/probes/{probeId}/revoke:
+    post:
+      tags: [Admin]
+      summary: Revoke one probe token
+      operationId: revokeProbe
+      security: [{ webSession: [] }]
+      parameters:
+        - name: probeId
+          in: path
+          required: true
+          schema: { $ref: "#/components/schemas/PublicId" }
+      responses:
+        "204": { description: Probe revoked }
+        "404": { $ref: "#/components/responses/Problem" }
+  /admin/note:
+    put:
+      tags: [Admin]
+      summary: Create or replace the active administrator note
+      operationId: putAdminNote
+      security: [{ webSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AdminNoteInput" }
+      responses:
+        "200":
+          description: Saved note
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminNote" }
+    delete:
+      tags: [Admin]
+      summary: Remove active administrator note
+      operationId: deleteAdminNote
+      security: [{ webSession: [] }]
+      responses:
+        "204": { description: Note removed }
+  /probe/enroll:
+    post:
+      tags: [Probes]
+      summary: Exchange enrollment code for a personal token
+      operationId: enrollProbe
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [code, agent_version, schema_version]
+              properties:
+                code: { type: string }
+                agent_version: { type: string, maxLength: 64 }
+                schema_version: { type: integer, const: 1 }
+      responses:
+        "201":
+          description: Personal token and allowed configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [token, probe, config]
+                properties:
+                  token: { type: string, minLength: 32 }
+                  probe: { $ref: "#/components/schemas/ProbeSummary" }
+                  config: { $ref: "#/components/schemas/ProbeConfig" }
+        "401": { $ref: "#/components/responses/Problem" }
+  /probe/config:
+    get:
+      tags: [Probes]
+      summary: Get capability-scoped probe configuration
+      operationId: getProbeConfig
+      security: [{ probeToken: [] }]
+      responses:
+        "200":
+          description: Configuration
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProbeConfig" }
+  /probe/reports:
+    post:
+      tags: [Probes]
+      summary: Submit an idempotent normalized probe report
+      operationId: createProbeReport
+      security: [{ probeToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProbeReport" }
+      responses:
+        "202":
+          description: Accepted or previously accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [report_id, accepted, duplicate]
+                properties:
+                  report_id: { type: string, format: uuid }
+                  accepted: { type: boolean }
+                  duplicate: { type: boolean }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /analytics/events:batch:
+    post:
+      tags: [Analytics]
+      summary: Submit privacy-safe allowlisted product events
+      operationId: createAnalyticsBatch
+      security: [{ webSession: [] }, { probeToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { $ref: "#/components/schemas/ProductEvent" }
+      responses:
+        "202": { description: Batch accepted idempotently }
+        "400": { $ref: "#/components/responses/Problem" }
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Process liveness
+      operationId: getLiveness
+      security: []
+      responses:
+        "200": { description: Process alive }
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Dependency and pipeline readiness
+      operationId: getReadiness
+      security: []
+      responses:
+        "200":
+          description: Ready
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+        "503": { $ref: "#/components/responses/Problem" }
+components:
+  securitySchemes:
+    webSession:
+      type: apiKey
+      in: cookie
+      name: vpnpulse_session
+    probeToken:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  parameters:
+    ServerId:
+      name: serverId
+      in: path
+      required: true
+      schema: { $ref: "#/components/schemas/PublicId" }
+  responses:
+    Problem:
+      description: RFC 9457 problem details
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    PublicId:
+      type: string
+      pattern: "^[a-z][a-z0-9-]{1,63}$"
+    State:
+      type: string
+      enum: [operational, degraded, unavailable, unknown]
+    Freshness:
+      type: object
+      additionalProperties: false
+      required: [observed_at, fresh_until, is_stale]
+      properties:
+        observed_at: { type: [string, "null"], format: date-time }
+        fresh_until: { type: [string, "null"], format: date-time }
+        is_stale: { type: boolean }
+    EvidenceSummary:
+      type: object
+      additionalProperties: false
+      required: [source, state, freshness]
+      properties:
+        source: { type: string, enum: [collector, pc, mobile, abroad, human_activity] }
+        state: { $ref: "#/components/schemas/State" }
+        freshness: { $ref: "#/components/schemas/Freshness" }
+        reason_code: { type: [string, "null"], maxLength: 80 }
+    ServerCard:
+      type: object
+      required: [id, name, country_code, state, freshness, recommended, sources, uptime_24h]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        name: { type: string, minLength: 1, maxLength: 80 }
+        country_code: { type: string, pattern: "^[A-Z]{2}$" }
+        state: { $ref: "#/components/schemas/State" }
+        freshness: { $ref: "#/components/schemas/Freshness" }
+        recommended: { type: boolean }
+        uptime_24h: { type: [number, "null"], minimum: 0, maximum: 1 }
+        coverage_24h: { type: [number, "null"], minimum: 0, maximum: 1 }
+        sources:
+          type: array
+          items: { $ref: "#/components/schemas/EvidenceSummary" }
+    StatusResponse:
+      type: object
+      additionalProperties: false
+      required: [state, freshness, coverage, servers]
+      properties:
+        state: { $ref: "#/components/schemas/State" }
+        freshness: { $ref: "#/components/schemas/Freshness" }
+        coverage: { type: number, minimum: 0, maximum: 1 }
+        mode:
+          description: live monitoring or fixture-backed demo; the UI shows a permanent "Demo data" mark for demo
+          type: string
+          enum: [live, demo]
+          default: live
+        observing_since: { type: [string, "null"], format: date-time, description: first observation ever; used by the empty events state }
+        recommended_server_id: { anyOf: [{ $ref: "#/components/schemas/PublicId" }, { type: "null" }] }
+        note: { anyOf: [{ $ref: "#/components/schemas/AdminNote" }, { type: "null" }] }
+        servers:
+          description: empty on a clean install (no servers connected yet)
+          type: array
+          minItems: 0
+          items: { $ref: "#/components/schemas/ServerCard" }
+    ProtocolSummary:
+      type: object
+      additionalProperties: false
+      required: [kind, state, coverage, connections]
+      properties:
+        kind: { type: string, enum: [amneziawg, xray_reality] }
+        state: { $ref: "#/components/schemas/State" }
+        coverage: { type: number, minimum: 0, maximum: 1 }
+        connections: { type: [integer, "null"], minimum: 0 }
+    ServerDetail:
+      allOf:
+        - $ref: "#/components/schemas/ServerCard"
+        - type: object
+          required: [protocols, checks]
+          properties:
+            protocols:
+              type: array
+              items: { $ref: "#/components/schemas/ProtocolSummary" }
+            checks:
+              type: array
+              items: { $ref: "#/components/schemas/EvidenceSummary" }
+            uptime_7d: { type: [number, "null"], minimum: 0, maximum: 1 }
+            coverage_7d: { type: [number, "null"], minimum: 0, maximum: 1 }
+            components:
+              description: member-safe software list for the "Software" group (no hosts, ports or paths)
+              type: array
+              maxItems: 12
+              items: { $ref: "#/components/schemas/SoftwareComponent" }
+            resources: { anyOf: [{ $ref: "#/components/schemas/ResourceSnapshot" }, { type: "null" }] }
+            profiles: { anyOf: [{ $ref: "#/components/schemas/ProfileStats" }, { type: "null" }] }
+            service_checks:
+              description: binary collector checks for the "Server" group
+              type: array
+              maxItems: 8
+              items: { $ref: "#/components/schemas/ServiceCheck" }
+    SoftwareComponent:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: string, enum: [amneziawg, xray, hiddify, ddns, tuning, other] }
+        name: { type: string, maxLength: 40 }
+        version: { type: [string, "null"], maxLength: 32 }
+        note_key: { type: [string, "null"], pattern: "^server[.]software[.]" }
+    ResourceSnapshot:
+      description: aggregate load; null means the collector could not measure it
+      type: object
+      additionalProperties: false
+      required: [traffic_mbps, cpu_percent, memory_percent]
+      properties:
+        traffic_mbps: { type: [number, "null"], minimum: 0 }
+        cpu_percent: { type: [number, "null"], minimum: 0, maximum: 100 }
+        memory_percent: { type: [number, "null"], minimum: 0, maximum: 100 }
+        swap_percent: { type: [number, "null"], minimum: 0, maximum: 100 }
+        peak_connections_24h: { type: [integer, "null"], minimum: 0 }
+    ProfileStats:
+      description: aggregate VPN profile counts, never per-person data
+      type: object
+      additionalProperties: false
+      required: [issued, ever_connected, active_24h]
+      properties:
+        issued: { type: [integer, "null"], minimum: 0 }
+        ever_connected: { type: [integer, "null"], minimum: 0 }
+        active_24h: { type: [integer, "null"], minimum: 0 }
+    ServiceCheck:
+      type: object
+      additionalProperties: false
+      required: [check, ok]
+      properties:
+        check: { type: string, enum: [ssh, engine, port, dns, ddns] }
+        ok: { type: [boolean, "null"] }
+    MetricPoint:
+      type: object
+      additionalProperties: false
+      required: [at, state, coverage, connections]
+      properties:
+        at: { type: string, format: date-time }
+        state: { $ref: "#/components/schemas/State" }
+        coverage: { type: number, minimum: 0, maximum: 1 }
+        connections: { type: [integer, "null"], minimum: 0 }
+    Event:
+      type: object
+      additionalProperties: false
+      required: [id, kind, severity, title_key, params, occurred_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind: { type: string, enum: [state_change, recovery, note, configuration, monitoring] }
+        severity: { type: string, enum: [info, warning, critical] }
+        server_id: { anyOf: [{ $ref: "#/components/schemas/PublicId" }, { type: "null" }] }
+        title_key: { type: string, pattern: "^events\\." }
+        params: { type: object, additionalProperties: { type: [string, number, boolean, "null"] } }
+        occurred_at: { type: string, format: date-time }
+    EventPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/Event" } }
+        next_cursor: { type: [string, "null"] }
+    AdminServerDetail:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/ServerDetail"
+        - type: object
+          required: [attention, diagnostics]
+          properties:
+            attention: { type: array, items: { type: string, maxLength: 80 } }
+            attention_items:
+              description: structured attention list for the admin dashboard (severity-ordered)
+              type: array
+              maxItems: 50
+              items: { $ref: "#/components/schemas/AttentionItem" }
+            diagnostics: { type: object, additionalProperties: true }
+    AttentionItem:
+      type: object
+      additionalProperties: false
+      required: [severity, code, message]
+      properties:
+        severity: { type: string, enum: [high, medium, low] }
+        code: { type: string, pattern: "^[A-Z][A-Z0-9_]+$" }
+        message: { type: string, maxLength: 240 }
+        server_id: { anyOf: [{ $ref: "#/components/schemas/PublicId" }, { type: "null" }] }
+    ProbeSummary:
+      type: object
+      additionalProperties: false
+      required: [id, kind, status, last_seen_at, capabilities]
+      properties:
+        id: { $ref: "#/components/schemas/PublicId" }
+        kind: { type: string, enum: [pc, android, abroad, watchdog] }
+        status: { type: string, enum: [active, stale, stopped, revoked] }
+        last_seen_at: { type: [string, "null"], format: date-time }
+        capabilities: { type: array, items: { type: string, maxLength: 64 } }
+        agent_version: { type: [string, "null"], maxLength: 64 }
+        route_verified: { type: [boolean, "null"], description: last report confirmed the intended network path }
+        queued_reports: { type: [integer, "null"], minimum: 0 }
+        network_type: { type: [string, "null"], enum: [home, cellular, abroad, unknown, null] }
+    EnrollmentRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, capabilities]
+      properties:
+        kind: { type: string, enum: [pc, android, abroad, watchdog] }
+        capabilities:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items: { type: string, enum: [report_pc, report_mobile, report_abroad, read_watchdog] }
+    ProbeConfig:
+      type: object
+      additionalProperties: false
+      required: [schema_version, interval_seconds, targets]
+      properties:
+        schema_version: { type: integer, const: 1 }
+        interval_seconds: { type: integer, minimum: 60, maximum: 3600 }
+        targets:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, checks]
+            properties:
+              id: { $ref: "#/components/schemas/PublicId" }
+              checks:
+                type: array
+                items: { type: string, enum: [control_internet, handshake, https, dns, tcp] }
+    ProbeReport:
+      type: object
+      additionalProperties: false
+      required: [report_id, schema_version, agent_version, observed_at, network, results]
+      properties:
+        report_id: { type: string, format: uuid }
+        schema_version: { type: integer, const: 1 }
+        agent_version: { type: string, maxLength: 64 }
+        observed_at: { type: string, format: date-time }
+        network:
+          type: object
+          additionalProperties: false
+          required: [type, ip_family, route_verified]
+          properties:
+            type: { type: string, enum: [home, cellular, abroad, unknown] }
+            ip_family: { type: string, enum: [ipv4, ipv6, dual, unknown] }
+            route_verified: { type: boolean }
+        results:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: false
+            required: [target_id, check, result, duration_ms]
+            properties:
+              target_id: { $ref: "#/components/schemas/PublicId" }
+              check: { type: string, enum: [control_internet, handshake, https, dns, tcp] }
+              result: { type: string, enum: [success, failure, not_run] }
+              duration_ms: { type: [integer, "null"], minimum: 0, maximum: 120000 }
+              not_run_reason: { type: [string, "null"], enum: [no_network, no_cellular, route_unverified, stopped, unsupported, null] }
+              error_code: { type: [string, "null"], maxLength: 80 }
+    AdminNoteInput:
+      type: object
+      required: [text]
+      properties:
+        server_id: { anyOf: [{ $ref: "#/components/schemas/PublicId" }, { type: "null" }] }
+        text: { type: string, minLength: 1, maxLength: 500 }
+        expires_at: { type: [string, "null"], format: date-time }
+    AdminNote:
+      unevaluatedProperties: false
+      allOf:
+        - $ref: "#/components/schemas/AdminNoteInput"
+        - type: object
+          required: [id, created_at]
+          properties:
+            id: { type: string, format: uuid }
+            created_at: { type: string, format: date-time }
+    ProductEvent:
+      type: object
+      additionalProperties: false
+      required: [event_id, name, occurred_at, schema_version, session_id, surface, properties]
+      properties:
+        event_id: { type: string, format: uuid }
+        name: { type: string, maxLength: 64 }
+        occurred_at: { type: string, format: date-time }
+        schema_version: { type: integer, const: 1 }
+        session_id: { type: string, format: uuid }
+        surface: { type: string, enum: [mini_app, android] }
+        properties: { type: object, maxProperties: 12, additionalProperties: { type: [string, number, boolean, "null"] } }
+    Readiness:
+      type: object
+      additionalProperties: false
+      required: [ready, checks]
+      properties:
+        ready: { type: boolean }
+        checks:
+          type: object
+          additionalProperties:
+            type: object
+            required: [ok]
+            properties:
+              ok: { type: boolean }
+              age_seconds: { type: [integer, "null"], minimum: 0 }
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [type, title, status, code, trace_id]
+      properties:
+        type: { type: string, format: uri-reference }
+        title: { type: string }
+        status: { type: integer, minimum: 400, maximum: 599 }
+        code: { type: string, pattern: "^[A-Z][A-Z0-9_]+$" }
+        trace_id: { type: string, minLength: 8, maxLength: 64 }

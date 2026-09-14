@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/vpn-pulse/config.schema.json",
+  "title": "VPN Pulse public configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "app",
+    "servers",
+    "monitoring",
+    "retention"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "app": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_language",
+        "languages",
+        "timezone"
+      ],
+      "properties": {
+        "default_language": {
+          "type": "string",
+          "enum": [
+            "ru",
+            "en"
+          ]
+        },
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "ru",
+              "en"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "timezone": {
+          "type": "string",
+          "default": "UTC"
+        },
+        "admin_contact_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://t[.]me/",
+          "description": "Telegram deep link used by the \"Contact administrator\" button"
+        }
+      }
+    },
+    "servers": {
+      "type": "array",
+      "minItems": 0,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "name",
+          "country_code",
+          "enabled"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/publicId"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "awg-host",
+              "awg-docker",
+              "hiddify"
+            ]
+          },
+          "name": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ru",
+              "en"
+            ],
+            "properties": {
+              "ru": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "en": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              }
+            }
+          },
+          "country_code": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "recommended_priority": {
+            "type": "integer",
+            "minimum": 0,
+            "default": 0
+          },
+          "collector_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        }
+      },
+      "description": "may be empty right after installation; the UI shows \"Monitoring is being set up\""
+    },
+    "monitoring": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collection_interval_seconds",
+        "pc_target_interval_seconds",
+        "probe_deadline_seconds",
+        "confirmations",
+        "freshness_seconds"
+      ],
+      "properties": {
+        "collection_interval_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3600,
+          "default": 60
+        },
+        "pc_target_interval_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "default": 60
+        },
+        "probe_deadline_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120,
+          "default": 20
+        },
+        "confirmations": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 5,
+          "default": 2
+        },
+        "freshness_seconds": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 3600,
+          "default": 180
+        }
+      }
+    },
+    "retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observations_days",
+        "aggregates_days",
+        "events_days",
+        "analytics_raw_days",
+        "audit_days"
+      ],
+      "properties": {
+        "observations_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30,
+          "default": 7
+        },
+        "aggregates_days": {
+          "type": "integer",
+          "minimum": 7,
+          "maximum": 365,
+          "default": 90
+        },
+        "events_days": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 730,
+          "default": 180
+        },
+        "analytics_raw_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 90,
+          "default": 30
+        },
+        "audit_days": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 730,
+          "default": 365
+        }
+      }
+    }
+  },
+  "$defs": {
+    "publicId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$"
+    }
+  }
+}
