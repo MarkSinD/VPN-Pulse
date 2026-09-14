@@ -14,8 +14,12 @@ release is cut.
   `Event.kind = monitoring`, `/help.contact_url`, `AdminServerDetail.attention_items`,
   probe health fields on `ProbeSummary`. Contract tests in `tests/test_contract_ui_v4.py`.
 - Configuration schema: `app.admin_contact_url`; servers may be empty right after installation.
-- Interactive UI prototypes (`docs/prototypes/`): Mini App v4 with thirteen scenarios, roles,
+- Interactive UI prototypes (`docs/prototypes/`): Mini App with thirteen scenarios, roles,
   RU/EN and light/dark; Android probe flow; first-run walkthrough.
+- Visual style v5 "instrument panel": near-black / iOS-grouped palette of its own, gauge rings with
+  inline SVG flags (24-hour availability as the arc), brushed-metal primary button, recessed panels,
+  engraved rules, lamp badges; two font weights and 1.5 line-height. `scripts/check_contrast.py`
+  verifies 4.5:1 text and 3:1 control contrast for both themes in CI.
 - Backend core (mock-first): configuration loader, SQLite migration, state evaluator with
   canonical fixtures, session/auth, analytics ingestion, route parity with the contract.
 - Repository scaffolding: documentation set, CI (tests, contract validation, link check,

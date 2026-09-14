@@ -12,6 +12,7 @@
         "en": "Server 1"
       },
       "flag": "🇱🇻",
+      "cc": "lv",
       "country": {
         "ru": "Латвия",
         "en": "Latvia"
@@ -49,6 +50,7 @@
         "en": "Server 2"
       },
       "flag": "🇳🇱",
+      "cc": "nl",
       "country": {
         "ru": "Нидерланды",
         "en": "Netherlands"
@@ -88,6 +90,7 @@
         "en": "Server 3"
       },
       "flag": "🇫🇮",
+      "cc": "fi",
       "country": {
         "ru": "Финляндия",
         "en": "Finland"

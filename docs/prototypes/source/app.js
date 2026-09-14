@@ -105,6 +105,7 @@
     if (S.theme === 'auto') html.removeAttribute('data-theme'); else html.setAttribute('data-theme', S.theme);
     html.style.fontSize = S.text200 ? '200%' : '';
     document.documentElement.lang = S.lang;
+    if (tg) { try { const bg = getComputedStyle(html).getPropertyValue('--color-bg').trim(); if (tg.setHeaderColor) tg.setHeaderColor(bg); if (tg.setBackgroundColor) tg.setBackgroundColor(bg); } catch (e) { /* older clients */ } }
   }
 
   // ---------- header / nav ----------
@@ -131,10 +132,34 @@
   }
 
   // ---------- components ----------
+  // flags: inline SVG (30x20) for simple geometric flags keyed by ISO code; anything else shows the code.
+  // Emoji flags are not used: Windows renders them as letters and colours differ between platforms.
+  const H = (c, w) => { w = w || c.map(() => 1); const total = w.reduce((a, b) => a + b, 0); let y = 0; return c.map((col, i) => { const h = 20 * w[i] / total, r = '<rect x="0" y="' + y.toFixed(2) + '" width="30" height="' + (h + 0.2).toFixed(2) + '" fill="' + col + '"/>'; y += h; return r; }).join(''); };
+  const V = c => c.map((col, i) => '<rect x="' + (30 * i / c.length).toFixed(2) + '" y="0" width="' + (30 / c.length + 0.2).toFixed(2) + '" height="20" fill="' + col + '"/>').join('');
+  const N = (bg, cross, inner) => '<rect width="30" height="20" fill="' + bg + '"/><rect x="8" y="0" width="5" height="20" fill="' + cross + '"/><rect x="0" y="7.5" width="30" height="5" fill="' + cross + '"/>' + (inner ? '<rect x="9.5" y="0" width="2" height="20" fill="' + inner + '"/><rect x="0" y="9" width="30" height="2" fill="' + inner + '"/>' : '');
+  const FLAGS = {
+    lv: H(['#9e3039', '#ffffff', '#9e3039'], [2, 1, 2]), nl: H(['#ae1c28', '#ffffff', '#21468b']), fi: N('#ffffff', '#003580'),
+    se: N('#006aa7', '#fecc00'), no: N('#ba0c2f', '#ffffff', '#00205b'), dk: N('#c8102e', '#ffffff'), is: N('#02529c', '#ffffff', '#dc1e35'),
+    de: H(['#000000', '#dd0000', '#ffce00']), ee: H(['#0072ce', '#000000', '#ffffff']), lt: H(['#fdb913', '#006a44', '#c1272d']), at: H(['#ed2939', '#ffffff', '#ed2939']),
+    hu: H(['#ce2939', '#ffffff', '#477050']), bg: H(['#ffffff', '#00966e', '#d62612']), pl: H(['#ffffff', '#dc143c']), ua: H(['#0057b7', '#ffd700']),
+    fr: V(['#0055a4', '#ffffff', '#ef4135']), it: V(['#009246', '#ffffff', '#ce2b37']), ie: V(['#169b62', '#ffffff', '#ff883e']), be: V(['#000000', '#fae042', '#ed2939']), ro: V(['#002b7f', '#fcd116', '#ce1126']),
+    ch: '<rect width="30" height="20" fill="#d52b1e"/><rect x="13" y="4" width="4" height="12" fill="#fff"/><rect x="9" y="8" width="12" height="4" fill="#fff"/>',
+    jp: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#bc002d"/>'
+  };
+  const flagSvg = cc => FLAGS[cc] ? '<svg viewBox="0 0 30 20" aria-hidden="true">' + FLAGS[cc] + '</svg>' : '';
+  // gauge ring: a 300-degree scale open at the bottom, engraved ticks, the flag in the centre and the
+  // country code in the gap. Arc length = availability over 24 h (dashed when unknown); colour = state;
+  // the mark repeats the state for colour-blind users.
+  const gauge = arc => '<svg class="r" viewBox="0 0 64 64"><path class="track" d="M18 56.25A28 28 0 1 1 46 56.25"/><path class="ticks" d="M21 51.05A22 22 0 1 1 43 51.05" pathLength="300"/><path class="arc" d="M18 56.25A28 28 0 1 1 46 56.25" pathLength="300"' + arc + '/></svg>';
   function ring(s, cls) {
+    const cc = (s.cc || '').toLowerCase();
+    const face = flagSvg(cc) || (cc ? '<span class="cc-txt">' + esc(cc.toUpperCase()) + '</span>' : '<span class="emoji">' + (s.flag || '') + '</span>');
     const mark = s.state === 'unavailable' ? '<span class="mark">' + ico('x') + '</span>' : s.state === 'degraded' ? '<span class="mark">' + ico('alert') + '</span>' : '';
-    return '<span class="ring r-' + s.state + ' ' + (cls || '') + '" aria-hidden="true"><svg class="r" viewBox="0 0 60 60"><circle class="track" cx="30" cy="30" r="27"/><circle class="arc" cx="30" cy="30" r="27"/></svg><span class="flag">' + s.flag + '</span>' + mark + '</span>';
+    const up = parseFloat(String(s.uptime24 || '').replace(',', '.'));
+    const arc = s.state === 'unknown' || isNaN(up) ? '' : ' style="stroke-dasharray:' + Math.max(6, Math.min(300, up * 3)).toFixed(1) + ' 300"';
+    return '<span class="ring r-' + s.state + ' ' + (cls || '') + '" aria-hidden="true">' + gauge(arc) + '<span class="flag">' + face + '</span>' + (cc ? '<span class="cc">' + esc(cc.toUpperCase()) + '</span>' : '') + mark + '</span>';
   }
+  const sevIcon = { high: 'x', medium: 'alert', low: 'info' };
   const srcIcon = { pc: 'pc', mobile: 'signal', abroad: 'globe' };
   function sources(s, withLabels) {
     return '<span class="srcs">' + ['pc', 'mobile', 'abroad'].map(k => { const r = s.sources[k].r; return '<span class="src s-' + r + '"><span class="sr-only">' + esc(t('source.' + k)) + ': ' + esc(t('source.result.' + r)) + '</span>' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span>' + (withLabels ? '<span class="lbl">' + esc(t('source.' + k)) + '</span>' : '') + '</span>'; }).join('') + '</span>';
@@ -172,7 +197,8 @@
     const fresh = SC.freshnessMin === null || SC.freshnessMin === undefined ? '' : '<div class="fresh">' + ico('clock') + '<span>' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span></div>';
     const recHtml = SC.empty ? '' : (rec ? '<div class="rec">' + ico('star') + '<span>' + esc(t('status.recommendedServer', { server: sname(rec) })) + '</span></div>' : (SC.list.length ? '<div class="rec muted">' + esc(t('status.noRecommendation')) + '</div>' : ''));
     const title = SC.empty ? t('status.settingUp') : SC.api === 'offline' ? t('status.' + SC.overall) : t('status.' + SC.overall);
-    return '<div class="overall"><h1 class="title" id="screen-title" tabindex="-1">' + esc(title) + '</h1>' + fresh + recHtml + '</div>';
+    const lamp = SC.empty || !SC.overall ? '' : '<span class="lamp c-' + SC.overall + '" aria-hidden="true"></span>';
+    return '<div class="overall"><h1 class="title" id="screen-title" tabindex="-1">' + esc(title) + (lamp ? '&nbsp;' + lamp : '') + '</h1>' + fresh + recHtml + '</div>';
   }
   function noteBlock() {
     if (!SC.note) return '';
@@ -187,7 +213,7 @@
       : '<span class="up num">' + esc(s.uptime24) + '</span><span class="cap">' + esc(t('status.history24h')) + '</span>';
     return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
       '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? ico('star') + '<span class="sr-only">' + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
-      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>·</span><span>' + esc(L(s.country)) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
+      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
       '<span class="side">' + side + ico('chevron', 'chev') + '</span></button>';
   }
   function statusScreen() {
@@ -211,7 +237,7 @@
     return '<div class="status-layout"><div class="screen">' + parts.join('') + '</div>' + ctx + '</div>';
   }
   function skeleton() {
-    const row = '<div class="srow" aria-hidden="true"><span class="sk" style="width:56px;height:56px;border-radius:50%"></span><span class="main"><span class="sk" style="height:20px;width:40%"></span><span class="sk" style="height:14px;width:60%"></span><span class="sk" style="height:30px;width:100%"></span></span><span class="sk" style="width:48px;height:20px"></span></div>';
+    const row = '<div class="srow" aria-hidden="true"><span class="sk" style="width:64px;height:64px;border-radius:50%"></span><span class="main"><span class="sk" style="height:20px;width:40%"></span><span class="sk" style="height:14px;width:60%"></span><span class="sk" style="height:30px;width:100%"></span></span><span class="sk" style="width:48px;height:20px"></span></div>';
     return '<div class="screen skeleton" aria-busy="true" aria-live="polite"><div class="overall"><span class="sk" style="height:34px;width:60%"></span><span class="sk" style="height:16px;width:40%"></span></div><p class="sr-only">' + esc(t('app.loading')) + '</p><div class="servers">' + row + row + row + '</div></div>';
   }
   function errorScreen(kind) {
@@ -273,10 +299,10 @@
     let adminHtml = '';
     if (S.role === 'admin' && SC.adminData) {
       const att = SC.adminData.attention.filter(a => a.server === s.id);
-      adminHtml = acc('admin', 'shield', t('server.admin'), att.length ? String(att.length) : '', '<div class="admin-block">' + (att.length ? '<div class="attn">' + att.map(a => '<div><i class="' + a.sev + '"></i><span>' + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>') + '</div>');
+      adminHtml = acc('admin', 'shield', t('server.admin'), att.length ? String(att.length) : '', '<div class="admin-block">' + (att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>') + '</div>');
     }
     return '<div class="screen">' +
-      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? ico('star') : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>·</span><span>' + esc(L(s.country)) + '</span><span>·</span><span>' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>·</span><span>' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
+      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? ico('star') : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
       stale + conflict + diag +
       '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))), load) + '</div><div>' + acc('software', 'layers', t('server.software'), String(s.protocols.length), soft) + acc('keys', 'key', t('server.keys'), String(s.keys.active), keys) + acc('system', 'server', t('server.system'), s.state === 'unknown' ? '—' : s.uptime7, sys) + acc('events', 'clock', t('server.events'), String(evs.length), evHtml) + adminHtml + '</div></div></div>';
   }
@@ -348,10 +374,10 @@
 
   // ---------- admin ----------
   function adminScreen() {
-    const A = SC.adminData; if (!A) return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1><p class="muted">' + esc(t('status.unknown')) + '</p></div>';
+    const A = SC.adminData; if (!A) return '<div class="screen admin-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1><p class="muted">' + esc(t('status.unknown')) + '</p></div>';
     const sevOrder = { high: 0, medium: 1, low: 2 };
     const att = A.attention.slice().sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
-    const attHtml = att.length ? '<div class="attn">' + att.map(a => '<div><i class="' + a.sev + '"></i><span>' + (a.server ? '<b>' + esc(sname(a.server)) + '</b> · ' : '') + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>';
+    const attHtml = att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + (a.server ? '<b>' + esc(sname(a.server)) + '</b> · ' : '') + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>';
     const pr = A.probes;
     function probeRow(k, name) {
       const p = pr[k] || {}, enrolled = p.enrolled !== false, stateCls = { ok: 'ok', warn: 'warn', fail: 'bad', unknown: 'unk' }[p.state || 'unknown'];
@@ -365,7 +391,7 @@
     const doctor = '<div class="doctor"><div class="res c-' + dc + '">' + ico(d.result === 'ok' ? 'check' : d.result === 'warn' ? 'alert' : 'x') + '<span>' + esc(t('admin.doctor.' + d.result)) + '</span></div>' + d.items.map(it => '<div class="item"><div><b>' + esc(t('admin.service.' + it.name) === 'admin.service.' + it.name ? it.name : t('admin.service.' + it.name)) + '</b> · <span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable' }[it.state] + '">' + esc(t('admin.state.' + it.state)) + '</span></div><div class="muted">' + esc(t('admin.doctor.next')) + ': ' + esc(L(it.next)) + '</div>' + copyRow(it.cmd) + '</div>').join('') + (A.nextCommand && !d.items.length ? copyRow(A.nextCommand) : '') + '</div>';
     const nt = SC.note, noteVal = noteDraft !== null ? noteDraft : (nt ? L(nt.text) : '');
     const note = '<div class="stack"><textarea class="note-input" id="note-input" maxlength="' + FX.meta.noteMax + '" placeholder="' + esc(t('admin.note.placeholder')) + '" aria-label="' + esc(t('admin.note')) + '">' + esc(noteVal) + '</textarea><div class="small muted" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span id="note-count">' + esc(t('admin.note.chars', { n: noteVal.length, max: FX.meta.noteMax })) + '</span>' + (nt ? '<span>' + esc(t('admin.note.expires', { time: nt.expires })) + '</span>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="note-save">' + esc(t('action.save')) + '</button>' + (nt ? '<button type="button" class="btn btn-ghost btn-danger" id="note-del">' + esc(t('admin.note.delete')) + '</button>' : '') + '</div>' + (!nt && !noteVal ? '<p class="small muted">' + esc(t('admin.note.empty')) + '</p>' : '') + '</div>';
-    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1>' +
+    return '<div class="screen admin-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.attention')) + '</h2>' + attHtml + '</section>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.probes')) + '</h2><div>' + probes + '</div></section>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.services')) + '</h2>' + svc + '</section>' +

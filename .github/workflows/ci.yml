@@ -28,6 +28,8 @@ jobs:
         run: python scripts/validate_specs.py
       - name: Prototypes rebuild is reproducible
         run: python scripts/build_prototypes.py && git diff --exit-code -- docs/prototypes
+      - name: Design tokens keep WCAG contrast
+        run: python scripts/check_contrast.py
       - name: Relative Markdown links
         run: python scripts/check_links.py
       - name: Private data scan (tree and history)

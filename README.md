@@ -37,8 +37,8 @@ run the tests, validate the contracts and click through the prototypes. See
 |---|---|
 | ![Status screen, 390 px, one server with a mobile-network issue](docs/images/status-390-degraded.png) | ![Server details, tablet width, dark theme](docs/images/server-768-dark.png) |
 
-Every server is one row: a ring with the flag shows the state, the row shows the three check
-sources and a 24-hour availability chart. Tapping a row opens the server screen.
+Every server is one row: a gauge ring with the flag shows the state (arc = 24-hour availability),
+the row shows the three check sources and an availability chart. Tapping a row opens the server screen.
 
 ## Five-minute developer preview
 
