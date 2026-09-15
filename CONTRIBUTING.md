@@ -25,7 +25,9 @@ python scripts/check_links.py
 python scripts/check_public_tree.py
 ```
 
-Prototypes are generated from `docs/prototypes/source/` with `python scripts/build_prototypes.py`.
+The Mini App and the prototypes are generated from `web/src/` with `python scripts/build_prototypes.py`;
+`python scripts/ui_check.py` runs the browser QA and `python scripts/ui_parity_check.py` proves the app
+renders the same DOM from the API as from the demo scenarios (both need Playwright + Chromium).
 Edit the sources, not the built HTML.
 
 ## Pull requests
@@ -40,7 +42,8 @@ Edit the sources, not the built HTML.
 
 - `tests/` and `src/vpnpulse/domain/evaluator.py` — the state machine and its fixtures.
 - `docs/api.md` and `contracts/openapi.yaml` — the API surface.
-- `docs/prototypes/source/app.js` — the Mini App prototype that the web client will follow.
+- `web/src/app.js` — the Mini App (renderer), `web/src/model.js` — the view model built from the API or
+  from the demo scenarios, `web/src/api.js` — the contract client.
 - Issues labelled `good first issue`.
 
 ## Code of conduct

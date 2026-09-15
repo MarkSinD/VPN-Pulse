@@ -154,6 +154,11 @@ def create_app(
             path="/api/v1",
         )
 
+    @app.get("/api/v1/sessions/current")
+    def current_session(vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session)
+        return {"role": session.identity.role, "expires_at": session.expires_at.isoformat()}
+
     @app.delete("/api/v1/sessions/current", status_code=204)
     def delete_session(vpnpulse_session: str | None = Cookie(default=None)):
         sessions.revoke(vpnpulse_session)
@@ -223,6 +228,11 @@ def create_app(
             if probe["id"] not in seen:
                 listed.append({key: value for key, value in probe.items() if key in public_probe_keys})
         return listed
+
+    @app.get("/api/v1/admin/overview")
+    def admin_overview(vpnpulse_session: str | None = Cookie(default=None)):
+        require_session(vpnpulse_session, "admin")
+        return read_model.admin_overview()
 
     @app.post("/api/v1/admin/probe-enrollments", status_code=201)
     def create_enrollment(payload: EnrollmentInput, vpnpulse_session: str | None = Cookie(default=None)):

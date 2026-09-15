@@ -8,6 +8,14 @@ release is cut.
 
 ### Added
 
+- The Mini App reads the API: `web/src/api.js` (contract client) and `web/src/model.js` (one view
+  model built either from API payloads or from the demo scenarios); the renderer is unchanged.
+  Sessions via Telegram init data or the dev session, role from `GET /sessions/current`, 60-second
+  refresh, offline and membership screens driven by real responses, admin note / enrollment / revoke
+  through the API, real 7-day metrics. `scripts/ui_parity_check.py` proves API render == scenario
+  render for every scenario × role × language × screen; `scripts/ui_check.py` is the browser QA matrix.
+- Contract 1.3.0 (additive): `GET /sessions/current`, `GET /admin/overview` (attention items across
+  the installation + doctor summary), `EvidenceSummary.via_server_id`, `ProfileStats.last_connection_at`.
 - Dev server (`python -m vpnpulse.dev`): the real API on the demo scenarios with `?scenario=`,
   `?lang=`, `?delay_ms=`, dev sessions, and the built Mini App at `/app/`. The read side of the API
   now goes through a `ReadModel` protocol (`vpnpulse.api.read_model`); `tests/test_dev_server.py`
