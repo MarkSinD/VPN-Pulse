@@ -8,6 +8,16 @@ release is cut.
 
 ### Added
 
+- SQLite read model (`vpnpulse.storage.SqliteReadModel`): every read route is served from the
+  database and the public configuration — state and freshness from snapshots, evidence from the
+  latest observation per source, availability and metric points from the state timeline, server
+  details from the newest collector payload, check-source presence from probes, doctor and
+  installation-wide attention derived from the tables. Strict pydantic response models validate
+  every read response. `python -m vpnpulse.dev --sqlite <file>` seeds a scenario into a real
+  database (`vpnpulse.dev.seed`) and serves it through the same model.
+- Contract 1.4.0: documented `Accept-Language` on localized routes;
+  `contracts/collector-observation.schema.json` — the payload every collector writes.
+- Server-side RU/EN strings for doctor hints and attention messages (`i18n/*.json`, `vpnpulse.i18n`).
 - The Mini App reads the API: `web/src/api.js` (contract client) and `web/src/model.js` (one view
   model built either from API payloads or from the demo scenarios); the renderer is unchanged.
   Sessions via Telegram init data or the dev session, role from `GET /sessions/current`, 60-second

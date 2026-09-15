@@ -1,5 +1,5 @@
 from .database import apply_migrations, connect
+from .read_model import SqliteReadModel
 from .repository import NotificationWorker, StateRepository
-from .status_view import SqliteStatusProvider
 
-__all__ = ["NotificationWorker", "SqliteStatusProvider", "StateRepository", "apply_migrations", "connect"]
+__all__ = ["NotificationWorker", "SqliteReadModel", "StateRepository", "apply_migrations", "connect"]

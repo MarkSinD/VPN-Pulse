@@ -52,6 +52,7 @@ def visit(document: dict, value) -> None:
 def main() -> int:
     config_schema = load_json("contracts/config.schema.json")
     analytics_schema = load_json("contracts/analytics-events.schema.json")
+    collector_schema = load_json("contracts/collector-observation.schema.json")
     ru = load_json("i18n/ru.json")
     en = load_json("i18n/en.json")
     with (ROOT / "contracts/openapi.yaml").open(encoding="utf-8") as source:
@@ -66,6 +67,8 @@ def main() -> int:
     assert analytics_schema["additionalProperties"] is False
     Draft202012Validator.check_schema(config_schema)
     Draft202012Validator.check_schema(analytics_schema)
+    Draft202012Validator.check_schema(collector_schema)
+    assert collector_schema["additionalProperties"] is False
     Draft202012Validator(config_schema).validate(config_example)
     visit(openapi, openapi)
 
@@ -83,6 +86,7 @@ def main() -> int:
         "contracts/config.schema.json",
         "contracts/config.example.yaml",
         "contracts/analytics-events.schema.json",
+        "contracts/collector-observation.schema.json",
         "i18n/ru.json",
         "i18n/en.json",
     ):

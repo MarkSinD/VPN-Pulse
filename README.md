@@ -27,6 +27,7 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | Backend core: config, SQLite migration, state evaluator, mock-first API, analytics ingestion | tests green (`pytest`) |
 | Dev server: every API route on 13 demo scenarios, contract-validated (`python -m vpnpulse.dev`) | working |
 | Mini App reads the API (`web/src`): same DOM from the API and from the scenarios, 337 screen comparisons | working |
+| SQLite read model: every read route served from the database (`vpnpulse.storage.SqliteReadModel`), strict response models | working |
 | Installer, CLI (`vpn-pulse …`), collectors for real servers, Telegram bot, probes | **planned** — not yet runnable |
 
 There is no one-command install yet. Today the repository is a **developer preview**: you can
