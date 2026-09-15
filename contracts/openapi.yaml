@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.4.0
+  version: 1.4.1
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -268,6 +268,7 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AdminNote" }
+        "404": { $ref: "#/components/responses/Problem" }
     delete:
       tags: [Admin]
       summary: Remove active administrator note

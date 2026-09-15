@@ -26,6 +26,22 @@ an invalid file. Changing the file requires a restart of the API and the collect
 | `timezone` | IANA name | `UTC` | used for event grouping and note expiry display |
 | `admin_contact_url` | `https://t.me/…` | — | target of the "Contact administrator" button; omit to hide the button |
 
+## `storage` (optional)
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `database` | path | `./vpnpulse.sqlite3` | the SQLite file shared by the API and `vpn-pulse run`; `vpn-pulse init` creates it |
+
+## `telegram` (optional)
+
+Without this block `vpn-pulse run` prints the messages it would send instead of delivering them.
+
+| Field | Type | Default | Notes |
+|---|---|---|---|
+| `bot_token_file` | path | — | a `0600` file holding the bot token; the token itself is never in `config.yaml` |
+| `group_chat_id` | string or integer | — | the members' chat: confirmed outages and recoveries |
+| `admin_chat_id` | string or integer | the group | unconfirmed problems and data gaps, sent silently |
+
 ## `servers[]`
 
 May be **empty** right after installation — the UI then shows "Monitoring is being set up"
@@ -72,6 +88,11 @@ app:
   languages: [en, ru]
   timezone: UTC
   admin_contact_url: https://t.me/example_admin
+storage:
+  database: /var/lib/vpn-pulse/vpnpulse.sqlite3
+telegram:
+  bot_token_file: /etc/vpn-pulse/secrets/telegram-bot.token
+  group_chat_id: "-1001234567890"
 servers:
   - id: primary-vpn
     type: awg-host

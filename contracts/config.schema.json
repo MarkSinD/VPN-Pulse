@@ -55,6 +55,51 @@
         }
       }
     },
+    "storage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "database"
+      ],
+      "properties": {
+        "database": {
+          "type": "string",
+          "minLength": 1,
+          "description": "SQLite file shared by the API and the monitoring loop (vpn-pulse run); created by vpn-pulse init"
+        }
+      },
+      "description": "where the data lives; optional — commands accept --db and default to ./vpnpulse.sqlite3"
+    },
+    "telegram": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "bot_token_file",
+        "group_chat_id"
+      ],
+      "properties": {
+        "bot_token_file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "path to a 0600 file holding the bot token — the token itself never appears in this file"
+        },
+        "group_chat_id": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "description": "chat that hears about confirmed outages and recoveries (a supergroup id looks like -100…)"
+        },
+        "admin_chat_id": {
+          "type": [
+            "string",
+            "integer"
+          ],
+          "description": "chat for unconfirmed problems and data gaps; defaults to the group"
+        }
+      },
+      "description": "delivery settings for vpn-pulse run; optional — without it messages are printed to the console"
+    },
     "servers": {
       "type": "array",
       "minItems": 0,

@@ -28,6 +28,7 @@ from pathlib import Path
 from vpnpulse.analytics import SqliteAnalyticsRepository
 from vpnpulse.auth import Identity, Session
 
+PROTOCOL_OF_TYPE = {"awg-host": "amneziawg", "awg-docker": "amneziawg", "hiddify": "xray_reality"}
 SOURCE_OF_PROBE = {"pc": "pc", "android": "mobile", "abroad": "abroad", "watchdog": "collector"}
 SCOPE_OF_PROBE = {"pc": "country", "android": "country", "abroad": "abroad", "watchdog": "all"}
 FULL_TEST_CHECKS = {"handshake", "https"}
@@ -47,6 +48,35 @@ def _dt(value: str | None) -> datetime | None:
 
 def _sha(value: str) -> bytes:
     return hashlib.sha256(value.encode()).digest()
+
+
+def sync_servers(connection: sqlite3.Connection, config: dict, now: datetime | None = None) -> None:
+    """Mirror config servers/protocols into the tables that reference them (config stays the source of truth).
+
+    Idempotent; a server that left the configuration is disabled, never deleted — its history stays.
+    """
+    now = now or datetime.now(UTC)
+    configured = {s["id"] for s in config.get("servers", [])}
+    with connection:
+        for order, s in enumerate(config.get("servers", [])):
+            connection.execute(
+                """
+                INSERT INTO servers(id, public_id, type, enabled, display_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET type=excluded.type, enabled=excluded.enabled, display_order=excluded.display_order, updated_at=excluded.updated_at
+                """,
+                (s["id"], s["id"], s["type"], 1 if s.get("enabled", True) else 0, order + 1, _iso(now), _iso(now)),
+            )
+            kind = PROTOCOL_OF_TYPE.get(s["type"], "amneziawg")
+            connection.execute(
+                """
+                INSERT INTO protocols(id, server_id, kind, label_key, enabled, coverage_state, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 'complete', ?, ?)
+                ON CONFLICT(id) DO UPDATE SET enabled=1, updated_at=excluded.updated_at
+                """,
+                (f"{s['id']}:{kind}", s["id"], kind, f"server.protocol.{kind}", _iso(now), _iso(now)),
+            )
+        for (server_id,) in connection.execute("SELECT id FROM servers WHERE enabled = 1").fetchall():
+            if server_id not in configured:
+                connection.execute("UPDATE servers SET enabled = 0, updated_at = ? WHERE id = ?", (_iso(now), server_id))
 
 
 class SqliteStore:

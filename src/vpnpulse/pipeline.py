@@ -29,11 +29,10 @@ from pathlib import Path
 from vpnpulse.collectors import Collected, Collector
 from vpnpulse.domain import Observation, ObservationResult, State, evaluate_scope
 from vpnpulse.i18n import Translator
-from vpnpulse.storage import NotificationWorker, SqliteStore, StateRepository
+from vpnpulse.storage import NotificationWorker, SqliteStore, StateRepository, sync_servers
 
 log = logging.getLogger("vpnpulse.pipeline")
 
-PROTOCOL_OF_TYPE = {"awg-host": "amneziawg", "awg-docker": "amneziawg", "hiddify": "xray_reality"}
 PROBE_KIND_OF_SOURCE = {"pc": "pc", "mobile": "android", "abroad": "abroad"}
 PROBE_CAPABILITIES = {"pc": ["control_internet", "handshake", "https"], "android": ["dns", "tcp"], "abroad": ["handshake"]}
 EVENT_SEVERITY = {"unavailable": "critical", "degraded": "warning", "operational": "info", "unknown": "info"}
@@ -98,29 +97,7 @@ class Pipeline:
 
     def ensure_servers(self, now: datetime | None = None) -> None:
         """Mirror config servers/protocols into the tables observations reference (config stays the source of truth)."""
-        now = now or self.now()
-        configured = {s["id"] for s in self.config.get("servers", [])}
-        with self.db:
-            for order, s in enumerate(self.config.get("servers", [])):
-                self.db.execute(
-                    """
-                    INSERT INTO servers(id, public_id, type, enabled, display_order, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET type=excluded.type, enabled=excluded.enabled, display_order=excluded.display_order, updated_at=excluded.updated_at
-                    """,
-                    (s["id"], s["id"], s["type"], 1 if s.get("enabled", True) else 0, order + 1, _iso(now), _iso(now)),
-                )
-                kind = PROTOCOL_OF_TYPE.get(s["type"], "amneziawg")
-                self.db.execute(
-                    """
-                    INSERT INTO protocols(id, server_id, kind, label_key, enabled, coverage_state, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 'complete', ?, ?)
-                    ON CONFLICT(id) DO UPDATE SET enabled=1, updated_at=excluded.updated_at
-                    """,
-                    (f"{s['id']}:{kind}", s["id"], kind, f"server.protocol.{kind}", _iso(now), _iso(now)),
-                )
-            known = [row[0] for row in self.db.execute("SELECT id FROM servers").fetchall()]
-            for server_id in known:
-                if server_id not in configured:
-                    self.db.execute("UPDATE servers SET enabled = 0, updated_at = ? WHERE id = ? AND enabled = 1", (_iso(now), server_id))
+        sync_servers(self.db, self.config, now or self.now())
 
     # ---------- 1. collect ----------
     def collect(self, now: datetime) -> dict:

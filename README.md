@@ -30,7 +30,8 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | SQLite read model: every read route served from the database (`vpnpulse.storage.SqliteReadModel`), strict response models | working |
 | SQLite writes: sessions, enrollment codes, probes, reports → observations, note, analytics, audit, retention sweep (`SqliteStore`); the API keeps no state between requests | working |
 | Monitoring loop `vpn-pulse run`: collect → evaluate → snapshots → transitions → events → notification queue with retries; hourly sweep; `--demo` plays the scenarios over a real database | working |
-| Installer, the rest of the CLI (`init / doctor / server / probe / note`), collectors for real servers, Telegram bot in a real group, probes | **planned** — not yet runnable |
+| Administrator CLI: `vpn-pulse init / doctor / server add|list|remove / probe enroll|list|revoke / note set|clear|show`; `doctor` prints the Admin screen's next steps, exit code as a gate; secrets `0600`, never echoed | working |
+| Installer (`install.sh`), read-only collectors for real servers (`server add` on the server side), Telegram bot in a real group, probes | **planned** — not yet runnable |
 
 There is no one-command install yet. Today the repository is a **developer preview**: you can
 run the tests, validate the contracts and click through the prototypes. See

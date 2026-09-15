@@ -157,6 +157,10 @@ def test_note_is_shared_between_processes(tmp_path):
     login(admin, 2, NOW)
     assert admin.delete("/api/v1/admin/note").status_code == 204
     assert member.get("/api/v1/status").json()["note"] is None
+    # a note for a configured server works even before the loop ever ran; an unknown server is a 404, not a constraint error
+    assert admin.put("/api/v1/admin/note", json={"text": "Только для первого", "server_id": "s1"}).status_code == 200
+    denied = admin.put("/api/v1/admin/note", json={"text": "x", "server_id": "ghost"})
+    assert denied.status_code == 404 and denied.json()["code"] == "SERVER_NOT_FOUND"
 
 
 def test_analytics_audit_and_retention_sweep(tmp_path):

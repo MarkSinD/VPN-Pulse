@@ -1,8 +1,9 @@
 # Connect a server
 
-> **Status: planned.** The `vpn-pulse server add` command and the read-only helpers are
-> designed but not implemented. This page describes the intended behaviour so reviewers can
-> challenge it before code exists.
+> **Status: partly implemented.** `vpn-pulse server add | list | remove` edit the servers block
+> of `config.yaml` today (validated against the contract, written atomically); the SSH steps and
+> the read-only helpers below are designed but not implemented yet. Until they exist, probe
+> reports are the evidence for a server.
 
 ## Principle
 
@@ -21,7 +22,18 @@ a bug in the design — please open an issue.
 The helper returns aggregate numbers only: handshake ages, connection counts, interface
 counters, service checks. Peer keys and any per-person data never leave the server.
 
-## Planned flow: `vpn-pulse server add`
+## Today: `vpn-pulse server add`
+
+```bash
+vpn-pulse server add --id primary-vpn --type awg-host --name-ru "Основной сервер" --name-en "Primary server" --country NL --priority 10
+vpn-pulse server list          # configured servers with their current state
+vpn-pulse server remove primary-vpn --yes
+```
+
+`add` refuses duplicate ids and ids that look like hostnames; `remove` takes the server out of the
+configuration and keeps its history in the database. Nothing on the VPN server is touched.
+
+## Planned flow: `vpn-pulse server add` on the server side
 
 1. Choose the type, a display name (RU/EN) and the country code.
 2. Confirm the SSH host key fingerprint; it is pinned for future connections.
