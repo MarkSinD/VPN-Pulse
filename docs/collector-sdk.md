@@ -1,7 +1,8 @@
 # Collector SDK
 
-> **Status: prototype.** Today there is one adapter, `fixture`, used by the tests. The
-> interface below is what a real collector implements.
+> **Status: interface fixed, real adapters pending.** Today there is one collector,
+> `FixtureCollector` (`src/vpnpulse/collectors/fixture.py`), which plays the demo scenarios for
+> `vpn-pulse run --demo` and the tests. The interface below is what a real collector implements.
 
 ## What a collector is
 
@@ -9,17 +10,26 @@ A collector turns whatever a source can tell us into **observations** — small,
 records the evaluator understands. It never decides state itself.
 
 ```python
-Observation(
-    source="pc" | "mobile" | "abroad" | "collector" | "human_activity",
-    result=ObservationResult.SUCCESS | FAILURE | NOT_RUN,
-    observed_at=datetime,          # when the evidence was produced
-    fresh_until=datetime,          # after this it cannot confirm "operational"
-    full_vpn_test=bool,            # True only for a real handshake + HTTPS through the tunnel
-    control_internet_ok=bool,      # the regular internet worked at the time of the check
+class Collector(Protocol):
+    name: str
+    def collect(self, now: datetime) -> list[Collected]: ...
+
+Collected(
+    server_id="primary-vpn",                       # an id from config.yaml; unknown ids are dropped
+    source="collector" | "human_activity",         # probes report through the API instead
+    result="success" | "failure" | "not_run",
+    observed_at=datetime,                          # when the evidence was produced
+    metrics={...},                                 # the payload below for `collector` sources
+    error_code="SSH_TIMEOUT" | None,               # a code, never a message with a host in it
+    network_scope="all",
 )
 ```
 
-See `src/vpnpulse/domain/models.py` and `src/vpnpulse/adapters/fixture.py`.
+The loop (`vpnpulse.pipeline`) stores each `Collected` as an `observations` row with
+`fresh_until = observed_at + freshness_seconds`, links it to the `collection_runs` row of that
+run, and evaluates the fresh rows of every server. A collector that raises marks the run
+`partial` (or `error` when nothing was collected) and the loop goes on. See
+`src/vpnpulse/collectors/base.py` and `src/vpnpulse/domain/models.py`.
 
 ## What a collector writes
 

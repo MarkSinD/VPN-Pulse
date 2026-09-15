@@ -29,7 +29,8 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | Mini App reads the API (`web/src`): same DOM from the API and from the scenarios, 337 screen comparisons | working |
 | SQLite read model: every read route served from the database (`vpnpulse.storage.SqliteReadModel`), strict response models | working |
 | SQLite writes: sessions, enrollment codes, probes, reports → observations, note, analytics, audit, retention sweep (`SqliteStore`); the API keeps no state between requests | working |
-| Installer, CLI (`vpn-pulse …`), collectors for real servers, Telegram bot, probes | **planned** — not yet runnable |
+| Monitoring loop `vpn-pulse run`: collect → evaluate → snapshots → transitions → events → notification queue with retries; hourly sweep; `--demo` plays the scenarios over a real database | working |
+| Installer, the rest of the CLI (`init / doctor / server / probe / note`), collectors for real servers, Telegram bot in a real group, probes | **planned** — not yet runnable |
 
 There is no one-command install yet. Today the repository is a **developer preview**: you can
 run the tests, validate the contracts and click through the prototypes. See
@@ -54,6 +55,8 @@ pip install -e ".[dev]"
 python -m pytest                                  # backend core + contract tests
 python scripts/validate_specs.py                  # OpenAPI, schemas, RU/EN parity
 python -m vpnpulse.dev                            # API on demo scenarios + the Mini App at /app/
+vpn-pulse run --demo --db demo.sqlite3            # the monitoring loop on a scripted world (Ctrl+C to stop)
+python -m vpnpulse.dev --sqlite demo.sqlite3      # …and the Mini App reading that database live
 ```
 
 Then open <http://127.0.0.1:8765/app/mvp.html> (or `docs/prototypes/mvp.html` directly) and use

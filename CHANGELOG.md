@@ -8,6 +8,18 @@ release is cut.
 
 ### Added
 
+- The monitoring loop (`vpnpulse.pipeline`, `vpn-pulse run`): collect → evaluate → snapshots →
+  transitions → member-visible events → notification queue, plus an hourly retention sweep and
+  hourly connection aggregates (`metric_hourly`). One process owns the loop over the SQLite file
+  the API reads; a failing collector marks the run and never stops it. Notification policy: the
+  group hears about a confirmed outage once and about the recovery that follows it; unconfirmed
+  problems and data gaps go to the administrator; the first evaluation after a gap tells nobody.
+  Failed sends retry with growing back-off, pending messages for one server collapse into the
+  newest, an unsent outage/recovery pair cancels out, a restart resends nothing.
+- `vpnpulse.collectors`: the `Collected` / `Collector` interface and `FixtureCollector`, a scripted
+  world that plays the demo scenarios over time (`vpn-pulse run --demo`, tests).
+- `vpnpulse.notify`: message texts from `i18n/*.json` (`bot.*`, public server names only) with
+  console, fake and Telegram Bot API senders.
 - SQLite writes (`vpnpulse.storage.SqliteStore`): web sessions, one-time enrollment codes, probes
   with hashed tokens, idempotent reports turned into observations, the administrator note, product
   analytics, audit entries and a retention sweep. The API keeps no state between requests; the

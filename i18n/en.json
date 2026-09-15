@@ -298,5 +298,9 @@
   "doctor.queue.stuck": "Notifications are stuck ({n} queued) — check the bot",
   "attention.probesNotEnrolled": "Probes are not enrolled: server state is confirmed only by member connections.",
   "attention.probeSilent": "The {name} probe has been silent for {duration}.",
-  "attention.collectorStale": "The collector is not reporting — server data is going stale."
+  "attention.collectorStale": "The collector is not reporting — server data is going stale.",
+  "bot.unavailable": "🔴 {server}: connections fail — the check confirmed an outage",
+  "bot.recovered": "🟢 {server}: working again",
+  "bot.degraded": "🟡 {server}: has problems ({state})",
+  "bot.unknown": "⚪ {server}: no fresh data ({state})"
 }

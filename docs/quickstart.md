@@ -66,6 +66,21 @@
    request. `GET /api/v1/dev/scenarios` lists the ids. The dev routes are not part of the
    contract and never exist in a deployment.
 
+6. Watch the monitoring loop work (optional).
+
+   ```bash
+   vpn-pulse run --demo --db demo.sqlite3
+   ```
+
+   The loop collects from a scripted world (10 minutes all good, 5 with a mobile-network
+   problem, 10 with one server down, 15 recovering — then again), evaluates, writes snapshots,
+   transitions and events into `demo.sqlite3`, and prints what the bot would send:
+   `[group] 🔴 Server 2: connections fail — the check confirmed an outage` once, and `[group] 🟢
+   Server 2: working again` when it recovers. Start `python -m vpnpulse.dev --sqlite demo.sqlite3`
+   in a second terminal to watch the same database in the Mini App. `--once` does a single run;
+   `--config config.yaml` without `--demo` runs the real loop (probe reports arrive through the
+   API; server collectors are the next increment). Ctrl+C stops it; a restart resends nothing.
+
 ## Planned installation path
 
 When the installer ships, the intended path is (not available yet):
