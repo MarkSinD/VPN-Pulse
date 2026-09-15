@@ -1,9 +1,15 @@
+"""HTTP layer of VPN Pulse (contracts/openapi.yaml).
+
+Reads go through a ReadModel (SQLite in production, demo scenarios in the dev server); writes go
+through SqliteStore. The app itself keeps no state between requests, so it can restart at any
+moment and several workers can share one database file.
+"""
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from pathlib import Path
-import secrets
+from typing import Literal
 from uuid import uuid4
 
 import jsonschema
@@ -11,15 +17,11 @@ from fastapi import Cookie, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from vpnpulse.analytics import AnalyticsRegistry
 from vpnpulse.api import schemas
 from vpnpulse.api.read_model import ReadModel, ReadModelUnavailable, StatusOnlyReadModel, pick_language
-from vpnpulse.auth import (
-    AuthenticationError,
-    InMemorySessionStore,
-    MembershipChecker,
-    validate_telegram_init_data,
-)
+from vpnpulse.auth import AuthenticationError, MembershipChecker, validate_telegram_init_data
+from vpnpulse.storage.database import apply_migrations, connect
+from vpnpulse.storage.store import SqliteStore
 
 
 class SessionInput(BaseModel):
@@ -34,25 +36,42 @@ class AnalyticsBatch(BaseModel):
 
 class EnrollmentInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    kind: str
-    capabilities: list[str] = Field(min_length=1)
+    kind: Literal["pc", "android", "abroad", "watchdog"]
+    capabilities: list[Literal["report_pc", "report_mobile", "report_abroad", "read_watchdog"]] = Field(min_length=1)
 
 
 class ProbeEnrollInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    code: str
+    code: str = Field(min_length=1, max_length=128)
     agent_version: str = Field(max_length=64)
-    schema_version: int = 1
+    schema_version: Literal[1] = 1
+
+
+class ReportNetwork(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    type: Literal["home", "cellular", "abroad", "unknown"]
+    ip_family: Literal["ipv4", "ipv6", "dual", "unknown"]
+    route_verified: bool
+
+
+class ReportResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    target_id: str = Field(pattern=r"^[a-z][a-z0-9-]{1,63}$")
+    check: Literal["control_internet", "handshake", "https", "dns", "tcp"]
+    result: Literal["success", "failure", "not_run"]
+    duration_ms: int | None = Field(ge=0, le=120000)
+    not_run_reason: Literal["no_network", "no_cellular", "route_unverified", "stopped", "unsupported"] | None = None
+    error_code: str | None = Field(default=None, max_length=80)
 
 
 class ProbeReportInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    report_id: str
-    schema_version: int = 1
+    report_id: str = Field(pattern=r"^[0-9a-fA-F-]{36}$")
+    schema_version: Literal[1] = 1
     agent_version: str = Field(max_length=64)
     observed_at: datetime
-    network: dict
-    results: list[dict] = Field(min_length=1, max_length=20)
+    network: ReportNetwork
+    results: list[ReportResult] = Field(min_length=1, max_length=20)
 
 
 class AdminNoteInput(BaseModel):
@@ -62,6 +81,14 @@ class AdminNoteInput(BaseModel):
     expires_at: datetime | None = None
 
 
+def _migrations_dir() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "migrations"
+        if (candidate / "0001_initial.sql").exists():
+            return candidate
+    raise FileNotFoundError("migrations/ not found; pass a store to create_app")
+
+
 def create_app(
     *,
     bot_token: str,
@@ -69,27 +96,26 @@ def create_app(
     analytics_schema: Path,
     status_provider: Callable[[str], dict] | None = None,
     read_model: ReadModel | None = None,
+    store: SqliteStore | None = None,
+    config: dict | None = None,
     contact_url: str | None = None,
     default_language: str = "ru",
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> FastAPI:
-    """Build the API. Reads go through `read_model`; `status_provider` is the legacy status-only form."""
+    """Build the API. Reads: `read_model` (or the legacy status-only `status_provider`); writes: `store`.
+
+    Without a store an in-memory SQLite database is created — the same code path as production,
+    just not persistent. Real deployments pass a store over the shared database file.
+    """
     if read_model is None:
         if status_provider is None:
             raise ValueError("create_app needs read_model or status_provider")
         read_model = StatusOnlyReadModel(status_provider, contact_url)
+    if store is None:
+        connection = connect(":memory:")
+        apply_migrations(connection, _migrations_dir())
+        store = SqliteStore(connection, analytics_schema=analytics_schema, config=config, pepper=bot_token, now=now)
     app = FastAPI(title="VPN Pulse API", version="1.4.0")
-    sessions = InMemorySessionStore()
-    analytics = AnalyticsRegistry(analytics_schema)
-    enrollments: dict[str, dict] = {}
-    probes: dict[str, dict] = {}
-    accepted_reports: set[str] = set()
-    active_note: dict | None = None
-    note_touched = False  # a PUT/DELETE in this process overrides the note the read model reports
-    public_probe_keys = {
-        "id", "kind", "status", "last_seen_at", "capabilities",
-        "agent_version", "route_verified", "queued_reports", "network_type",
-    }
 
     @app.exception_handler(ReadModelUnavailable)
     async def read_model_unavailable(request: Request, error: ReadModelUnavailable):
@@ -99,7 +125,7 @@ def create_app(
     async def problem_details(request: Request, error: HTTPException):
         detail = error.detail if isinstance(error.detail, dict) else {}
         code = str(detail.get("code", "HTTP_ERROR"))
-        trace_id = request.headers.get("x-request-id") or __import__("uuid").uuid4().hex
+        trace_id = request.headers.get("x-request-id") or uuid4().hex
         return JSONResponse(
             status_code=error.status_code,
             media_type="application/problem+json",
@@ -113,7 +139,7 @@ def create_app(
         )
 
     def require_session(token: str | None, role: str | None = None):
-        session = sessions.get(token, now())
+        session = store.get_session(token, now())
         if session is None:
             raise HTTPException(status_code=401, detail={"code": "SESSION_EXPIRED"})
         if role and session.identity.role != role:
@@ -123,41 +149,39 @@ def create_app(
     def lang_of(request: Request) -> str:
         return pick_language(request.headers.get("accept-language"), default_language)
 
+    def trace_of(request: Request) -> str:
+        return request.headers.get("x-request-id") or uuid4().hex
+
     def require_probe(authorization: str | None):
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail={"code": "PROBE_TOKEN_REQUIRED"})
-        token = authorization.removeprefix("Bearer ")
-        probe = probes.get(token)
-        if probe is None or probe.get("status") == "revoked":
+        probe = store.probe_by_token(authorization.removeprefix("Bearer "))
+        if probe is None:
             raise HTTPException(status_code=401, detail={"code": "PROBE_TOKEN_INVALID"})
         return probe
 
+    def public_probe(probe: dict) -> dict:
+        return {key: value for key, value in probe.items() if not key.startswith("_")}
+
+    # ---------- health ----------
     @app.get("/api/v1/health/live")
     def live():
         return {"alive": True}
 
+    @app.get("/api/v1/health/ready", response_model=schemas.Readiness)
+    def ready():
+        return read_model.readiness()
+
+    # ---------- sessions ----------
     @app.post("/api/v1/sessions", status_code=204)
     def create_session(payload: SessionInput, response: Response):
         try:
-            identity = validate_telegram_init_data(
-                payload.init_data,
-                bot_token=bot_token,
-                membership=membership,
-                now=now(),
-            )
+            identity = validate_telegram_init_data(payload.init_data, bot_token=bot_token, membership=membership, now=now())
         except AuthenticationError as error:
             status = 403 if str(error) == "MEMBERSHIP_REQUIRED" else 401
             raise HTTPException(status_code=status, detail={"code": str(error)}) from error
-        session = sessions.create(identity, now())
-        response.set_cookie(
-            "vpnpulse_session",
-            session.token,
-            httponly=True,
-            secure=True,
-            samesite="lax",
-            max_age=1800,
-            path="/api/v1",
-        )
+        session = store.create_session(identity, now())
+        response.set_cookie("vpnpulse_session", session.token, httponly=True, secure=True, samesite="lax", max_age=1800, path="/api/v1")
 
     @app.get("/api/v1/sessions/current", response_model=schemas.SessionInfo)
     def current_session(vpnpulse_session: str | None = Cookie(default=None)):
@@ -166,15 +190,13 @@ def create_app(
 
     @app.delete("/api/v1/sessions/current", status_code=204)
     def delete_session(vpnpulse_session: str | None = Cookie(default=None)):
-        sessions.revoke(vpnpulse_session)
+        store.revoke_session(vpnpulse_session, now())
 
+    # ---------- member reads ----------
     @app.get("/api/v1/status", response_model=schemas.StatusResponse)
     def status(request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
-        payload = dict(read_model.status(session.identity.role, lang_of(request)))
-        if note_touched:
-            payload["note"] = active_note
-        return payload
+        return read_model.status(session.identity.role, lang_of(request))
 
     @app.get("/api/v1/servers/{server_id}", response_model=schemas.ServerDetail)
     def server(server_id: str, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
@@ -185,11 +207,7 @@ def create_app(
         return detail
 
     @app.get("/api/v1/servers/{server_id}/metrics", response_model=schemas.MetricsResponse)
-    def server_metrics(
-        server_id: str,
-        period: str = "24h",
-        vpnpulse_session: str | None = Cookie(default=None),
-    ):
+    def server_metrics(server_id: str, period: str = "24h", vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session)
         if period not in {"24h", "7d"}:
             raise HTTPException(status_code=400, detail={"code": "PERIOD_INVALID"})
@@ -199,13 +217,7 @@ def create_app(
         return payload
 
     @app.get("/api/v1/events", response_model=schemas.EventPage)
-    def events(
-        request: Request,
-        filter: str = "all",
-        cursor: str | None = None,
-        limit: int = 50,
-        vpnpulse_session: str | None = Cookie(default=None),
-    ):
+    def events(request: Request, filter: str = "all", cursor: str | None = None, limit: int = 50, vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
         if filter not in {"all", "problems", "notes"} or not 1 <= limit <= 100:
             raise HTTPException(status_code=400, detail={"code": "EVENT_QUERY_INVALID"})
@@ -216,6 +228,7 @@ def create_app(
         require_session(vpnpulse_session)
         return read_model.help(lang_of(request))
 
+    # ---------- admin ----------
     @app.get("/api/v1/admin/servers/{server_id}", response_model=schemas.AdminServerDetail)
     def admin_server(server_id: str, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session, "admin")
@@ -227,12 +240,12 @@ def create_app(
     @app.get("/api/v1/admin/probes", response_model=list[schemas.ProbeSummary])
     def admin_probes(vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session, "admin")
-        # probes known to the read model first, then the ones enrolled in this process
+        # probes known to the read model first (demo scenarios), then the ones enrolled through the API
         listed = list(read_model.admin_probes())
         seen = {probe["id"] for probe in listed}
-        for probe in probes.values():
+        for probe in store.list_probes():
             if probe["id"] not in seen:
-                listed.append({key: value for key, value in probe.items() if key in public_probe_keys})
+                listed.append(probe)
         return listed
 
     @app.get("/api/v1/admin/overview", response_model=schemas.AdminOverview)
@@ -241,85 +254,66 @@ def create_app(
         return read_model.admin_overview(lang_of(request))
 
     @app.post("/api/v1/admin/probe-enrollments", status_code=201)
-    def create_enrollment(payload: EnrollmentInput, vpnpulse_session: str | None = Cookie(default=None)):
-        require_session(vpnpulse_session, "admin")
-        code = secrets.token_urlsafe(24)
-        expires_at = now() + timedelta(minutes=10)
-        enrollments[code] = {"kind": payload.kind, "capabilities": payload.capabilities, "expires_at": expires_at}
+    def create_enrollment(payload: EnrollmentInput, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session, "admin")
+        code, expires_at = store.create_enrollment(payload.kind, list(payload.capabilities), session.token, now())
+        store.audit(actor=session.token, role="admin", action="probe.enroll_code", target_type="probe", target_id=payload.kind, trace_id=trace_of(request), now=now())
         return {"code": code, "expires_at": expires_at}
 
     @app.post("/api/v1/admin/probes/{probe_id}/revoke", status_code=204)
-    def revoke_probe(probe_id: str, vpnpulse_session: str | None = Cookie(default=None)):
-        require_session(vpnpulse_session, "admin")
-        probe = next((item for item in probes.values() if item["id"] == probe_id), None)
-        if probe is not None:
-            probe["status"] = "revoked"
-            return
-        revoke = getattr(read_model, "revoke_probe", None)
-        if revoke is None or not revoke(probe_id):
+    def revoke_probe(probe_id: str, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session, "admin")
+        revoked = store.revoke_probe(probe_id, now())
+        if not revoked:
+            fallback = getattr(read_model, "revoke_probe", None)
+            revoked = bool(fallback and fallback(probe_id))
+        if not revoked:
             raise HTTPException(status_code=404, detail={"code": "PROBE_NOT_FOUND"})
+        store.audit(actor=session.token, role="admin", action="probe.revoke", target_type="probe", target_id=probe_id, trace_id=trace_of(request), now=now())
 
-    @app.put("/api/v1/admin/note")
-    def put_note(payload: AdminNoteInput, vpnpulse_session: str | None = Cookie(default=None)):
-        nonlocal active_note, note_touched
-        require_session(vpnpulse_session, "admin")
-        active_note = {"id": str(uuid4()), **payload.model_dump(mode="json"), "created_at": now().isoformat()}
-        note_touched = True
-        return active_note
+    @app.put("/api/v1/admin/note", response_model=schemas.AdminNote)
+    def put_note(payload: AdminNoteInput, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session, "admin")
+        note = store.put_note(payload.text, payload.expires_at, payload.server_id, "admin", now())
+        store.audit(actor=session.token, role="admin", action="note.put", target_type="note", target_id=note["id"], details={"length": len(payload.text)}, trace_id=trace_of(request), now=now())
+        return note
 
     @app.delete("/api/v1/admin/note", status_code=204)
-    def delete_note(vpnpulse_session: str | None = Cookie(default=None)):
-        nonlocal active_note, note_touched
-        require_session(vpnpulse_session, "admin")
-        active_note = None
-        note_touched = True
+    def delete_note(request: Request, vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session, "admin")
+        store.delete_note(now())
+        store.audit(actor=session.token, role="admin", action="note.delete", target_type="note", target_id="active", trace_id=trace_of(request), now=now())
 
+    # ---------- probes ----------
     @app.post("/api/v1/probe/enroll", status_code=201)
     def enroll_probe(payload: ProbeEnrollInput):
-        enrollment = enrollments.pop(payload.code, None)
-        if enrollment is None or enrollment["expires_at"] <= now():
+        enrollment = store.consume_enrollment(payload.code, now())
+        if enrollment is None:
             raise HTTPException(status_code=401, detail={"code": "ENROLLMENT_INVALID"})
-        token = secrets.token_urlsafe(32)
-        probe_id = f"{enrollment['kind']}-{uuid4().hex[:12]}"
-        probe = {
-            "id": probe_id,
-            "kind": enrollment["kind"],
-            "status": "active",
-            "last_seen_at": None,
-            "capabilities": enrollment["capabilities"],
-            "agent_version": payload.agent_version,
-        }
-        probes[token] = probe
-        public_probe = {key: value for key, value in probe.items() if key in public_probe_keys}
-        return {"token": token, "probe": public_probe, "config": {"schema_version": 1, "interval_seconds": 60, "targets": []}}
+        token, probe = store.register_probe(enrollment["kind"], enrollment["capabilities"], payload.agent_version, now())
+        return {"token": token, "probe": public_probe(probe), "config": store.probe_config(probe["kind"])}
 
-    @app.get("/api/v1/probe/config")
+    @app.get("/api/v1/probe/config", response_model=schemas.ProbeConfig)
     def probe_config(authorization: str | None = Header(default=None)):
-        require_probe(authorization)
-        return {"schema_version": 1, "interval_seconds": 60, "targets": []}
+        probe = require_probe(authorization)
+        return store.probe_config(probe["kind"])
 
     @app.post("/api/v1/probe/reports", status_code=202)
     def probe_report(payload: ProbeReportInput, authorization: str | None = Header(default=None)):
         probe = require_probe(authorization)
-        duplicate = payload.report_id in accepted_reports
-        accepted_reports.add(payload.report_id)
-        probe["last_seen_at"] = now().isoformat()
+        duplicate, _written = store.accept_report(probe, payload.model_dump(mode="json"), now())
         return {"report_id": payload.report_id, "accepted": True, "duplicate": duplicate}
 
+    # ---------- analytics ----------
     @app.post("/api/v1/analytics/events:batch", status_code=202)
     def analytics_batch(payload: AnalyticsBatch, vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session)
         try:
-            accepted = analytics.accept_batch(payload.events)
+            accepted = store.analytics.accept_batch(payload.events, now())
         except jsonschema.ValidationError as error:
             raise HTTPException(status_code=400, detail={"code": "ANALYTICS_EVENT_INVALID"}) from error
         return {"accepted": accepted}
 
-    @app.get("/api/v1/health/ready", response_model=schemas.Readiness)
-    def ready():
-        return read_model.readiness()
-
-    app.state.sessions = sessions
-    app.state.analytics = analytics
+    app.state.store = store
     app.state.read_model = read_model
     return app

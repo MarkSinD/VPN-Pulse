@@ -208,3 +208,14 @@ class Readiness(Strict):
 class SessionInfo(Strict):
     role: Literal["member", "admin"]
     expires_at: datetime
+
+
+class ProbeTarget(Strict):
+    id: str
+    checks: list[Literal["control_internet", "handshake", "https", "dns", "tcp"]]
+
+
+class ProbeConfig(Strict):
+    schema_version: Literal[1] = 1
+    interval_seconds: int = Field(ge=60, le=3600)
+    targets: list[ProbeTarget]
