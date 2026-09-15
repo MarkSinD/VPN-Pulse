@@ -59,6 +59,25 @@ admin) so the Admin tab is shown only when it will work. Server names and doctor
 in the language of the documented `Accept-Language` header (`ru` or `en`, first supported tag
 wins, otherwise the installation default); the administrator note is returned as written.
 
+## What the API writes
+
+`vpnpulse.storage.SqliteStore` owns every write, so a restart or a second worker changes
+nothing:
+
+| Write | Table | Notes |
+|---|---|---|
+| web session | `web_sessions` | keyed by the SHA-256 of the cookie; the Telegram id is stored only as a peppered hash; 30 minutes |
+| enrollment code | `probe_enrollments` | SHA-256 of the one-time code, 10 minutes, single use |
+| probe | `probes` | SHA-256 of the bearer token plus a 6-character prefix for support; `revoked` closes the token everywhere |
+| report | `probe_reports` → `observations` | idempotent by `report_id`; one observation per known target server (unknown targets are ignored, never invented); the probe's `last_seen_at` moves |
+| administrator note | `admin_notes` | `active` → `replaced` / `deleted`; expiry honoured by the read model |
+| product analytics | `product_events` | allowlisted names and properties, deduplicated by `event_id`, `analytics_raw_days` retention |
+| audit | `audit_entries` | every administrator action with a hashed actor and a trace id |
+
+`SqliteStore.sweep()` deletes expired sessions and codes, observations and reports older than
+`observations_days`, events older than `events_days`, analytics older than `analytics_raw_days`
+and audit older than `audit_days` (the scheduler calls it; see the roadmap).
+
 ## Where the answers come from
 
 `vpnpulse.storage.SqliteReadModel` serves every read route from the database and the public

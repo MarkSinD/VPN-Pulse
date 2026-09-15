@@ -12,6 +12,14 @@ VPN Pulse is built for a small trusted circle, but it is designed as if it were 
 Members **never** see IP addresses, domains, ports, hostnames, hosting provider names, raw error
 text, per-person data, or anything about other members.
 
+## What the service stores about people
+
+As little as the features need: web sessions carry only the role and a peppered hash of the
+Telegram user id; probe tokens and enrollment codes are stored as SHA-256 hashes; the administrator
+note is plain text written by the administrator; product analytics are allowlisted events without
+identity, deduplicated and deleted after `analytics_raw_days`; audit entries record administrator
+actions with a hashed actor.
+
 ## What the collector reads on your servers
 
 Aggregate, read-only data: handshake ages and counts of VPN peers, interface counters, whether

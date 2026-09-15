@@ -167,8 +167,9 @@ class ScenarioCatalog:
 class FixtureReadModel:
     """ReadModel over the demo catalog. Scenario and language come from the request context."""
 
-    def __init__(self, catalog: ScenarioCatalog, *, default_scenario: str = "operational", contact_url: str | None = "https://t.me/example_admin", now=None) -> None:
+    def __init__(self, catalog: ScenarioCatalog, *, default_scenario: str = "operational", contact_url: str | None = "https://t.me/example_admin", now=None, notes=None) -> None:
         self.catalog = catalog
+        self.notes = notes  # optional SqliteStore: a note put or deleted through the API replaces the scenario note
         self.default_scenario = default_scenario
         self.contact_url = contact_url
         self._now = now or (lambda: datetime.now(UTC))
@@ -300,6 +301,7 @@ class FixtureReadModel:
         if sc.raw.get("api") == "offline":
             raise ReadModelUnavailable("STATUS_UNAVAILABLE")
         note = sc.raw.get("note")
+        written = self.notes.note_state(sc.now) if self.notes is not None else ("none", None)
         active = [k for k in KINDS if sc.presence[k] == "active"]
         present = [k for k in KINDS if sc.presence[k] != "none"]
         since = self.catalog.data["meta"].get("since")
@@ -310,7 +312,7 @@ class FixtureReadModel:
             "mode": "demo" if sc.raw.get("demo") else "live",
             "observing_since": self._iso(datetime.fromisoformat(since).replace(tzinfo=UTC)) if since else None,
             "recommended_server_id": sc.raw.get("recommended"),
-            "note": None if not note else {
+            "note": written[1] if written[0] != "none" else None if not note else {
                 "id": str(uuid.uuid5(NAMESPACE, f"{sc.id}:note")),
                 "server_id": None,
                 "text": self._text(note["text"], lang),

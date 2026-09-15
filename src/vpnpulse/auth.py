@@ -3,7 +3,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
-import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -65,30 +64,3 @@ class Session:
     token: str
     identity: Identity
     expires_at: datetime
-
-
-class InMemorySessionStore:
-    def __init__(self) -> None:
-        self._sessions: dict[str, Session] = {}
-
-    def create(self, identity: Identity, now: datetime) -> Session:
-        token = secrets.token_urlsafe(32)
-        session = Session(token, identity, now + timedelta(minutes=30))
-        self._sessions[self._key(token)] = session
-        return session
-
-    def get(self, token: str | None, now: datetime) -> Session | None:
-        if not token:
-            return None
-        session = self._sessions.get(self._key(token))
-        if session is None or session.expires_at <= now:
-            return None
-        return session
-
-    def revoke(self, token: str | None) -> None:
-        if token:
-            self._sessions.pop(self._key(token), None)
-
-    @staticmethod
-    def _key(token: str) -> str:
-        return hashlib.sha256(token.encode()).hexdigest()

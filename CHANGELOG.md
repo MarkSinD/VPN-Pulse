@@ -8,6 +8,11 @@ release is cut.
 
 ### Added
 
+- SQLite writes (`vpnpulse.storage.SqliteStore`): web sessions, one-time enrollment codes, probes
+  with hashed tokens, idempotent reports turned into observations, the administrator note, product
+  analytics, audit entries and a retention sweep. The API keeps no state between requests; the
+  same code path runs in tests, the dev server (in-memory database) and production. One shared
+  connection serializes its statements for the worker threads (`SerializedConnection`).
 - SQLite read model (`vpnpulse.storage.SqliteReadModel`): every read route is served from the
   database and the public configuration — state and freshness from snapshots, evidence from the
   latest observation per source, availability and metric points from the state timeline, server

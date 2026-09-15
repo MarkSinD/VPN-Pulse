@@ -21,6 +21,8 @@ from fastapi.staticfiles import StaticFiles
 
 from vpnpulse.api import create_app
 from vpnpulse.auth import Identity
+from vpnpulse.dev.seed import config_for, seed_scenario
+from vpnpulse.storage import SqliteReadModel, SqliteStore, apply_migrations, connect
 from vpnpulse.dev.scenarios import REQUEST, FixtureReadModel, ScenarioCatalog
 
 DEV_BOT_TOKEN = "dev-server-not-a-real-token"
@@ -54,26 +56,29 @@ def create_dev_app(
     if default_scenario not in catalog.ids:
         raise ValueError(f"unknown scenario {default_scenario!r}; known: {', '.join(catalog.ids)}")
     now = now or (lambda: datetime.now(UTC))
+    analytics_schema = root / "contracts" / "analytics-events.schema.json"
+    config = config_for(catalog, catalog.build(default_scenario, now()), contact_url)
     if sqlite_path is not None:
         # one scenario, written once into a real database and served by the production read model
-        from vpnpulse.dev.seed import seed_scenario
-        from vpnpulse.storage import SqliteReadModel, apply_migrations, connect
-
         connection = connect(sqlite_path)
         apply_migrations(connection, root / "migrations")
-        if connection.execute("SELECT count(*) FROM servers").fetchone()[0] == 0 and not connection.execute("SELECT count(*) FROM schema_migrations WHERE version > 1").fetchone()[0]:
+        if connection.execute("SELECT count(*) FROM servers").fetchone()[0] == 0:
             config = seed_scenario(connection, catalog, default_scenario, now(), contact_url=contact_url)
-        else:
-            from vpnpulse.dev.seed import config_for
-            config = config_for(catalog, catalog.build(default_scenario, now()), contact_url)
+        store = SqliteStore(connection, analytics_schema=analytics_schema, config=config, pepper=DEV_BOT_TOKEN, now=now)
         read_model = SqliteReadModel(connection, config, now=now, mode="demo" if default_scenario == "demo" else "live")
     else:
-        read_model = FixtureReadModel(catalog, default_scenario=default_scenario, contact_url=contact_url, now=now)
+        # scenarios stay in memory; writes (sessions, enrollments, notes) go to an in-memory SQLite database
+        connection = connect(":memory:")
+        apply_migrations(connection, root / "migrations")
+        store = SqliteStore(connection, analytics_schema=analytics_schema, config=config, pepper=DEV_BOT_TOKEN, now=now)
+        read_model = FixtureReadModel(catalog, default_scenario=default_scenario, contact_url=contact_url, now=now, notes=store)
     app = create_app(
         bot_token=DEV_BOT_TOKEN,
         membership=DevMembership(),
-        analytics_schema=root / "contracts" / "analytics-events.schema.json",
+        analytics_schema=analytics_schema,
         read_model=read_model,
+        store=store,
+        config=config,
         contact_url=contact_url,
         now=now,
     )
@@ -125,7 +130,7 @@ def create_dev_app(
         scenario = catalog.build(req.get("scenario") or state["scenario"], now())
         if scenario.raw.get("api") == "auth":
             raise HTTPException(status_code=403, detail={"code": scenario.raw.get("code", "MEMBERSHIP_REQUIRED")})
-        session = app.state.sessions.create(Identity(1 if role == "admin" else 2, role), now())
+        session = app.state.store.create_session(Identity(1 if role == "admin" else 2, role), now())
         response.set_cookie("vpnpulse_session", session.token, httponly=True, samesite="lax", max_age=1800, path="/api/v1")
 
     static_dir = app_dir or (root / "docs" / "prototypes")
