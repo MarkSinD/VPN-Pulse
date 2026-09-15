@@ -1,14 +1,15 @@
 # Troubleshooting
 
-> Most operational commands referenced here (`vpn-pulse doctor …`) are **planned**. Until they
-> ship, the equivalent checks are described in words.
+> `vpn-pulse doctor` and its sections (`probes`, `collector`, `queue`, `storage`, `telegram`)
+> work on an installation directory created by `vpn-pulse init`; the `https` check arrives with
+> the installer. See [operations/doctor.md](operations/doctor.md).
 
 ## The app shows "No recent data" for a server
 
 Nothing has confirmed the server recently. Check, in order:
 
-1. Is the PC probe reporting? (planned: `vpn-pulse doctor probes`). A sleeping or offline
-   computer is the usual cause. The server itself may be fine.
+1. Is the PC probe reporting? `vpn-pulse doctor probes` shows the last report per probe. A
+   sleeping or offline computer is the usual cause. The server itself may be fine.
 2. Are members connected? If yes, the server stays green by member activity; only the probe
    coverage is missing.
 3. Is the collector reaching the server? `/health/ready` shows `collector.age_seconds`.

@@ -8,6 +8,18 @@ release is cut.
 
 ### Added
 
+- The administrator's command line (`vpnpulse.cli`): `vpn-pulse init` (config.yaml, database,
+  `0700` secrets directory, bot token stored `0600` from a file or stdin and never echoed),
+  `vpn-pulse doctor [section] [--json]` (one next step per finding with the Admin screen's texts;
+  exit code 0/1/2), `vpn-pulse server add | list | remove` (atomic, contract-validated edits of
+  `config.yaml`), `vpn-pulse probe enroll | list | revoke` (single-use codes, audit without the
+  code), `vpn-pulse note set | clear | show`. `--config` / `VPN_PULSE_CONFIG`, `--db` and `--lang`
+  work before or after the command; every line printed passes through a redactor.
+- Configuration contract: optional `storage.database` (the SQLite file shared by the API and the
+  loop) and `telegram` (`bot_token_file`, `group_chat_id`, `admin_chat_id`) blocks; `vpn-pulse run`
+  reads both. Contract 1.4.1: `PUT /admin/note` answers 404 `SERVER_NOT_FOUND` for an unknown
+  `server_id`; the API mirrors configured servers into the tables at start-up (`sync_servers`).
+
 - The monitoring loop (`vpnpulse.pipeline`, `vpn-pulse run`): collect → evaluate → snapshots →
   transitions → member-visible events → notification queue, plus an hourly retention sweep and
   hourly connection aggregates (`metric_hourly`). One process owns the loop over the SQLite file
@@ -69,8 +81,13 @@ release is cut.
 - Repository scaffolding: documentation set, CI (tests, contract validation, link check,
   private-data scan, secret scan), security policy, contributing guide.
 
+### Changed
+
+- The doctor's probes hint on a fresh installation reads "After the server, enroll the probes"
+  (`doctor.probes.afterServer`), matching the Admin screen fixtures.
+
 ### Planned
 
-- Installer (`install.sh`), CLI (`vpn-pulse …`), collectors for `awg-host`, `awg-docker`,
-  `hiddify`, Telegram bot, PC and Android probes, cross-server checks. See `docs/` pages marked
-  *planned*.
+- Installer (`install.sh`), the server side of `vpn-pulse server add` (read-only helpers for
+  `awg-host`, `awg-docker`, `hiddify`), Telegram bot in a real group, PC and Android probes,
+  cross-server checks. See `docs/` pages marked *planned*.

@@ -8,6 +8,14 @@ app:
   timezone: UTC
   admin_contact_url: https://t.me/example_admin
 
+storage:
+  database: /var/lib/vpn-pulse/vpnpulse.sqlite3      # shared by the API and `vpn-pulse run`
+
+telegram:
+  bot_token_file: /etc/vpn-pulse/secrets/telegram-bot.token   # 0600; the token itself is never in this file
+  group_chat_id: "-1001234567890"                              # the members' group (example value)
+  admin_chat_id: "123456789"                                   # optional; defaults to the group
+
 servers:
   - id: primary-vpn
     type: awg-host

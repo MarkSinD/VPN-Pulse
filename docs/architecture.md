@@ -33,7 +33,7 @@
 | `pipeline.py` | the loop: collect → evaluate → snapshots → transitions → events → notification queue; hourly sweep and aggregates | done, deterministic tests |
 | `collectors/` | `Collected` / `Collector` interface and `FixtureCollector` (demo); `awg-host` / `awg-docker` / `hiddify` planned | fixture only |
 | `notify.py` | message texts from `i18n/*.json` (public names only); console, fake and Telegram Bot API senders | done (Telegram not yet exercised against a real bot) |
-| `cli.py` | `vpn-pulse run [--demo] [--once]`; `init / doctor / server / probe / note` planned | `run` only |
+| `cli/` | `vpn-pulse init / run / doctor / server / probe / note` — installation directory, the loop, one next step per finding, config edits, probe lifecycle, the note; output redacted, secrets `0600` | done (server-side helper install planned) |
 | `auth.py` | Telegram `initData` HMAC, `auth_date`, member/admin roles | done |
 | `api/` | routes from `contracts/openapi.yaml`, role projections, Problem Details; stateless over SQLite | done |
 | `analytics.py` | allowlisted product events, idempotency, retention | done |

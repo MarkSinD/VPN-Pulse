@@ -21,7 +21,7 @@ from vpnpulse.api import schemas
 from vpnpulse.api.read_model import ReadModel, ReadModelUnavailable, StatusOnlyReadModel, pick_language
 from vpnpulse.auth import AuthenticationError, MembershipChecker, validate_telegram_init_data
 from vpnpulse.storage.database import apply_migrations, connect
-from vpnpulse.storage.store import SqliteStore
+from vpnpulse.storage.store import SqliteStore, sync_servers
 
 
 class SessionInput(BaseModel):
@@ -115,7 +115,9 @@ def create_app(
         connection = connect(":memory:")
         apply_migrations(connection, _migrations_dir())
         store = SqliteStore(connection, analytics_schema=analytics_schema, config=config, pepper=bot_token, now=now)
-    app = FastAPI(title="VPN Pulse API", version="1.4.0")
+    if config and config.get("servers"):
+        sync_servers(store.db, config, now())  # rows that notes, reports and observations reference
+    app = FastAPI(title="VPN Pulse API", version="1.4.1")
 
     @app.exception_handler(ReadModelUnavailable)
     async def read_model_unavailable(request: Request, error: ReadModelUnavailable):
@@ -274,6 +276,8 @@ def create_app(
     @app.put("/api/v1/admin/note", response_model=schemas.AdminNote)
     def put_note(payload: AdminNoteInput, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session, "admin")
+        if payload.server_id and not any(s["id"] == payload.server_id for s in (config or {}).get("servers", [])):
+            raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
         note = store.put_note(payload.text, payload.expires_at, payload.server_id, "admin", now())
         store.audit(actor=session.token, role="admin", action="note.put", target_type="note", target_id=note["id"], details={"length": len(payload.text)}, trace_id=trace_of(request), now=now())
         return note

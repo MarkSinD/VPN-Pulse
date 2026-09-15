@@ -1,6 +1,7 @@
 # PC probe
 
-> **Status: planned.** Design complete; the agent is not implemented yet.
+> **Status: planned.** Design complete; the agent is not implemented yet. The enrollment side
+> exists: `vpn-pulse probe enroll pc` and `POST /api/v1/probe/enroll`.
 
 The PC probe is the only source that proves a **full VPN connection** works from inside the
 users' country: a real handshake to each server plus a small HTTPS request through the tunnel,

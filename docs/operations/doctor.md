@@ -1,8 +1,8 @@
 # Operations: doctor and installation
 
-> **Status: planned.** `install.sh` and `vpn-pulse doctor` are designed, not implemented.
-> What exists today: `/health/live`, `/health/ready` in the API contract and the mock-first
-> implementation, plus the doctor summary in the Mini App prototype.
+> **Status: `vpn-pulse doctor` works; `install.sh` is planned.** The doctor checks below run
+> against a real installation directory (`vpn-pulse init`) and print the same next steps the
+> administrator sees in the Mini App. HTTPS and backup checks arrive with the installer.
 
 ## Two entry points
 
@@ -33,13 +33,40 @@ Full debug output is behind `--verbose` and redacts secrets.
 
 ## `vpn-pulse doctor`
 
-Checks the whole chain — API, HTTPS, Telegram, collector freshness per source, storage,
-queue, probes — and prints one next step per warning. `--json` for scripts,
-`--support-bundle` builds a local redacted archive and lists its contents first; nothing is
-uploaded automatically.
+```text
+$ vpn-pulse doctor
+doctor: FAIL
+  [FAIL] servers: Connect the first server  →  vpn-pulse server add
+  [WARN] probes: After the server, enroll the probes  →  vpn-pulse probe enroll pc
+  [WARN] telegram: Telegram is not configured — messages are printed to the console; …  →  vpn-pulse doctor telegram
+```
 
-In the Mini App the administrator sees a compact doctor summary built from `/health/ready`,
-`/admin/probes` and the attention items — there is no separate doctor endpoint.
+One line per finding, one next step each, failures first. Exit code `0` when everything passed,
+`1` with warnings, `2` with failures — so `vpn-pulse doctor` works as a post-install gate.
+`--json` prints `{"result", "items", "next_command"}`; `--lang ru|en` picks the language of the
+hints (default: `app.default_language`).
+
+| Check | Where it comes from | What it says |
+|---|---|---|
+| `servers` | configuration | no servers yet → connect the first one |
+| `probes` | `probes` table | none enrolled → enroll; enrolled but silent (no report for 15 min) → wake the computer / check the network |
+| `collector` | `collection_runs` | never ran → start the `vpn-pulse` service; last run failed or older than three intervals → check the service and server access |
+| `queue` | `notification_queue` | messages pending for more than ten minutes → check the bot |
+| `storage` | the database file | missing → `vpn-pulse init`; cannot be opened → path and permissions |
+| `telegram` | `telegram` block and the token file | not configured (warning: messages go to the console); token file missing or empty (failure); readable by others (`chmod 600`) |
+
+`servers`, `probes`, `collector` and `queue` are computed by the same code that serves
+`GET /admin/overview`, so the terminal and the Mini App never disagree; `storage` and `telegram`
+look at files the Mini App cannot see. `vpn-pulse doctor <check>` limits the output to one check
+and adds details (per-probe last report, last collection run, queue counts, database size and
+schema version, token-file status — never its contents).
+
+Planned additions: `https` (records and certificate of the Mini App domain, with the installer),
+`backup` (age of the last archive) and `--support-bundle`, a local redacted archive that lists
+its contents first; nothing is ever uploaded automatically.
+
+In the Mini App the administrator sees the compact doctor summary from `/admin/overview` plus
+`/health/ready` and `/admin/probes` — there is no separate doctor endpoint.
 
 ## Final screen
 

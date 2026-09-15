@@ -1,0 +1,150 @@
+"""`vpn-pulse doctor [section]` — one next step per warning, the same texts the Admin screen shows.
+
+The data-derived checks (servers, probes, collector, queue) come from `SqliteReadModel.admin_overview`,
+so the terminal and the Mini App never disagree; the local checks (storage, telegram) look at the
+files the Mini App cannot see. Exit code: 0 ok, 1 warnings, 2 failures.
+"""
+from __future__ import annotations
+
+import argparse
+from datetime import datetime, UTC
+from pathlib import Path
+
+from vpnpulse.cli.common import CliError, Output, config_path_of, lang_of, load_public_config, make_read_model, open_database, resolve_db, secret_file_status
+from vpnpulse.i18n import Translator
+
+SECTIONS = ("servers", "probes", "collector", "queue", "storage", "telegram")
+EXIT = {"ok": 0, "warn": 1, "fail": 2}
+
+
+def add_parser(commands, parents) -> None:
+    p = commands.add_parser("doctor", parents=parents, help="check the installation and print one next step per warning")
+    p.add_argument("section", nargs="?", choices=SECTIONS, help="only this check, with details")
+    p.add_argument("--json", action="store_true", help="machine-readable result (the Admin screen's doctor shape plus local checks)")
+    p.set_defaults(handler=command_doctor)
+
+
+def _dt(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def _age(value: str | None, now: datetime) -> str:
+    at = _dt(value)
+    if at is None:
+        return "never"
+    minutes = int((now - at).total_seconds() // 60)
+    return f"{minutes} min ago" if minutes < 120 else f"{minutes // 60} h ago"
+
+
+def local_checks(config: dict, db_path: Path, i18n: Translator, lang: str) -> tuple[list[dict], object]:
+    """storage and telegram items; returns (items, connection or None)."""
+    items: list[dict] = []
+    connection = None
+    if not db_path.exists():
+        items.append({"check": "storage", "state": "fail", "next": i18n.t(lang, "doctor.storage.missing"), "command": "vpn-pulse init"})
+    else:
+        try:
+            connection = open_database(db_path)
+            connection.execute("SELECT count(*) FROM servers").fetchone()
+        except Exception:  # noqa: BLE001 - any failure to open is the finding itself
+            connection = None
+            items.append({"check": "storage", "state": "fail", "next": i18n.t(lang, "doctor.storage.broken"), "command": "vpn-pulse doctor storage"})
+    telegram = config.get("telegram") or {}
+    if not telegram:
+        items.append({"check": "telegram", "state": "warn", "next": i18n.t(lang, "doctor.telegram.missing"), "command": "vpn-pulse doctor telegram"})
+    else:
+        status = secret_file_status(Path(telegram["bot_token_file"]))
+        if status in ("missing", "empty"):
+            items.append({"check": "telegram", "state": "fail", "next": i18n.t(lang, "doctor.telegram.tokenMissing"), "command": "vpn-pulse doctor telegram"})
+        elif status == "permissions":
+            items.append({"check": "telegram", "state": "warn", "next": i18n.t(lang, "doctor.telegram.permissions"), "command": f"chmod 600 {telegram['bot_token_file']}"})
+    return items, connection
+
+
+def run_doctor(config: dict, db_path: Path, lang: str) -> tuple[dict, object]:
+    i18n = Translator()
+    local, connection = local_checks(config, db_path, i18n, lang)
+    items: list[dict] = []
+    if connection is not None:
+        items.extend(make_read_model(connection, config, translator=i18n).admin_overview(lang)["doctor"]["items"])
+    items.extend(local)
+    items.sort(key=lambda i: 0 if i["state"] == "fail" else 1)  # failures first, otherwise the Admin screen's order
+    result = "fail" if any(i["state"] == "fail" for i in items) else "warn" if items else "ok"
+    return {"result": result, "items": items, "next_command": items[0]["command"] if items else None}, connection
+
+
+def command_doctor(args: argparse.Namespace, out: Output) -> int:
+    config = load_public_config(config_path_of(args))
+    lang = lang_of(args, config)
+    db_path = resolve_db(args, config)
+    summary, connection = run_doctor(config, db_path, lang)
+    if args.section:
+        summary["items"] = [i for i in summary["items"] if i["check"] == args.section]
+        summary["result"] = "fail" if any(i["state"] == "fail" for i in summary["items"]) else "warn" if summary["items"] else "ok"
+        summary["next_command"] = summary["items"][0]["command"] if summary["items"] else None
+        summary["details"] = section_details(args.section, config, db_path, connection)
+    if args.json:
+        out.json(summary)
+        return EXIT[summary["result"]]
+    label = {"ok": "OK", "warn": "WARN", "fail": "FAIL"}
+    out.line(f"doctor: {label[summary['result']]}" + (f" ({args.section})" if args.section else ""))
+    for item in summary["items"]:
+        line = f"  [{label[item['state']]}] {item['check']}: {item['next']}"
+        if item.get("command"):
+            line += f"  →  {item['command']}"
+        out.line(line)
+    if args.section:
+        for line in summary["details"]:
+            out.line(f"  {line}")
+    if not summary["items"] and not args.section:
+        out.line("  every check passed")
+    return EXIT[summary["result"]]
+
+
+def section_details(section: str, config: dict, db_path: Path, connection) -> list[str]:
+    now = datetime.now(UTC)
+    if section == "storage":
+        lines = [f"database: {db_path}"]
+        if db_path.exists():
+            lines.append(f"size: {db_path.stat().st_size // 1024} KiB")
+        if connection is not None:
+            version = connection.execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0]
+            counts = {t: connection.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in ("observations", "events", "probes", "notification_queue")}
+            lines.append(f"schema version: {version}; " + ", ".join(f"{k} {v}" for k, v in counts.items()))
+        return lines
+    if section == "telegram":
+        telegram = config.get("telegram") or {}
+        if not telegram:
+            return ["not configured: messages are printed by vpn-pulse run; add telegram.bot_token_file and telegram.group_chat_id to config.yaml"]
+        return [
+            f"token file: {telegram['bot_token_file']} — {secret_file_status(Path(telegram['bot_token_file']))}",
+            f"group chat: {telegram['group_chat_id']}; admin chat: {telegram.get('admin_chat_id', 'same as the group')}",
+        ]
+    if connection is None:
+        return ["database unavailable"]
+    if section == "servers":
+        cards = make_read_model(connection, config).status("admin")["servers"]
+        if not cards:
+            return ["no servers configured"]
+        return [f"{c['id']}: {c['state']}{' (stale)' if c['freshness']['is_stale'] else ''}, observed {_age(c['freshness']['observed_at'], now)}" for c in cards]
+    if section == "probes":
+        probes = make_read_model(connection, config).admin_probes()
+        if not probes:
+            return ["no probes enrolled"]
+        return [f"{p['id']}: {p['kind']} {p['status']}, last report {_age(p['last_seen_at'], now)}" for p in probes]
+    if section == "collector":
+        row = connection.execute("SELECT started_at, finished_at, result, error_code FROM collection_runs ORDER BY started_at DESC LIMIT 1").fetchone()
+        if row is None:
+            return ["no collection run yet — is vpn-pulse run running?"]
+        runs = connection.execute("SELECT count(*) FROM collection_runs WHERE started_at >= ?", ((now.replace(hour=0, minute=0, second=0, microsecond=0)).isoformat().replace("+00:00", "Z"),)).fetchone()[0]
+        return [f"last run: {row[2] or 'running'} {_age(row[1] or row[0], now)}" + (f" ({row[3]})" if row[3] else ""), f"runs today: {runs}"]
+    if section == "queue":
+        pending = connection.execute("SELECT count(*), MIN(created_at) FROM notification_queue WHERE state = 'pending'").fetchone()
+        failed = connection.execute("SELECT count(*) FROM notification_queue WHERE state = 'failed'").fetchone()[0]
+        sent = connection.execute("SELECT count(*) FROM notification_queue WHERE state = 'sent'").fetchone()[0]
+        lines = [f"pending: {pending[0]}" + (f" (oldest {_age(pending[1], now)})" if pending[1] else ""), f"sent: {sent}, failed: {failed}"]
+        return lines
+    raise CliError(f"unknown section {section}")

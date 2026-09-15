@@ -471,7 +471,8 @@ class SqliteReadModel:
         probes = self.admin_probes()
         if not probes:
             items.append({"severity": "medium", "code": "PROBES_NOT_ENROLLED", "message": self.i18n.t(lang, "attention.probesNotEnrolled"), "server_id": None})
-            doctor_items.append({"check": "probes", "state": "warn", "next": self.i18n.t(lang, "doctor.probes.enroll"), "command": "vpn-pulse probe enroll pc"})
+            hint = "doctor.probes.afterServer" if not servers else "doctor.probes.enroll"
+            doctor_items.append({"check": "probes", "state": "warn", "next": self.i18n.t(lang, hint), "command": "vpn-pulse probe enroll pc"})
         else:
             silent = [p for p in probes if p["status"] in ("stale", "stopped")]
             for p in silent:

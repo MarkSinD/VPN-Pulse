@@ -81,6 +81,23 @@
    `--config config.yaml` without `--demo` runs the real loop (probe reports arrive through the
    API; server collectors are the next increment). Ctrl+C stops it; a restart resends nothing.
 
+7. Try the administrator's command line (optional).
+
+   ```bash
+   vpn-pulse init --dir ./my-install --language en
+   export VPN_PULSE_CONFIG=./my-install/config.yaml
+   vpn-pulse server add --id my-vpn --type awg-host --name-ru "Мой сервер" --name-en "My server" --country NL
+   vpn-pulse probe enroll pc
+   vpn-pulse note set "Maintenance tonight" --expires 23:00
+   vpn-pulse doctor
+   ```
+
+   `init` writes `config.yaml`, creates the database and a `0700` secrets directory (pass
+   `--telegram-token-stdin --group-chat-id …` to store the bot token with `0600`; it is never
+   echoed). `doctor` prints one next step per finding — the same texts as the Admin screen — and
+   exits `0/1/2` for ok/warnings/failures. Every command takes `--config`, `--db` and `--lang`
+   before or after the verb.
+
 ## Planned installation path
 
 When the installer ships, the intended path is (not available yet):
