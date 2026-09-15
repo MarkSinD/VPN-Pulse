@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -45,7 +45,12 @@ def test_observation_reaches_api_and_notification(tmp_path):
     assert payload["recommended_server_id"] == "s1"
     assert payload["servers"][0]["uptime_24h"] is None
 
+    # the first evaluation is not news for anybody; a confirmed failure two minutes later is
     sent = []
     worker = NotificationWorker(connection, lambda template, params: sent.append((template, params)))
-    assert worker.deliver_one(NOW)
-    assert sent[0][1]["state"] == "operational"
+    assert worker.deliver_one(NOW) is False
+    later = NOW + timedelta(minutes=2)
+    outage = evaluate_scope(load_scenario(ROOT / "fixtures" / "scenarios.json", "confirmed-pc-failure", later), now=later)
+    StateRepository(connection).save_evaluation(scope_key="server:s1", server_id="s1", network_scope="all", evaluation=outage, evaluated_at=later)
+    assert worker.deliver_one(later) is True and worker.deliver_one(later) is False
+    assert sent == [("bot.unavailable", {"server_id": "s1", "scope_key": "server:s1", "state": "unavailable", "from_state": "operational", "destination": "group"})]

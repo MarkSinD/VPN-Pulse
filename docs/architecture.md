@@ -28,14 +28,17 @@
 | Module | Responsibility | Status |
 |---|---|---|
 | `config.py` | load and validate `config.yaml`, redact secrets from logs | done |
-| `storage/` | SQLite schema (`migrations/0001_initial.sql`), repositories, status view | done (mock-first) |
+| `storage/` | SQLite schema (`migrations/0001_initial.sql`), `SqliteStore` (all API writes), `SqliteReadModel` (all API reads), `StateRepository` + `NotificationWorker` (snapshots, transitions, queue) | done |
 | `domain/evaluator.py` | evidence → state per server × protocol × network; freshness; two confirmations; recommendation | done, fixture-tested |
-| `adapters/` | evidence sources; `fixture.py` today, `awg-host` / `awg-docker` / `hiddify` collectors planned | fixture only |
+| `pipeline.py` | the loop: collect → evaluate → snapshots → transitions → events → notification queue; hourly sweep and aggregates | done, deterministic tests |
+| `collectors/` | `Collected` / `Collector` interface and `FixtureCollector` (demo); `awg-host` / `awg-docker` / `hiddify` planned | fixture only |
+| `notify.py` | message texts from `i18n/*.json` (public names only); console, fake and Telegram Bot API senders | done (Telegram not yet exercised against a real bot) |
+| `cli.py` | `vpn-pulse run [--demo] [--once]`; `init / doctor / server / probe / note` planned | `run` only |
 | `auth.py` | Telegram `initData` HMAC, `auth_date`, member/admin roles | done |
-| `api/` | routes from `contracts/openapi.yaml`, role projections, Problem Details | mock-first |
+| `api/` | routes from `contracts/openapi.yaml`, role projections, Problem Details; stateless over SQLite | done |
 | `analytics.py` | allowlisted product events, idempotency, retention | done |
 | `observability.py` | structured JSON logs with redaction | done |
-| bot, CLI, installer, probes, watchdog | — | planned |
+| installer, probes, watchdog | — | planned |
 
 ## Data flow
 
@@ -48,12 +51,30 @@
 3. **Evaluation.** The evaluator turns evidence into `operational / degraded / unavailable /
    unknown` per scope, applies freshness and the two-confirmation rule, and picks the
    recommended server.
-4. **Transitions.** Each state transition becomes an event and, once, a Telegram notification.
-   Duplicate reports never produce duplicate messages.
-5. **Mini App.** The web client exchanges `initData` for a short session, then reads `/status`,
+4. **Transitions.** Each state transition becomes an event and at most one queued notification
+   (`notification_queue`, deduplicated by transition). Duplicate reports never produce duplicate
+   messages; a restart over the same database resends nothing.
+5. **Delivery.** `NotificationWorker` sends what is due every run; a failed send is retried with
+   growing back-off (30 s × attempts, up to 20 attempts). Several pending messages for one server
+   collapse into the newest, and an unsent outage/recovery pair cancels out.
+6. **Mini App.** The web client exchanges `initData` for a short session, then reads `/status`,
    `/servers/{id}`, `/servers/{id}/metrics`, `/events`, `/help`; administrators additionally
    read `/admin/*` and `/health/ready`. The administrator's "doctor" is aggregated on the
    client from those — there is no separate doctor endpoint.
+
+## Who hears what
+
+| Transition | Group (members) | Administrator |
+|---|---|---|
+| → `unavailable` (confirmed failure) | 🔴 once | — |
+| → `operational` after the group heard about an outage (whatever the path back) | 🟢 once | — |
+| → `degraded` (conflicting or unconfirmed evidence) | — | 🟡 (silent message) |
+| → `unknown` (no fresh evidence) | — | ⚪ (silent message) |
+| → `operational` from `degraded`/`unknown` without a group alert | — | 🟢 |
+| `unknown` → `operational` (first data after a gap or a restart) | — | — |
+
+The texts are `bot.*` keys in `i18n/*.json` with the server's public name; they never carry
+hosts, addresses or member data.
 
 ## Trust boundaries
 

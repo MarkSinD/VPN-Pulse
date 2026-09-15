@@ -298,5 +298,9 @@
   "doctor.queue.stuck": "Уведомления не уходят ({n} в очереди) — проверьте бота",
   "attention.probesNotEnrolled": "Пробники не привязаны: состояние серверов подтверждают только подключения участников.",
   "attention.probeSilent": "Пробник «{name}» молчит {duration}.",
-  "attention.collectorStale": "Сборщик не отчитывается — данные о серверах устаревают."
+  "attention.collectorStale": "Сборщик не отчитывается — данные о серверах устаревают.",
+  "bot.unavailable": "🔴 {server}: подключение не проходит — проверка подтвердила сбой",
+  "bot.recovered": "🟢 {server}: снова работает",
+  "bot.degraded": "🟡 {server}: есть проблемы ({state})",
+  "bot.unknown": "⚪ {server}: нет свежих данных ({state})"
 }
