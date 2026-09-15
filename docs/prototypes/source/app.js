@@ -204,11 +204,13 @@
   // ---------- status ----------
   function overallBlock() {
     const rec = SC.recommended ? byId(SC.recommended) : null;
-    const fresh = SC.freshnessMin === null || SC.freshnessMin === undefined ? '' : '<div class="fresh">' + ico('clock') + '<span>' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span></div>';
-    const recHtml = SC.empty ? '' : (rec ? '<div class="rec">' + ico('star') + '<span>' + esc(t('status.recommendedServer', { server: sname(rec) })) + '</span></div>' : (SC.list.length ? '<div class="rec muted">' + esc(t('status.noRecommendation')) + '</div>' : ''));
+    // freshness as a chip: short duration visible, full sentence for screen readers; amber once stale (> 3 min)
+    const fresh = SC.freshnessMin === null || SC.freshnessMin === undefined ? '' : '<span class="chip chip-fresh' + (SC.freshnessMin > 3 ? ' stale' : '') + '"><span aria-hidden="true">' + ico('clock') + '<span class="num">' + esc(dur(SC.freshnessMin)) + '</span></span><span class="sr-only">' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span></span>';
+    // the recommendation lives on the server row (chip); here only the absence of one is worth a line
+    const recHtml = !SC.empty && !rec && SC.list.length ? '<p class="small muted">' + esc(t('status.noRecommendation')) + '</p>' : '';
     const title = SC.empty ? t('status.settingUp') : SC.api === 'offline' ? t('status.' + SC.overall) : t('status.' + SC.overall);
     const lamp = SC.empty || !SC.overall ? '' : '<span class="lamp c-' + SC.overall + '" aria-hidden="true"></span>';
-    return '<div class="overall"><h1 class="title" id="screen-title" tabindex="-1">' + esc(title) + (lamp ? '&nbsp;' + lamp : '') + '</h1>' + fresh + recHtml + '</div>';
+    return '<div class="overall"><div class="ov-row"><h1 class="title" id="screen-title" tabindex="-1">' + lamp + esc(title) + '</h1>' + fresh + '</div>' + recHtml + '</div>';
   }
   function noteBlock() {
     if (!SC.note) return '';
@@ -222,7 +224,7 @@
       ? '<span class="up num muted">—</span><span class="cap">' + esc(t('status.currentUnknown')) + '</span>'
       : '<span class="up num">' + esc(s.uptime24) + '</span><span class="cap">' + esc(t('status.history24h')) + '</span>';
     return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
-      '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? ico('star') + '<span class="sr-only">' + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
+      '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
       '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
       '<span class="side">' + side + ico('chevron', 'chev') + '</span></button>';
   }
@@ -249,7 +251,7 @@
   }
   function skeleton() {
     const row = '<div class="srow" aria-hidden="true"><span class="sk" style="width:64px;height:64px;border-radius:50%"></span><span class="main"><span class="sk" style="height:20px;width:40%"></span><span class="sk" style="height:14px;width:60%"></span><span class="sk" style="height:30px;width:100%"></span></span><span class="sk" style="width:48px;height:20px"></span></div>';
-    return '<div class="screen skeleton" aria-busy="true" aria-live="polite"><div class="overall"><span class="sk" style="height:34px;width:60%"></span><span class="sk" style="height:16px;width:40%"></span></div><p class="sr-only">' + esc(t('app.loading')) + '</p><div class="servers">' + row + row + row + '</div></div>';
+    return '<div class="screen skeleton" aria-busy="true" aria-live="polite"><div class="overall"><div class="ov-row"><span class="sk" style="height:29px;width:56%"></span><span class="sk" style="height:28px;width:72px;border-radius:999px"></span></div></div><p class="sr-only">' + esc(t('app.loading')) + '</p><div class="servers">' + row + row + row + '</div></div>';
   }
   function errorScreen(kind) {
     const code = SC.code || 'MEMBERSHIP_REQUIRED';
@@ -314,7 +316,7 @@
       adminHtml = acc('admin', 'shield', t('server.admin'), att.length ? String(att.length) : '', '<div class="admin-block">' + (att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>') + '</div>');
     }
     return '<div class="screen">' +
-      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? ico('star') : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
+      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
       stale + conflict + diag +
       '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))), load) + '</div><div>' + acc('software', 'layers', t('server.software'), String(s.protocols.length), soft) + acc('keys', 'key', t('server.keys'), String(s.keys.active), keys) + acc('system', 'server', t('server.system'), s.state === 'unknown' ? '—' : s.uptime7, sys) + acc('events', 'clock', t('server.events'), String(evs.length), evHtml) + adminHtml + '</div></div></div>';
   }

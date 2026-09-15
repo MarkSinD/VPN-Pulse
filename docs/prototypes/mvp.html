@@ -34,7 +34,7 @@
   --text-sm: 0.875rem;  /* 14 */
   --text-md: 1rem;      /* 16 */
   --text-lg: 1.25rem;   /* 20 */
-  --text-xl: 1.75rem;   /* 28 */
+  --text-xl: 1.5rem;    /* 24 */
   --lh-tight: 1.2;
   --lh-caption: 1.4;
   --lh-normal: 1.5;
@@ -238,7 +238,7 @@ body[data-showcase="hidden"] .showcase { display: none; }
 /* ---------- common blocks ---------- */
 .screen { display: grid; gap: var(--space-4); align-content: start; }
 h1.title { font-size: var(--text-xl); line-height: 1.2; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
-h1.title .lamp { vertical-align: middle; margin-left: 2px; }
+h1.title .lamp { vertical-align: middle; }
 h2.sub { font-size: var(--text-lg); line-height: 1.3; font-weight: 700; margin: 0; }
 p { margin: 0; }
 .stack { display: grid; gap: var(--space-2); }
@@ -290,10 +290,21 @@ p { margin: 0; }
 .toast.show { opacity: 1; }
 
 /* ---------- status screen ---------- */
-.overall { display: grid; gap: var(--space-1); }
-.overall .fresh { color: var(--color-muted); font-size: var(--text-sm); display: flex; align-items: center; gap: 6px; }
-.overall .rec { font-size: var(--text-md); font-weight: 400; display: flex; align-items: center; gap: 6px; }
-.overall .rec .i { color: var(--color-accent); fill: currentColor; }
+/* status header: one instrument line — lamp, state, freshness chip on the right */
+.overall { display: grid; gap: var(--space-2); }
+.overall .ov-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); }
+.overall h1.title { min-width: 0; display: flex; align-items: flex-start; gap: 10px; }
+/* lamp sits on the first line of the headline (cap height of a 24 px / 1.2 title) */
+.overall h1.title .lamp { width: 14px; height: 14px; margin: 7px 0 0; }
+.overall .chip-fresh { margin-top: 1px; }
+/* chips: machined pill (freshness) and metal plate (recommendation) */
+.chip { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 0 9px; border-radius: 999px; font-size: var(--text-xs); font-weight: 700; line-height: 1; white-space: nowrap; border: 1px solid var(--color-border-strong); color: var(--color-muted); box-shadow: inset 0 1px 0 var(--line-light); vertical-align: middle; }
+.chip .i { width: 14px; height: 14px; }
+.chip-fresh { min-height: 28px; padding: 0 10px; font-weight: 400; font-variant-numeric: tabular-nums; }
+.chip-fresh > span[aria-hidden] { display: inline-flex; align-items: center; gap: 5px; }
+.chip-fresh.stale { color: var(--color-degraded); border-color: color-mix(in srgb, var(--color-degraded) 60%, transparent); }
+.chip-rec { background: var(--metal); color: var(--color-accent-text); border-color: transparent; box-shadow: var(--metal-edge); letter-spacing: .02em; }
+.chip-rec .i { fill: currentColor; stroke: none; width: 12px; height: 12px; }
 .note-box { background: var(--color-surface); border-radius: var(--radius-md); padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-1); border-left: 3px solid var(--color-accent); box-shadow: var(--card-edge); }
 .note-box .txt { font-size: var(--text-sm); line-height: var(--lh-normal); }
 .note-box .txt.clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
@@ -322,9 +333,10 @@ p { margin: 0; }
 .srow:focus-visible { outline-offset: -2px; }
 .srow:focus-visible .chev { color: var(--color-text); }
 .srow .main { display: grid; gap: 6px; min-width: 0; }
-.srow .name { font-size: var(--text-lg); font-weight: 700; line-height: 1.25; display: flex; align-items: center; gap: 6px; min-width: 0; }
-.srow .name .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.srow .name .i { color: var(--color-accent); fill: currentColor; width: 18px; height: 18px; }
+.srow .name { font-size: var(--text-lg); font-weight: 700; line-height: 1.25; display: flex; align-items: center; gap: 4px 8px; min-width: 0; flex-wrap: wrap; }
+/* the name never truncates for a chip: the chip drops under the name when the row is narrow */
+.srow .name .t { flex: 0 1 auto; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.srow .name .chip { margin-left: 0; }
 .srow .stl { font-size: var(--text-sm); color: var(--color-muted); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .srow .stl b { font-weight: 700; color: var(--color-text); }
 .srow .side { display: grid; justify-items: end; align-items: center; gap: 2px; grid-template-columns: auto 20px; column-gap: var(--space-1); }
@@ -383,7 +395,7 @@ p { margin: 0; }
 .detail-top { display: grid; grid-template-columns: var(--ring-size-sm) minmax(0, 1fr); gap: var(--space-3); align-items: center; }
 .detail-top .h { min-width: 0; }
 .detail-top h1 { font-size: var(--text-lg); font-weight: 700; margin: 0; line-height: 1.25; display: flex; align-items: center; gap: 6px; }
-.detail-top h1 .i { color: var(--color-accent); fill: currentColor; width: 18px; height: 18px; }
+.detail-top h1 .chip { margin-left: 2px; }
 .detail-top .st { font-size: var(--text-sm); color: var(--color-muted); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .detail-top .st b { color: var(--color-text); font-weight: 700; }
 .acc { border-top: 1px solid var(--color-border); }
@@ -732,11 +744,13 @@ textarea.note-input:focus-visible { box-shadow: var(--panel-inset), inset 0 0 0 
   // ---------- status ----------
   function overallBlock() {
     const rec = SC.recommended ? byId(SC.recommended) : null;
-    const fresh = SC.freshnessMin === null || SC.freshnessMin === undefined ? '' : '<div class="fresh">' + ico('clock') + '<span>' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span></div>';
-    const recHtml = SC.empty ? '' : (rec ? '<div class="rec">' + ico('star') + '<span>' + esc(t('status.recommendedServer', { server: sname(rec) })) + '</span></div>' : (SC.list.length ? '<div class="rec muted">' + esc(t('status.noRecommendation')) + '</div>' : ''));
+    // freshness as a chip: short duration visible, full sentence for screen readers; amber once stale (> 3 min)
+    const fresh = SC.freshnessMin === null || SC.freshnessMin === undefined ? '' : '<span class="chip chip-fresh' + (SC.freshnessMin > 3 ? ' stale' : '') + '"><span aria-hidden="true">' + ico('clock') + '<span class="num">' + esc(dur(SC.freshnessMin)) + '</span></span><span class="sr-only">' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span></span>';
+    // the recommendation lives on the server row (chip); here only the absence of one is worth a line
+    const recHtml = !SC.empty && !rec && SC.list.length ? '<p class="small muted">' + esc(t('status.noRecommendation')) + '</p>' : '';
     const title = SC.empty ? t('status.settingUp') : SC.api === 'offline' ? t('status.' + SC.overall) : t('status.' + SC.overall);
     const lamp = SC.empty || !SC.overall ? '' : '<span class="lamp c-' + SC.overall + '" aria-hidden="true"></span>';
-    return '<div class="overall"><h1 class="title" id="screen-title" tabindex="-1">' + esc(title) + (lamp ? '&nbsp;' + lamp : '') + '</h1>' + fresh + recHtml + '</div>';
+    return '<div class="overall"><div class="ov-row"><h1 class="title" id="screen-title" tabindex="-1">' + lamp + esc(title) + '</h1>' + fresh + '</div>' + recHtml + '</div>';
   }
   function noteBlock() {
     if (!SC.note) return '';
@@ -750,7 +764,7 @@ textarea.note-input:focus-visible { box-shadow: var(--panel-inset), inset 0 0 0 
       ? '<span class="up num muted">—</span><span class="cap">' + esc(t('status.currentUnknown')) + '</span>'
       : '<span class="up num">' + esc(s.uptime24) + '</span><span class="cap">' + esc(t('status.history24h')) + '</span>';
     return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
-      '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? ico('star') + '<span class="sr-only">' + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
+      '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
       '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
       '<span class="side">' + side + ico('chevron', 'chev') + '</span></button>';
   }
@@ -777,7 +791,7 @@ textarea.note-input:focus-visible { box-shadow: var(--panel-inset), inset 0 0 0 
   }
   function skeleton() {
     const row = '<div class="srow" aria-hidden="true"><span class="sk" style="width:64px;height:64px;border-radius:50%"></span><span class="main"><span class="sk" style="height:20px;width:40%"></span><span class="sk" style="height:14px;width:60%"></span><span class="sk" style="height:30px;width:100%"></span></span><span class="sk" style="width:48px;height:20px"></span></div>';
-    return '<div class="screen skeleton" aria-busy="true" aria-live="polite"><div class="overall"><span class="sk" style="height:34px;width:60%"></span><span class="sk" style="height:16px;width:40%"></span></div><p class="sr-only">' + esc(t('app.loading')) + '</p><div class="servers">' + row + row + row + '</div></div>';
+    return '<div class="screen skeleton" aria-busy="true" aria-live="polite"><div class="overall"><div class="ov-row"><span class="sk" style="height:29px;width:56%"></span><span class="sk" style="height:28px;width:72px;border-radius:999px"></span></div></div><p class="sr-only">' + esc(t('app.loading')) + '</p><div class="servers">' + row + row + row + '</div></div>';
   }
   function errorScreen(kind) {
     const code = SC.code || 'MEMBERSHIP_REQUIRED';
@@ -842,7 +856,7 @@ textarea.note-input:focus-visible { box-shadow: var(--panel-inset), inset 0 0 0 
       adminHtml = acc('admin', 'shield', t('server.admin'), att.length ? String(att.length) : '', '<div class="admin-block">' + (att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>') + '</div>');
     }
     return '<div class="screen">' +
-      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? ico('star') : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
+      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
       stale + conflict + diag +
       '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))), load) + '</div><div>' + acc('software', 'layers', t('server.software'), String(s.protocols.length), soft) + acc('keys', 'key', t('server.keys'), String(s.keys.active), keys) + acc('system', 'server', t('server.system'), s.state === 'unknown' ? '—' : s.uptime7, sys) + acc('events', 'clock', t('server.events'), String(evs.length), evHtml) + adminHtml + '</div></div></div>';
   }
