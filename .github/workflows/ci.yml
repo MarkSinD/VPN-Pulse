@@ -35,6 +35,25 @@ jobs:
       - name: Private data scan (tree and history)
         run: python scripts/check_public_tree.py --history
 
+  browser:
+    name: browser QA and API parity (Playwright)
+    runs-on: ubuntu-latest
+    # font metrics differ from the Windows machine the matrix was tuned on: advisory until the
+    # first green run on Linux, then promote to blocking
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install package, Playwright and Chromium
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]" playwright && playwright install --with-deps chromium
+      - name: Browser QA matrix
+        run: python scripts/ui_check.py
+      - name: API render equals scenario render
+        run: python scripts/ui_parity_check.py
+
   secret-scan:
     name: gitleaks
     runs-on: ubuntu-latest

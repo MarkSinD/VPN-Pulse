@@ -37,6 +37,8 @@ class ReadModel(Protocol):
 
     def admin_probes(self) -> list[dict]: ...
 
+    def admin_overview(self) -> dict: ...
+
     def readiness(self) -> dict: ...
 
 
@@ -82,6 +84,9 @@ class StatusOnlyReadModel:
 
     def admin_probes(self) -> list[dict]:
         return []
+
+    def admin_overview(self) -> dict:
+        return {"attention_items": [], "doctor": {"result": "ok", "items": []}, "next_command": None}
 
     def readiness(self) -> dict:
         return {

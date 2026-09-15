@@ -553,14 +553,306 @@ body { flex-direction: column; }
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <script>window.__I18N={"ru":{"action.back":"Назад","action.retry":"Повторить","action.copy":"Копировать","action.copied":"Скопировано","action.more":"Ещё","action.less":"Свернуть","action.confirm":"Подтвердить","action.cancel":"Отмена","action.save":"Сохранить","action.close":"Закрыть","action.quickStart":"Открыть quick start","app.title":"VPN Pulse","app.nav.status":"Статус","app.nav.events":"События","app.nav.keys":"Профили","app.nav.help":"Помощь","app.nav.admin":"Админ","app.lang.switch":"Переключить язык на {language}","app.lang.other":"EN","app.demo":"Демо-данные","app.showcase":"Демонстрационные переключатели — не часть приложения","app.loading":"Загружаем статус…","duration.now":"только что","duration.min":"{n} мин","duration.hour":"{n} ч","duration.day":"{n} дн","status.operational":"Всё работает","status.degraded":"Есть проблемы","status.unavailable":"Подключение не проходит","status.unknown":"Нет свежих данных","status.updatedAgo":"Обновлено {duration} назад","status.recommended":"Советуем","status.recommendedServer":"Советуем: {server}","status.noRecommendation":"Пока нет сервера с подтверждённой работой","status.uptime24h":"{value} за 24 ч","status.history24h":"за 24 ч","status.currentUnknown":"нет данных","status.hint":"Нажмите на сервер, чтобы посмотреть показатели","status.hintDismiss":"Понятно","status.legend":"Источники проверки","status.coveragePartial":"Проверки настроены не полностью: {missing}","status.coverage.pc":"нет проверки с компьютера","status.coverage.mobile":"нет проверки из мобильной сети","status.coverage.abroad":"нет проверки из-за границы","status.settingUp":"Мониторинг настраивается","status.settingUpBody":"Администратор подключает серверы. Как только появятся первые данные, они будут здесь.","status.offline":"Нет связи с сервисом","status.offlineBody":"Показаны последние данные от {time}. Они могли устареть.","status.axisStart":"−24 ч","status.axisEnd":"сейчас","status.noteFrom":"Заметка администратора · {time}","status.rowLabel":"{server}, {state}, доступность за 24 часа {uptime}. Открыть показатели","status.rowLabelUnknown":"{server}, нет свежих данных. Открыть показатели","status.state.operational":"Работает","status.state.degraded":"Есть проблемы","status.state.unavailable":"Не проходит проверка","status.state.unknown":"Нет свежих данных","source.pc":"Компьютер","source.mobile":"Мобильная сеть","source.abroad":"Из-за границы","source.pc.full":"Полная проверка VPN с компьютера в РФ","source.mobile.full":"Мобильная сеть в РФ вне VPN; туннель не проверяется","source.abroad.full":"Проверка с другого сервера, из-за границы","source.result.ok":"прошла","source.result.fail":"не прошла","source.result.partial":"частично","source.result.unknown":"нет данных","source.ago":"{duration} назад","source.detail.handshakeHttps":"подключение и HTTPS через туннель","source.detail.dnsReach":"DNS оператора и доступность","source.detail.handshake":"подключение","source.detail.timeout2":"два таймаута подряд","source.detail.timeout":"таймаут","source.detail.pcSilent":"компьютер не выходит на связь","source.detail.sessionStopped":"сессия на телефоне остановлена","source.detail.notEnrolled":"пробник не привязан","source.detail.viaServer":"с сервера {server}","server.open":"Открыть показатели {server}","server.checks":"Проверки","server.load":"Нагрузка","server.software":"Что работает","server.keys":"Профили","server.system":"Сервер","server.events":"События","server.admin":"Администратору","server.connections":"Подключений","server.awg":"AmneziaWG","server.xray":"Xray","server.xrayUnknown":"нет данных по Xray","server.traffic":"Трафик","server.mbit":"Мбит/с","server.cpu":"Процессор","server.memory":"Память","server.swap":"swap","server.peak":"пик за сутки: {n}","server.lastConn":"Последнее подключение","server.uptime24":"Доступность за 24 ч","server.uptime7":"Доступность за 7 дней","server.range24":"24 ч","server.range7d":"7 дней","server.chartSummary":"Подключения за {range}. Полоса под графиком показывает состояние: зелёный — работает, жёлтый — проблемы, красный — не проходит проверка, разрыв — нет данных.","server.keysIssued":"выпущено","server.keysEver":"подключались","server.keysActive":"активны за сутки","server.sshOk":"Отвечает по SSH","server.moduleOk":"Модуль VPN","server.containerOk":"Контейнер VPN","server.portOk":"VPN-порт слушается","server.dnsOk":"Домен резолвится","server.ddnsOk":"Адрес в DNS совпадает","server.yes":"да","server.no":"нет","server.confirmedBy":"Подтверждено: {by}","server.by.pc":"тестом с компьютера","server.by.humans":"подключениями участников","server.by.both":"подключениями и тестом","server.by.none":"свидетельств нет","server.by.stale":"данные устарели","server.conflict":"Источники расходятся: {a}, но {b}. Показываем осторожное состояние.","server.conflict.pcFail":"проверка с компьютера не прошла","server.conflict.humansOk":"участники подключены","server.conflict.abroadOk":"из-за границы доступен","server.stale":"Данные устарели: последнее свидетельство {duration} назад","server.freshness":"Свежесть","server.software.kernel":"модуль ядра","server.software.docker":"в контейнере","server.software.ddns":"автообновление адреса","server.software.panel":"панель","server.software.tuning":"тюнинг сети","events.title":"События","events.filter.all":"Все","events.filter.problems":"Проблемы","events.filter.notes":"Заметки","events.empty":"За этот период событий нет","events.emptyBody":"Наблюдение ведётся с {date}. Как только состояние изменится, здесь появится запись.","events.error":"Не удалось загрузить события","events.more":"Показать ещё","events.loading":"Загрузка…","events.today":"Сегодня","events.yesterday":"Вчера","events.stateChanged":"{server}: {state}","events.sourceFailed":"{server}: проверка «{source}» не прошла","events.recovered":"{server}: работа подтверждена","events.note":"Заметка администратора","events.addressUpdated":"{server}: адрес обновлён","events.keysIssued":"{server}: выданы новые профили","events.probeSilent":"Пробник «{source}» не выходит на связь","keys.title":"VPN-профили","keys.mvp":"Новые профили пока выдаёт администратор","keys.body":"Напишите ему — он пришлёт файл или QR лично. Это займёт пару минут.","keys.reserveTitle":"Резервный профиль","keys.reserve":"Если есть резервный профиль, выберите его в Amnezia","keys.reserveBody":"Он использует тот же ключ, но другой адрес. Держите его импортированным и выключенным.","help.title":"Помощь","help.contact":"Написать администратору","help.current":"Сейчас","help.step1.title":"Проверьте статус","help.step1.body":"Если кольцо сервера зелёное, проблема на вашей стороне: сеть, приложение или профиль.","help.step2.title":"Переподключитесь","help.step2.body":"Выключите и включите VPN. Клиент заново найдёт адрес сервера.","help.step3.title":"Смените сервер","help.step3.body":"Выберите сервер с пометкой «Советуем» — его работа подтверждена.","help.step4.title":"Включите резервный профиль","help.step4.body":"Если он есть — выберите его в Amnezia. Если нет — напишите администратору.","help.why":"Почему так?","help.whyIncident":"Сервер жив и доступен из-за границы, но проверки из России не проходят при рабочем обычном интернете. Обычно это блокировка адреса. Администратор запрашивает новый; профили менять не нужно.","help.whyOk":"Все проверки проходят. Если у вас не работает, причина на устройстве или в вашей сети.","help.whyUnknown":"Свежих проверок нет: пробники не выходят на связь. Сервер может работать — мы просто не можем это подтвердить прямо сейчас.","admin.title":"Администратор","admin.attention":"Требует внимания","admin.noAttention":"Срочных задач нет","admin.probes":"Пробники","admin.services":"Сервисы","admin.doctor":"Doctor","admin.doctor.ok":"Всё в порядке","admin.doctor.warn":"Есть предупреждения","admin.doctor.fail":"Есть ошибки","admin.doctor.next":"Следующий шаг","admin.note":"Заметка для участников","admin.note.empty":"Заметки нет. Она появится над списком серверов у всех участников.","admin.note.edit":"Изменить","admin.note.delete":"Удалить","admin.note.expires":"Действует до {time}","admin.note.chars":"{n} / {max}","admin.note.placeholder":"Что происходит и что делать участникам","admin.note.deleteConfirm":"Удалить заметку? Участники перестанут её видеть.","admin.enroll":"Привязать устройство","admin.enroll.title":"Код привязки","admin.enroll.body":"Введите код в приложении в течение 10 минут. Код одноразовый и не является постоянным токеном.","admin.revoke":"Отозвать","admin.revokeConfirm":"Отозвать доступ устройства «{name}»? Оно перестанет присылать отчёты.","admin.demoAction":"Демонстрационное действие: в макете ничего не меняется","admin.service.collector":"Сборщик","admin.service.api":"API","admin.service.bot":"Бот","admin.service.storage":"Хранилище","admin.service.queue":"Очередь","admin.service.https":"HTTPS","admin.service.telegram":"Telegram","admin.probe.pc":"Компьютер","admin.probe.android":"Android","admin.probe.abroad":"Перекрёстные проверки","admin.lastReport":"отчёт {duration} назад","admin.notEnrolled":"не привязан","admin.stale":"устарел","admin.routeOk":"маршрут подтверждён","admin.routeBad":"маршрут не подтверждён","admin.queue":"очередь {n}","admin.version":"версия {v}","admin.serverAdd":"Добавьте первый сервер","admin.serverAddBody":"Команда выполняется там, где установлен VPN Pulse. Мастер спросит тип сервера, имя и SSH-доступ.","admin.command":"Команда","admin.severity.high":"срочно","admin.severity.medium":"важно","admin.severity.low":"заметка","admin.state.ok":"в порядке","admin.state.warn":"предупреждение","admin.state.fail":"ошибка","admin.state.unknown":"нет данных","admin.diag.blocked":"Заблокирован в России: из РФ два таймаута подряд, из-за границы доступен, SSH отвечает.","admin.diag.action":"Запросить у хостера смену адреса. DDNS подхватит его сам; профили участников не меняются.","android.title":"VPN Pulse Probe","android.subtitle":"Проверка мобильной сети из России","android.step.bind":"Привязка","android.step.exclude":"Исключение из VPN","android.step.cellular":"Проверка сети","android.step.done":"Готово","android.bind.title":"Привяжите телефон","android.bind.body":"Введите код из раздела «Админ» в Mini App. Код действует 10 минут.","android.bind.code":"Код привязки","android.bind.action":"Привязать","android.bind.error":"Код не подошёл или истёк. Запросите новый.","android.exclude":"Исключите VPN Pulse Probe в Split App Tunneling","android.exclude.body":"Откройте Amnezia → Split App Tunneling → добавьте VPN Pulse Probe в список приложений, работающих без VPN. Затем переподключите Amnezia.","android.exclude.confirm":"Я исключил приложение","android.exclude.why":"Иначе проверки пойдут через туннель и покажут доступность из-за границы, а не из России.","android.cellularReady":"Проверка идёт через мобильную сеть вне VPN","android.cellular.checking":"Проверяем путь через мобильную сеть…","android.cellular.ok":"Путь подтверждён: запросы идут через мобильную сеть, мимо VPN","android.cellular.fail":"Запросы всё ещё идут через VPN или Wi-Fi","android.cellular.noSim":"Нет мобильного интернета","android.cellular.retry":"Проверить ещё раз","android.cellular.fix":"Проверьте исключение в Amnezia и включите мобильные данные","android.pcChecksVpn":"VPN-туннели проверяет компьютер","android.done.body":"Телефон будет проверять мобильную сеть из России. Нажмите «Начать», когда удобно.","android.main.running":"Идёт проверка","android.main.stopped":"Остановлено","android.main.everyMinute":"раз в минуту, пока экран открыт","android.main.background":"в фоне — не чаще раза в 15 минут","android.start":"Начать","android.stop":"Остановить","android.network":"Сеть","android.route":"Маршрут вне VPN","android.route.ok":"подтверждён","android.route.bad":"не подтверждён","android.lastCheck":"Последняя проверка","android.queue":"Очередь","android.queued":"ожидает отправки: {n}","android.offline":"Нет связи — результаты сохраняются и отправятся позже","android.stale":"Давно не было проверок","android.permission":"Нужно разрешение на доступ к сети","android.permission.action":"Открыть настройки","android.results":"Результаты","android.result.ok":"доступен","android.result.fail":"не отвечает","android.result.unknown":"нет данных","android.sent":"Отправлено","android.bound":"Привязано","android.unbind":"Отвязать","android.wifiOn":"Wi-Fi и Amnezia включены — не мешают","error.offline":"Не удалось получить данные","error.auth":"Доступ только для участников группы","error.authBody":"Откройте приложение из чата, куда добавлен бот. Код: {code}","error.generic":"Что-то пошло не так. Код: {code}","onboarding.title":"Первый запуск VPN Pulse","onboarding.intro":"Так выглядит приложение сразу после установки из открытого репозитория — до подключения серверов и пробников.","onboarding.demo":"Демо-режим","onboarding.demoBody":"install.sh demo поднимает интерфейс на вымышленных данных. Метка «Демо-данные» видна всегда.","onboarding.clean":"Чистая установка","onboarding.cleanBody":"Серверов ещё нет. Участник видит спокойное «настраивается», администратор — одну команду.","onboarding.partial":"Частичная настройка","onboarding.partialBody":"Сервер подключён, пробников нет. Система показывает неполное покрытие, а не зелёный успех.","onboarding.doctor":"Doctor","onboarding.doctorBody":"vpn-pulse doctor проверяет цепочку и даёт один следующий шаг на каждое предупреждение.","onboarding.memberView":"Участник видит","onboarding.adminView":"Администратор видит","onboarding.next":"Следующая команда","server.failedBy":"Отказ подтверждён: {by}","status.sourceOn":"работает","status.sourceOff":"не выходит на связь","server.checksNone":"Пробники не подключены — состояние подтверждается подключениями участников"},"en":{"action.back":"Back","action.retry":"Retry","action.copy":"Copy","action.copied":"Copied","action.more":"More","action.less":"Less","action.confirm":"Confirm","action.cancel":"Cancel","action.save":"Save","action.close":"Close","action.quickStart":"Open quick start","app.title":"VPN Pulse","app.nav.status":"Status","app.nav.events":"Events","app.nav.keys":"Profiles","app.nav.help":"Help","app.nav.admin":"Admin","app.lang.switch":"Switch language to {language}","app.lang.other":"RU","app.demo":"Demo data","app.showcase":"Showcase controls — not part of the app","app.loading":"Loading status…","duration.now":"just now","duration.min":"{n} min","duration.hour":"{n} h","duration.day":"{n} d","status.operational":"Everything works","status.degraded":"Some checks failed","status.unavailable":"Connection check failed","status.unknown":"No recent data","status.updatedAgo":"Updated {duration} ago","status.recommended":"Recommended","status.recommendedServer":"Recommended: {server}","status.noRecommendation":"No server with a confirmed check yet","status.uptime24h":"{value} over 24h","status.history24h":"over 24h","status.currentUnknown":"no data","status.hint":"Tap a server to see its details","status.hintDismiss":"Got it","status.legend":"Check sources","status.coveragePartial":"Checks are not fully configured: {missing}","status.coverage.pc":"no computer check","status.coverage.mobile":"no mobile-network check","status.coverage.abroad":"no check from abroad","status.settingUp":"Monitoring is being set up","status.settingUpBody":"The administrator is connecting servers. The first data will appear here as soon as it arrives.","status.offline":"Service unreachable","status.offlineBody":"Showing the last data from {time}. It may be outdated.","status.axisStart":"−24 h","status.axisEnd":"now","status.noteFrom":"Administrator note · {time}","status.rowLabel":"{server}, {state}, 24-hour availability {uptime}. Open details","status.rowLabelUnknown":"{server}, no recent data. Open details","status.state.operational":"Working","status.state.degraded":"Some checks failed","status.state.unavailable":"Check failed","status.state.unknown":"No recent data","source.pc":"Computer","source.mobile":"Mobile network","source.abroad":"From abroad","source.pc.full":"Full VPN check from a computer in Russia","source.mobile.full":"Mobile network in Russia outside the VPN; the tunnel is not tested","source.abroad.full":"Check from another server, from abroad","source.result.ok":"passed","source.result.fail":"failed","source.result.partial":"partial","source.result.unknown":"no data","source.ago":"{duration} ago","source.detail.handshakeHttps":"handshake and HTTPS through the tunnel","source.detail.dnsReach":"carrier DNS and reachability","source.detail.handshake":"handshake","source.detail.timeout2":"two timeouts in a row","source.detail.timeout":"timeout","source.detail.pcSilent":"the computer is not reporting","source.detail.sessionStopped":"phone session stopped","source.detail.notEnrolled":"probe not enrolled","source.detail.viaServer":"via {server}","server.open":"Open {server} details","server.checks":"Checks","server.load":"Load","server.software":"Software","server.keys":"Profiles","server.system":"Server","server.events":"Events","server.admin":"For administrator","server.connections":"Connections","server.awg":"AmneziaWG","server.xray":"Xray","server.xrayUnknown":"no Xray data","server.traffic":"Traffic","server.mbit":"Mbit/s","server.cpu":"CPU","server.memory":"Memory","server.swap":"swap","server.peak":"24h peak: {n}","server.lastConn":"Last connection","server.uptime24":"24-hour availability","server.uptime7":"7-day availability","server.range24":"24 h","server.range7d":"7 days","server.chartSummary":"Connections over {range}. The bar under the chart shows state: green — working, amber — issues, red — check failed, gap — no data.","server.keysIssued":"issued","server.keysEver":"ever connected","server.keysActive":"active today","server.sshOk":"SSH reachable","server.moduleOk":"VPN module","server.containerOk":"VPN container","server.portOk":"VPN port listening","server.dnsOk":"Domain resolves","server.ddnsOk":"DNS address matches","server.yes":"yes","server.no":"no","server.confirmedBy":"Confirmed by: {by}","server.by.pc":"computer check","server.by.humans":"member connections","server.by.both":"connections and check","server.by.none":"no evidence","server.by.stale":"data is stale","server.conflict":"Sources disagree: {a}, but {b}. Showing a cautious state.","server.conflict.pcFail":"the computer check failed","server.conflict.humansOk":"members are connected","server.conflict.abroadOk":"reachable from abroad","server.stale":"Data is stale: last evidence {duration} ago","server.freshness":"Freshness","server.software.kernel":"kernel module","server.software.docker":"in a container","server.software.ddns":"dynamic DNS","server.software.panel":"panel","server.software.tuning":"network tuning","events.title":"Events","events.filter.all":"All","events.filter.problems":"Problems","events.filter.notes":"Notes","events.empty":"No events in this period","events.emptyBody":"Monitoring has been running since {date}. A record will appear here as soon as a state changes.","events.error":"Could not load events","events.more":"Show more","events.loading":"Loading…","events.today":"Today","events.yesterday":"Yesterday","events.stateChanged":"{server}: {state}","events.sourceFailed":"{server}: “{source}” check failed","events.recovered":"{server}: service confirmed","events.note":"Administrator note","events.addressUpdated":"{server}: address updated","events.keysIssued":"{server}: new profiles issued","events.probeSilent":"“{source}” probe is not reporting","keys.title":"VPN profiles","keys.mvp":"New profiles are currently issued by the administrator","keys.body":"Message them — you will get a file or a QR code personally. It takes a couple of minutes.","keys.reserveTitle":"Backup profile","keys.reserve":"If you have a backup profile, select it in Amnezia","keys.reserveBody":"It uses the same key with a different address. Keep it imported and switched off.","help.title":"Help","help.contact":"Contact administrator","help.current":"Right now","help.step1.title":"Check the status","help.step1.body":"If the server ring is green, the problem is on your side: network, app or profile.","help.step2.title":"Reconnect","help.step2.body":"Turn the VPN off and on. The client will look up the server address again.","help.step3.title":"Switch server","help.step3.body":"Pick the server marked “Recommended” — its check has passed.","help.step4.title":"Enable the backup profile","help.step4.body":"If you have one, select it in Amnezia. If not, contact the administrator.","help.why":"Why is that?","help.whyIncident":"The server is alive and reachable from abroad, but checks from Russia fail while regular internet works. Usually this means the address is blocked. The administrator requests a new one; profiles do not change.","help.whyOk":"All checks pass. If it does not work for you, the cause is on your device or in your network.","help.whyUnknown":"There are no recent checks: the probes are not reporting. The server may be working — we just cannot confirm it right now.","admin.title":"Administrator","admin.attention":"Needs attention","admin.noAttention":"No urgent tasks","admin.probes":"Probes","admin.services":"Services","admin.doctor":"Doctor","admin.doctor.ok":"All good","admin.doctor.warn":"Warnings","admin.doctor.fail":"Errors","admin.doctor.next":"Next step","admin.note":"Note for members","admin.note.empty":"No note. It will appear above the server list for all members.","admin.note.edit":"Edit","admin.note.delete":"Delete","admin.note.expires":"Valid until {time}","admin.note.chars":"{n} / {max}","admin.note.placeholder":"What is happening and what members should do","admin.note.deleteConfirm":"Delete the note? Members will stop seeing it.","admin.enroll":"Enroll a device","admin.enroll.title":"Enrollment code","admin.enroll.body":"Enter the code in the app within 10 minutes. It is single-use and is not a permanent token.","admin.revoke":"Revoke","admin.revokeConfirm":"Revoke access for “{name}”? It will stop sending reports.","admin.demoAction":"Demo action: nothing changes in the mockup","admin.service.collector":"Collector","admin.service.api":"API","admin.service.bot":"Bot","admin.service.storage":"Storage","admin.service.queue":"Queue","admin.service.https":"HTTPS","admin.service.telegram":"Telegram","admin.probe.pc":"Computer","admin.probe.android":"Android","admin.probe.abroad":"Cross-server checks","admin.lastReport":"report {duration} ago","admin.notEnrolled":"not enrolled","admin.stale":"stale","admin.routeOk":"route verified","admin.routeBad":"route not verified","admin.queue":"queue {n}","admin.version":"version {v}","admin.serverAdd":"Add the first server","admin.serverAddBody":"Run the command where VPN Pulse is installed. The wizard asks for the server type, a name and SSH access.","admin.command":"Command","admin.severity.high":"urgent","admin.severity.medium":"important","admin.severity.low":"note","admin.state.ok":"ok","admin.state.warn":"warning","admin.state.fail":"error","admin.state.unknown":"no data","admin.diag.blocked":"Blocked in Russia: two timeouts in a row from Russia, reachable from abroad, SSH responds.","admin.diag.action":"Ask the host for a new address. DDNS will pick it up; member profiles do not change.","android.title":"VPN Pulse Probe","android.subtitle":"Mobile-network check from Russia","android.step.bind":"Enrollment","android.step.exclude":"VPN exclusion","android.step.cellular":"Network check","android.step.done":"Done","android.bind.title":"Enroll this phone","android.bind.body":"Enter the code from the Admin section of the Mini App. The code is valid for 10 minutes.","android.bind.code":"Enrollment code","android.bind.action":"Enroll","android.bind.error":"The code did not match or has expired. Request a new one.","android.exclude":"Exclude VPN Pulse Probe in Split App Tunneling","android.exclude.body":"Open Amnezia → Split App Tunneling → add VPN Pulse Probe to the apps that work without VPN. Then reconnect Amnezia.","android.exclude.confirm":"I have excluded the app","android.exclude.why":"Otherwise the checks go through the tunnel and show reachability from abroad, not from Russia.","android.cellularReady":"Checks use the mobile network outside the VPN","android.cellular.checking":"Checking the path through the mobile network…","android.cellular.ok":"Path confirmed: requests go through the mobile network, bypassing the VPN","android.cellular.fail":"Requests still go through the VPN or Wi-Fi","android.cellular.noSim":"No mobile internet","android.cellular.retry":"Check again","android.cellular.fix":"Check the exclusion in Amnezia and turn on mobile data","android.pcChecksVpn":"VPN tunnels are checked by the computer","android.done.body":"This phone will check the mobile network from Russia. Tap “Start” whenever convenient.","android.main.running":"Checking","android.main.stopped":"Stopped","android.main.everyMinute":"every minute while the screen is on","android.main.background":"in background — at most every 15 minutes","android.start":"Start","android.stop":"Stop","android.network":"Network","android.route":"Route outside VPN","android.route.ok":"verified","android.route.bad":"not verified","android.lastCheck":"Last check","android.queue":"Queue","android.queued":"waiting to send: {n}","android.offline":"Offline — results are saved and will be sent later","android.stale":"No checks for a long time","android.permission":"Network access permission is required","android.permission.action":"Open settings","android.results":"Results","android.result.ok":"reachable","android.result.fail":"not responding","android.result.unknown":"no data","android.sent":"Sent","android.bound":"Enrolled","android.unbind":"Unenroll","android.wifiOn":"Wi-Fi and Amnezia are on — not interfering","error.offline":"Could not load data","error.auth":"Members of the group only","error.authBody":"Open the app from the chat where the bot was added. Code: {code}","error.generic":"Something went wrong. Code: {code}","onboarding.title":"VPN Pulse first run","onboarding.intro":"This is what the app looks like right after installing it from the open repository — before any servers or probes are connected.","onboarding.demo":"Demo mode","onboarding.demoBody":"install.sh demo starts the interface on fictional data. The “Demo data” label is always visible.","onboarding.clean":"Clean install","onboarding.cleanBody":"No servers yet. A member sees a calm “being set up”; the administrator sees one command.","onboarding.partial":"Partial setup","onboarding.partialBody":"A server is connected but there are no probes. The system shows incomplete coverage, not a green success.","onboarding.doctor":"Doctor","onboarding.doctorBody":"vpn-pulse doctor checks the whole chain and gives one next step for every warning.","onboarding.memberView":"Member sees","onboarding.adminView":"Administrator sees","onboarding.next":"Next command","server.failedBy":"Failure confirmed by: {by}","status.sourceOn":"reporting","status.sourceOff":"not reporting","server.checksNone":"No probes connected — the state is confirmed by member connections"}};window.__FIXTURES={"meta":{"note":"Fictional demo data for the VPN Pulse prototypes. No real hosts, addresses or people.","since":"2026-06-06","noteMax":240},"servers":[{"id":"s1","name":{"ru":"Сервер 1","en":"Server 1"},"flag":"🇱🇻","cc":"lv","country":{"ru":"Латвия","en":"Latvia"},"protocols":["awg"],"seed":1,"abroadFrom":"s2","software":[{"name":"AmneziaWG","noteKey":"server.software.kernel"},{"name":"BBR + fq","noteKey":"server.software.tuning"}],"keys":{"issued":10,"ever":7,"active":4},"system":{"ssh":true,"engine":"module","port":true}},{"id":"s2","name":{"ru":"Сервер 2","en":"Server 2"},"flag":"🇳🇱","cc":"nl","country":{"ru":"Нидерланды","en":"Netherlands"},"protocols":["awg"],"seed":3,"abroadFrom":"s1","software":[{"name":"AmneziaWG","noteKey":"server.software.docker"},{"name":"DDNS","noteKey":"server.software.ddns"}],"keys":{"issued":50,"ever":17,"active":10},"system":{"ssh":true,"engine":"container","port":true,"dns":true,"ddns":true}},{"id":"s3","name":{"ru":"Сервер 3","en":"Server 3"},"flag":"🇫🇮","cc":"fi","country":{"ru":"Финляндия","en":"Finland"},"protocols":["awg","xray"],"seed":5,"abroadFrom":"s1","software":[{"name":"Hiddify Manager","noteKey":"server.software.panel"},{"name":"Xray 26.2","note":"VLESS · Reality"},{"name":"AmneziaWG","noteKey":"server.software.docker"}],"keys":{"issued":26,"ever":19,"active":9},"system":{"ssh":true,"engine":"container","port":true}}],"eventSets":{"base":[{"kind":"recovered","server":"s3","day":0,"time":"08:02","sev":"ok"},{"kind":"sourceFailed","server":"s3","source":"mobile","day":0,"time":"07:41","sev":"problem"},{"kind":"recovered","server":"s2","day":1,"time":"09:24","sev":"ok"},{"kind":"sourceFailed","server":"s2","source":"mobile","day":1,"time":"09:10","sev":"problem"},{"kind":"note","day":1,"time":"09:12","sev":"note","text":{"ru":"Проблемы у одного оператора, остальные в порядке","en":"One carrier has issues, others are fine"}},{"kind":"keysIssued","server":"s2","day":"2026-09-09","time":"10:35","sev":"info"},{"kind":"addressUpdated","server":"s2","day":"2026-09-08","time":"12:18","sev":"info"},{"kind":"stateChanged","server":"s2","state":"unavailable","day":"2026-09-07","time":"11:03","sev":"problem"}]},"defaults":{"load":{"s1":{"awg":0,"xray":null,"xrayKnown":true,"mbit":0,"cpu":4,"ram":20,"swap":2,"peak":5,"lastConnMin":180},"s2":{"awg":7,"xray":null,"xrayKnown":true,"mbit":11,"cpu":12,"ram":47,"swap":5,"peak":10,"lastConnMin":0},"s3":{"awg":5,"xray":null,"xrayKnown":false,"mbit":18,"cpu":21,"ram":54,"swap":17,"peak":14,"lastConnMin":0}},"sourcesOk":{"pc":{"r":"ok","age":1,"detailKey":"source.detail.handshakeHttps"},"mobile":{"r":"ok","age":4,"detailKey":"source.detail.dnsReach"},"abroad":{"r":"ok","age":1,"detailKey":"source.detail.handshake"}},"admin":{"probes":{"pc":{"state":"ok","lastMin":1,"route":true,"queue":0,"version":"0.1"},"android":{"state":"ok","lastMin":4,"session":"active","queue":0,"version":"0.1"},"abroad":{"state":"ok","lastMin":1,"queue":0}},"services":{"collector":"ok","api":"ok","bot":"ok","storage":"ok","queue":"ok","https":"ok","telegram":"ok"},"doctor":{"result":"ok","items":[]},"enrollCode":"7K4Q-2M9X","attention":[{"sev":"high","server":"s1","text":{"ru":"Ядро обновлено, модуль VPN собран только под текущее ядро. Перезагрузка оставит сервер без VPN.","en":"Kernel updated; the VPN module is built only for the current kernel. A reboot would leave the server without VPN."},"code":"KERNEL_MODULE_MISMATCH"},{"sev":"medium","server":"s3","text":{"ru":"Диск 82%, swap 332 МБ. Есть что освободить.","en":"Disk 82%, swap 332 MB. There is space to reclaim."},"code":"DISK_PRESSURE"},{"sev":"low","server":"s3","text":{"ru":"Нет доступа к данным Xray — нагрузка показана без него.","en":"No access to Xray data — load is shown without it."},"code":"XRAY_NO_ACCESS"}]}},"scenarios":{"loading":{"overall":"unknown","loading":true,"freshnessMin":null,"recommended":null,"servers":{},"events":[],"admin":null},"operational":{"overall":"operational","freshnessMin":1,"recommended":"s1","servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"operational","uptime24":"100%","uptime7":"99,1%","confirmedBy":"both","marks":[[18,18,"degraded"]]},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"both"}},"events":"base"},"degraded":{"overall":"degraded","freshnessMin":1,"recommended":"s1","servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"operational","uptime24":"100%","uptime7":"99,1%","confirmedBy":"both"},"s3":{"state":"degraded","uptime24":"99,2%","uptime7":"99,8%","confirmedBy":"both","scope":"mobile","sources":{"mobile":{"r":"fail","age":2,"detailKey":"source.detail.timeout"}},"marks":[[44,47,"degraded"]]}},"events":[{"kind":"sourceFailed","server":"s3","source":"mobile","day":0,"time":"14:31","sev":"problem"}],"eventsAppend":"base"},"unavailable":{"overall":"unavailable","freshnessMin":1,"recommended":"s1","note":{"text":{"ru":"Похоже на блокировку адреса. Запросил у хостера новый — обычно около часа. Пока подключайтесь к Серверу 1.","en":"Looks like the address is blocked. I asked the host for a new one — usually about an hour. Use Server 1 for now."},"time":"14:40","expires":"18:00"},"servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"unavailable","uptime24":"96,2%","uptime7":"98,9%","confirmedBy":"pc","sources":{"pc":{"r":"fail","age":1,"detailKey":"source.detail.timeout2"},"mobile":{"r":"fail","age":3,"detailKey":"source.detail.timeout"}},"load":{"awg":0,"mbit":0,"cpu":3,"lastConnMin":18},"marks":[[46,47,"unavailable"]],"diag":"blocked"},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"both"}},"events":[{"kind":"stateChanged","server":"s2","state":"unavailable","day":0,"time":"14:32","sev":"problem"},{"kind":"note","day":0,"time":"14:40","sev":"note","text":{"ru":"Запросил новый адрес у хостера","en":"Requested a new address from the host"}}],"eventsAppend":"base","admin":{"attentionPrepend":[{"sev":"high","server":"s2","text":{"ru":"Не проходит проверка из России 18 минут; из-за границы доступен. Похоже на блокировку адреса.","en":"Failing checks from Russia for 18 minutes; reachable from abroad. Looks like the address is blocked."},"code":"BLOCKED_IN_COUNTRY"}]}},"unknown":{"overall":"unknown","freshnessMin":25,"recommended":null,"servers":{"s1":{"state":"unknown","uptime24":"—","uptime7":"99,6%","confirmedBy":"none","staleMin":25,"gapFrom":30,"sources":{"pc":{"r":"unknown","age":25,"detailKey":"source.detail.pcSilent"},"mobile":{"r":"unknown","age":120,"detailKey":"source.detail.sessionStopped"}}},"s2":{"state":"operational","uptime24":"100%","uptime7":"99,1%","confirmedBy":"humans","sources":{"pc":{"r":"unknown","age":25,"detailKey":"source.detail.pcSilent"},"mobile":{"r":"unknown","age":120,"detailKey":"source.detail.sessionStopped"}}},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"humans","sources":{"pc":{"r":"unknown","age":25,"detailKey":"source.detail.pcSilent"},"mobile":{"r":"unknown","age":120,"detailKey":"source.detail.sessionStopped"}}}},"events":[{"kind":"probeSilent","source":"pc","day":0,"time":"14:10","sev":"problem"}],"eventsAppend":"base","admin":{"probes":{"pc":{"state":"unknown","lastMin":25,"route":true,"queue":0,"version":"0.1"},"android":{"state":"unknown","lastMin":120,"session":"stopped","queue":3,"version":"0.1"}},"attentionPrepend":[{"sev":"medium","text":{"ru":"Пробник на компьютере молчит 25 минут. Компьютер спит или без сети.","en":"The computer probe has been silent for 25 minutes. The computer is asleep or offline."},"code":"PROBE_SILENT"}],"doctor":{"result":"warn","items":[{"name":"probes","state":"warn","next":{"ru":"Разбудите компьютер или проверьте сеть; пробник продолжит сам","en":"Wake the computer or check its network; the probe resumes on its own"},"cmd":"vpn-pulse doctor probes"}]}}},"offline":{"overall":"operational","api":"offline","lastKnownTime":"14:03","freshnessMin":31,"recommended":"s1","inherit":"operational"},"auth":{"overall":"unknown","api":"auth","code":"MEMBERSHIP_REQUIRED","servers":{},"events":[],"admin":null},"empty_events":{"inherit":"operational","events":[],"eventsAppend":null},"long_note":{"inherit":"operational","note":{"text":{"ru":"Сегодня ночью с 02:00 до 03:00 хостер обновляет сеть в Латвии. Сервер 1 может быть недоступен до часа. Ничего делать не нужно: приложение само восстановит подключение, а если нет — выключите и включите VPN. Сервер 2 и Сервер 3 работают как обычно, при желании переключитесь на них заранее. Если после 03:30 подключение не восстановилось, напишите мне.","en":"Tonight from 02:00 to 03:00 the host is upgrading its network in Latvia. Server 1 may be unavailable for up to an hour. Nothing to do: the app will reconnect on its own; if not, turn the VPN off and on. Server 2 and Server 3 work as usual — switch to them in advance if you like. If the connection is not back after 03:30, message me."},"time":"20:15","expires":"04:00"}},"conflict":{"overall":"degraded","freshnessMin":1,"recommended":"s1","servers":{"s1":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"pc"},"s2":{"state":"degraded","uptime24":"99,7%","uptime7":"99,1%","confirmedBy":"humans","conflict":{"a":"server.conflict.pcFail","b":"server.conflict.humansOk"},"sources":{"pc":{"r":"fail","age":1,"detailKey":"source.detail.timeout"}},"marks":[[47,47,"degraded"]]},"s3":{"state":"operational","uptime24":"100%","uptime7":"100%","confirmedBy":"both"}},"events":[{"kind":"sourceFailed","server":"s2","source":"pc","day":0,"time":"14:32","sev":"problem"}],"eventsAppend":"base"},"demo":{"inherit":"operational","demo":true},"clean_install":{"overall":"unknown","freshnessMin":null,"recommended":null,"empty":true,"servers":{},"events":[],"admin":{"attention":[],"probes":{"pc":{"state":"unknown","enrolled":false},"android":{"state":"unknown","enrolled":false},"abroad":{"state":"unknown","enrolled":false}},"services":{"collector":"unknown","api":"ok","bot":"ok","storage":"ok","queue":"ok","https":"ok","telegram":"ok"},"doctor":{"result":"fail","items":[{"name":"servers","state":"fail","next":{"ru":"Подключите первый сервер","en":"Connect the first server"},"cmd":"vpn-pulse server add"},{"name":"probes","state":"warn","next":{"ru":"После сервера привяжите пробники","en":"After the server, enroll the probes"},"cmd":"vpn-pulse probe enroll pc"}]},"nextCommand":"vpn-pulse server add"}},"partial_coverage":{"overall":"unknown","freshnessMin":1,"recommended":null,"coverageMissing":["pc","mobile","abroad"],"servers":{"s1":{"state":"unknown","uptime24":"—","uptime7":"—","confirmedBy":"none","gapFrom":0,"sources":{"pc":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"mobile":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"abroad":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"}}},"s2":{"state":"operational","uptime24":"—","uptime7":"—","confirmedBy":"humans","gapFrom":0,"sources":{"pc":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"mobile":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"},"abroad":{"r":"unknown","age":null,"detailKey":"source.detail.notEnrolled"}}}},"events":[],"admin":{"attention":[{"sev":"medium","text":{"ru":"Пробники не привязаны: состояние серверов подтверждают только подключения участников.","en":"Probes are not enrolled: server state is confirmed only by member connections."},"code":"PROBES_NOT_ENROLLED"}],"probes":{"pc":{"state":"unknown","enrolled":false},"android":{"state":"unknown","enrolled":false},"abroad":{"state":"unknown","enrolled":false}},"doctor":{"result":"warn","items":[{"name":"probes","state":"warn","next":{"ru":"Привяжите пробник на компьютере","en":"Enroll the computer probe"},"cmd":"vpn-pulse probe enroll pc"},{"name":"servers","state":"warn","next":{"ru":"Подключите остальные серверы","en":"Connect the remaining servers"},"cmd":"vpn-pulse server add"}]},"nextCommand":"vpn-pulse probe enroll pc"}},"no_pc":{"inherit":"operational","servers":{"s1":{"confirmedBy":"humans"},"s2":{"confirmedBy":"humans"},"s3":{"confirmedBy":"humans"}},"admin":{"probes":{"pc":{"state":"unknown","enrolled":false}}}}}};</script>
 <script>
-/* VPN Pulse — Mini App v4 prototype logic.
-   Self-contained: i18n dictionaries and fixtures are inlined at build time as
-   window.__I18N and window.__FIXTURES. No network, no secrets. */
+/* VPN Pulse — view model: one shape for the renderer, two producers.
+     fromFixtures(FX, scenarioId, ctx)  — compact demo scenarios (prototype opened as a file, showcase)
+     fromApi(bundle, ctx)               — contract payloads (live API, dev server)
+   app.js consumes only the shape below and never looks at raw fixtures or raw API payloads,
+   so both paths must render the same DOM — scripts/ui_check.py --parity enforces that. */
+window.VPNPulseModel = (function () {
+  'use strict';
+  const KINDS = ['pc', 'mobile', 'abroad'];
+  const KIND_PROBE = { pc: 'pc', mobile: 'android', abroad: 'abroad' };
+  const STATE_RESULT = { operational: 'ok', unavailable: 'fail', degraded: 'partial', unknown: 'unknown' };
+  const NOTE_MAX = 240;
+  const FRESH_MIN = 3; // freshness window in minutes (monitoring policy: 180 s)
+
+  // ---------- shared helpers (formatting lives here so both producers agree) ----------
+  const pick = (v, lang) => (v && typeof v === 'object') ? (v[lang] || v.ru || '') : (v === undefined || v === null ? '' : String(v));
+  function fmtPct(x, lang) {
+    if (x === null || x === undefined || isNaN(x)) return '—';
+    const p = Math.round(x * 1000) / 10;
+    const s = Number.isInteger(p) ? String(p) : p.toFixed(1);
+    return (lang === 'ru' ? s.replace('.', ',') : s) + '%';
+  }
+  const parsePct = s => { if (s === null || s === undefined || s === '—') return null; const n = parseFloat(String(s).replace('%', '').replace(',', '.')); return isNaN(n) ? null : n / 100; };
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const fmtTime = d => d ? pad(d.getHours()) + ':' + pad(d.getMinutes()) : '';
+  const minutesSince = (iso, now) => iso ? Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60000)) : null;
+  function countryName(cc, lang, fallback) {
+    try { const n = new Intl.DisplayNames([lang === 'ru' ? 'ru' : 'en'], { type: 'region' }).of(cc.toUpperCase()); if (n && n !== cc.toUpperCase()) return n; } catch (e) { /* old webview */ }
+    return fallback || cc.toUpperCase();
+  }
+  // fictional demand curve shared with the dev server (vpnpulse.dev.scenarios._seeded)
+  function seeded(seed, base, amp, points, hoursPerPoint) {
+    const a = [];
+    for (let i = 0; i < points; i++) { const h = i * hoursPerPoint, day = Math.max(0, Math.sin((h - 6) / 24 * Math.PI * 2)); a.push(Math.max(0, Math.round((base + amp * day + ((i * 7 + seed) % 5) * 0.3 - 0.6) * 10) / 10)); }
+    return a;
+  }
+  const roundCount = v => v === null ? null : Math.floor(v + 0.5);
+  // day/time of a fixture event → Date (UTC calendar, like the dev server)
+  function fixtureAt(now, day, hhmm) {
+    const [h, m] = String(hhmm || '00:00').split(':').map(Number);
+    if (typeof day === 'number') { const d = new Date(now); d.setUTCDate(d.getUTCDate() - day); return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), h, m)); }
+    const p = String(day).split('-').map(Number); return new Date(Date.UTC(p[0], p[1] - 1, p[2], h, m));
+  }
+  // what confirms the current state: the PC test, member connections, both or nothing
+  function confirmedBy(state, sources, humans) {
+    const pc = sources.pc;
+    const pcConfirms = pc && pc.age !== null && pc.age !== undefined && pc.age <= FRESH_MIN && (state === 'unavailable' ? pc.r === 'fail' : pc.r === 'ok');
+    const humansConfirm = humans && state !== 'unavailable' && state !== 'unknown';
+    return pcConfirms && humansConfirm ? 'both' : pcConfirms ? 'pc' : humansConfirm ? 'humans' : 'none';
+  }
+  function conflictOf(state, sources, humans) {
+    if (state === 'unavailable' || !sources.pc || sources.pc.r !== 'fail') return null;
+    if (humans) return { a: 'server.conflict.pcFail', b: 'server.conflict.humansOk' };
+    if (sources.abroad && sources.abroad.r === 'ok') return { a: 'server.conflict.pcFail', b: 'server.conflict.abroadOk' };
+    return null;
+  }
+  const missingKinds = presence => { const m = KINDS.filter(k => presence[k] === 'none'); return m.length ? m : null; };
+  function finishServer(s, lang) {
+    s.country = countryName(s.cc, lang, s.countryFallback);
+    s.uptime24 = fmtPct(s.uptime24n, lang); s.uptime7 = fmtPct(s.uptime7n, lang);
+    return s;
+  }
+
+  // ---------- producer 1: compact fixtures ----------
+  function merged(FX, id) {
+    const raw = FX.scenarios[id] || FX.scenarios.operational;
+    if (!raw.inherit) return Object.assign({}, raw);
+    const base = merged(FX, raw.inherit), sc = Object.assign({}, base, raw);
+    sc.servers = Object.assign({}, base.servers || {});
+    Object.keys(raw.servers || {}).forEach(sid => { sc.servers[sid] = Object.assign({}, sc.servers[sid] || {}, raw.servers[sid]); });
+    if (!('events' in raw)) sc.events = base.events;
+    return sc;
+  }
+  function fromFixtures(FX, id, ctx) {
+    const lang = ctx.lang, now = ctx.now;
+    const sc = merged(FX, id);
+    const vm = {
+      id, source: 'fixtures', overall: sc.overall || 'unknown', freshnessMin: sc.freshnessMin === undefined ? null : sc.freshnessMin,
+      recommended: sc.recommended || null, empty: !!sc.empty, loading: !!sc.loading, api: sc.api || null, code: sc.code || null,
+      demo: !!sc.demo, lastKnownTime: sc.lastKnownTime || null, since: FX.meta.since ? new Date(FX.meta.since + 'T00:00:00Z') : null,
+      noteMax: NOTE_MAX, note: null, list: [], eventsList: [], adminData: null, presence: {}
+    };
+    if (sc.note) vm.note = { text: pick(sc.note.text, lang), at: fixtureAt(now, 0, sc.note.time), expires: sc.note.expires ? fixtureAt(now, 0, sc.note.expires) : null };
+    // events
+    let ev = sc.events; if (typeof ev === 'string') ev = FX.eventSets[ev]; ev = (ev || []).slice();
+    if (sc.eventsAppend) ev = ev.concat(FX.eventSets[sc.eventsAppend]);
+    vm.eventsList = ev.map(e => ({ kind: e.kind, sev: e.sev, server: e.server || null, at: fixtureAt(now, e.day, e.time), text: e.text === undefined ? null : pick(e.text, lang), source: e.source || null, state: e.state || null }));
+    vm.eventsList.sort((a, b) => b.at - a.at); // newest first, ties keep their order (stable sort) — same as the API
+    // admin
+    if (sc.admin !== null) {
+      const a = sc.admin || {}, A = FX.defaults.admin;
+      const attention = (a.attentionPrepend || []).concat(a.attention !== undefined ? a.attention : A.attention);
+      vm.adminData = {
+        attention: attention.map(x => ({ sev: x.sev, server: x.server || null, text: pick(x.text, lang), code: x.code || 'ATTENTION' })),
+        probes: (() => { const raw = Object.assign({}, A.probes, a.probes || {}), out = {}; Object.keys(raw).forEach(k => { out[k] = Object.assign({ id: 'probe-' + k }, raw[k]); }); return out; })(),
+        services: Object.assign({}, A.services, a.services || {}),
+        doctor: { result: (a.doctor || A.doctor).result, items: (a.doctor || A.doctor).items.map(it => ({ name: it.name, state: it.state, next: pick(it.next, lang), cmd: it.cmd || null })) },
+        enrollCode: A.enrollCode, nextCommand: a.nextCommand || null
+      };
+    }
+    // presence of check sources
+    const over = sc.sources || {};
+    KINDS.forEach(k => {
+      if (over[k]) { vm.presence[k] = over[k]; return; }
+      const p = vm.adminData ? vm.adminData.probes[KIND_PROBE[k]] : null;
+      vm.presence[k] = !p || p.enrolled === false ? 'none' : (p.state === 'unknown' ? 'silent' : 'active');
+    });
+    vm.coverageMissing = missingKinds(vm.presence);
+    // servers
+    if (!sc.empty && !sc.loading && sc.api !== 'auth') {
+      FX.servers.forEach(base_s => {
+        const o = (sc.servers || {})[base_s.id]; if (!o) return;
+        const s = Object.assign({}, base_s, o);
+        s.name = pick(s.name, lang); s.countryFallback = pick(base_s.country, lang);
+        s.abroadFrom = base_s.abroadFrom || null;
+        s.load = Object.assign({}, FX.defaults.load[s.id], o.load || {});
+        s.sources = {};
+        KINDS.forEach(k => { s.sources[k] = Object.assign({}, FX.defaults.sourcesOk[k], (o.sources || {})[k] || {}); });
+        // a source whose probe does not exist carries no evidence (the API sends none for it)
+        KINDS.forEach(k => { if (vm.presence[k] === 'none') s.sources[k] = { r: 'unknown', age: null, detailKey: 'source.detail.notEnrolled' }; s.sources[k].via = k === 'abroad' ? s.abroadFrom : null; });
+        const base = s.load.awg ? 1 + s.load.awg / 4 : 0.3, amp = 3 + s.load.awg;
+        s.series = seeded(s.seed, base, amp, 48, 0.5);
+        if (s.state === 'unavailable') { s.series[46] = 0; s.series[47] = 0; }
+        s.segs = []; for (let i = 0; i < 48; i++) s.segs.push('operational');
+        (o.marks || []).forEach(m => { for (let i = m[0]; i <= m[1]; i++) s.segs[i] = m[2]; });
+        if (o.gapFrom !== undefined) { for (let i = o.gapFrom; i < 48; i++) { s.segs[i] = 'unknown'; s.series[i] = null; } }
+        s.series = s.series.map(roundCount);
+        s.series7 = seeded(s.seed, base, amp, 168, 1); s.segs7 = [];
+        for (let i = 0; i < 168; i++) s.segs7.push(i < 120 ? 'operational' : s.segs[i - 120]);
+        s.series7 = s.series7.map((v, i) => s.segs7[i] === 'unknown' ? null : roundCount(v));
+        s.software = (s.software || []).map(w => ({ name: w.name, noteKey: w.noteKey || null, note: w.note || null }));
+        s.uptime24n = parsePct(s.uptime24); s.uptime7n = parsePct(s.uptime7);
+        s.diag = !!s.diag;
+        const humans = s.confirmedBy === 'humans' || s.confirmedBy === 'both';
+        s.confirmedBy = confirmedBy(s.state, s.sources, humans);
+        s.conflict = conflictOf(s.state, s.sources, humans);
+        vm.list.push(finishServer(s, lang));
+      });
+    }
+    return vm;
+  }
+
+  // ---------- producer 2: contract payloads ----------
+  function evidenceMap(items, now) {
+    const out = {};
+    (items || []).forEach(x => { if (KINDS.indexOf(x.source) === -1) return; out[x.source] = { r: STATE_RESULT[x.state] || 'unknown', age: minutesSince(x.freshness && x.freshness.observed_at, now), detailKey: x.reason_code ? 'source.detail.' + x.reason_code : 'source.detail.notEnrolled', via: x.via_server_id || null }; });
+    return out;
+  }
+  function apiServer(card, detail, metrics, adminDetail, ctx) {
+    const lang = ctx.lang, now = ctx.now, d = detail || {};
+    const s = { id: card.id, name: card.name, cc: (card.country_code || '').toLowerCase(), countryFallback: card.country_code, state: card.state };
+    s.uptime24n = card.uptime_24h === undefined ? null : card.uptime_24h; s.uptime7n = d.uptime_7d === undefined ? null : d.uptime_7d;
+    s.staleMin = card.freshness && card.freshness.is_stale && card.freshness.observed_at ? minutesSince(card.freshness.observed_at, now) : undefined;
+    const evidence = (d.checks && d.checks.length ? d.checks : card.sources) || [];
+    s.sources = evidenceMap(evidence, now);
+    KINDS.forEach(k => { if (!s.sources[k]) s.sources[k] = { r: 'unknown', age: null, detailKey: 'source.detail.notEnrolled', via: null }; });
+    s.abroadFrom = s.sources.abroad.via;
+    const humans = evidence.some(x => x.source === 'human_activity' && x.state === 'operational' && !(x.freshness && x.freshness.is_stale));
+    s.confirmedBy = confirmedBy(s.state, s.sources, humans);
+    s.conflict = conflictOf(s.state, s.sources, humans);
+    const protos = d.protocols || [];
+    s.protocols = protos.map(p => p.kind === 'xray_reality' ? 'xray' : 'awg');
+    const awg = protos.find(p => p.kind === 'amneziawg'), xr = protos.find(p => p.kind === 'xray_reality'), res = d.resources || {}, prof = d.profiles || {};
+    s.load = { awg: awg ? (awg.connections || 0) : 0, xray: xr ? xr.connections : null, xrayKnown: xr ? xr.connections !== null : true, mbit: res.traffic_mbps === undefined ? null : res.traffic_mbps, cpu: res.cpu_percent === undefined ? null : res.cpu_percent, ram: res.memory_percent === undefined ? null : res.memory_percent, swap: res.swap_percent === undefined ? null : res.swap_percent, peak: res.peak_connections_24h === undefined ? null : res.peak_connections_24h, lastConnMin: minutesSince(prof.last_connection_at, now) };
+    s.software = (d.components || []).map(c => ({ name: c.name + (c.version ? ' ' + c.version : ''), noteKey: c.note_key || null, note: c.note || null }));
+    s.keys = { issued: prof.issued === undefined ? null : prof.issued, ever: prof.ever_connected === undefined ? null : prof.ever_connected, active: prof.active_24h === undefined ? null : prof.active_24h };
+    const checks = {}; (d.service_checks || []).forEach(c => { checks[c.check] = c.ok; });
+    const engineKernel = (d.components || []).some(c => c.id === 'amneziawg' && c.note_key === 'server.software.kernel');
+    s.system = { ssh: checks.ssh !== false, engine: engineKernel ? 'module' : 'container', port: checks.port !== false };
+    if ('dns' in checks) { s.system.dns = true; s.system.ddns = checks.ddns !== false; }
+    const m24 = metrics && metrics['24h'], m7 = metrics && metrics['7d'];
+    s.series = m24 ? m24.points.map(p => p.connections) : []; s.segs = m24 ? m24.points.map(p => p.state) : [];
+    s.series7 = m7 ? m7.points.map(p => p.connections) : null; s.segs7 = m7 ? m7.points.map(p => p.state) : null;
+    s.diag = !!(adminDetail && adminDetail.diagnostics && adminDetail.diagnostics.code === 'BLOCKED_IN_COUNTRY');
+    return finishServer(s, lang);
+  }
+  function fromApi(b, ctx) {
+    const now = ctx.now, st = b.status;
+    const vm = { id: ctx.scenario || 'live', source: 'api', overall: st.state, freshnessMin: minutesSince(st.freshness && st.freshness.observed_at, now), recommended: st.recommended_server_id || null,
+      empty: st.servers.length === 0, loading: false, api: null, code: null, demo: st.mode === 'demo', lastKnownTime: null,
+      since: st.observing_since ? new Date(st.observing_since) : null, noteMax: NOTE_MAX, note: null, list: [], eventsList: [], adminData: null, presence: {} };
+    if (st.note) vm.note = { text: st.note.text, at: new Date(st.note.created_at), expires: st.note.expires_at ? new Date(st.note.expires_at) : null };
+    KINDS.forEach(k => { vm.presence[k] = 'none'; });
+    (st.sources || []).forEach(x => { if (KINDS.indexOf(x.source) !== -1) vm.presence[x.source] = x.state; });
+    vm.coverageMissing = missingKinds(vm.presence);
+    vm.list = st.servers.map(card => apiServer(card, b.details && b.details[card.id], b.metrics && b.metrics[card.id], b.admin && b.admin.details && b.admin.details[card.id], ctx));
+    vm.eventsList = ((b.events && b.events.items) || []).map(e => {
+      const kind = String(e.title_key || '').replace(/^events\./, '');
+      const sev = e.kind === 'note' ? 'note' : kind === 'recovered' ? 'ok' : (e.severity === 'critical' || e.severity === 'warning') ? 'problem' : 'info';
+      const p = e.params || {};
+      return { kind, sev, server: e.server_id || null, at: new Date(e.occurred_at), text: p.text === undefined ? null : p.text, source: p.source || null, state: p.state || null };
+    });
+    if (b.admin) {
+      const ov = b.admin.overview || { attention_items: [], doctor: { result: 'ok', items: [] }, next_command: null };
+      const probes = {};
+      (b.admin.probes || []).forEach(p => {
+        if (p.status === 'revoked') return;
+        const e = { id: p.id, state: p.status === 'active' ? 'ok' : 'unknown', enrolled: true, lastMin: minutesSince(p.last_seen_at, now) };
+        if (p.status === 'stopped') e.session = 'stopped';
+        if (p.route_verified !== null && p.route_verified !== undefined) e.route = p.route_verified;
+        if (p.queued_reports !== null && p.queued_reports !== undefined) e.queue = p.queued_reports;
+        if (p.agent_version) e.version = p.agent_version;
+        if (e.lastMin === null) delete e.lastMin;
+        probes[p.kind] = e;
+      });
+      ['pc', 'android', 'abroad'].forEach(k => { if (!probes[k]) probes[k] = { state: 'unknown', enrolled: false }; });
+      const services = {}; const checks = (b.admin.readiness && b.admin.readiness.checks) || {};
+      Object.keys(checks).forEach(n => { services[n] = checks[n].ok ? 'ok' : (checks[n].age_seconds === null || checks[n].age_seconds === undefined ? 'unknown' : 'fail'); });
+      vm.adminData = {
+        attention: (ov.attention_items || []).map(a => ({ sev: a.severity, server: a.server_id || null, text: a.message, code: a.code })),
+        probes, services,
+        doctor: { result: ov.doctor.result, items: (ov.doctor.items || []).map(it => ({ name: it.check, state: it.state, next: it.next, cmd: it.command || null })) },
+        enrollCode: null, nextCommand: ov.next_command || null
+      };
+    }
+    return vm;
+  }
+  // an unreachable API: last good model with the offline flag, or an empty offline shell
+  function offline(lastGood, ctx) {
+    const base = lastGood ? Object.assign({}, lastGood) : { id: 'offline', source: 'api', overall: 'unknown', freshnessMin: null, recommended: null, empty: false, demo: false, since: null, noteMax: NOTE_MAX, note: null, list: [], eventsList: [], adminData: null, presence: { pc: 'none', mobile: 'none', abroad: 'none' }, coverageMissing: null };
+    base.api = 'offline'; base.loading = false; base.code = null; base.lastKnownTime = ctx.lastGoodAt ? fmtTime(ctx.lastGoodAt) : '—';
+    return base;
+  }
+  const authFailed = code => ({ id: 'auth', source: 'api', overall: 'unknown', freshnessMin: null, recommended: null, empty: false, loading: false, api: 'auth', code: code || 'MEMBERSHIP_REQUIRED', demo: false, lastKnownTime: null, since: null, noteMax: NOTE_MAX, note: null, list: [], eventsList: [], adminData: null, presence: { pc: 'none', mobile: 'none', abroad: 'none' }, coverageMissing: null });
+  const loading = () => ({ id: 'loading', source: 'api', overall: 'unknown', freshnessMin: null, recommended: null, empty: false, loading: true, api: null, code: null, demo: false, lastKnownTime: null, since: null, noteMax: NOTE_MAX, note: null, list: [], eventsList: [], adminData: null, presence: { pc: 'none', mobile: 'none', abroad: 'none' }, coverageMissing: null });
+
+  return { KINDS, NOTE_MAX, fromFixtures, fromApi, offline, authFailed, loading, fmtPct, fmtTime, minutesSince, pick };
+})();
+
+</script>
+<script>
+/* VPN Pulse — API client for contracts/openapi.yaml (v1.3).
+   One fetch wrapper: same-origin cookies, Accept-Language, problem+json errors.
+   `scenario` is a dev-server affordance (?scenario=…); a real deployment ignores it. */
+window.VPNPulseApi = function (opts) {
+  'use strict';
+  const base = (opts.base || '/api/v1').replace(/\/$/, '');
+  function ApiError(status, code, message) { this.status = status; this.code = code || 'HTTP_ERROR'; this.message = message || this.code; }
+  ApiError.prototype = Object.create(Error.prototype);
+
+  function url(path, params) {
+    const p = new URLSearchParams();
+    Object.keys(params || {}).forEach(k => { if (params[k] !== undefined && params[k] !== null) p.set(k, String(params[k])); });
+    const sc = opts.scenario && opts.scenario(); if (sc) p.set('scenario', sc);
+    const qs = p.toString();
+    return base + path + (qs ? (path.indexOf('?') === -1 ? '?' : '&') + qs : '');
+  }
+  async function call(method, path, params, body) {
+    const headers = { 'Accept': 'application/json', 'Accept-Language': opts.lang() };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    let res;
+    try {
+      res = await fetch(url(path, params), { method, headers, credentials: 'same-origin', body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch (e) { throw new ApiError(0, 'NETWORK', String(e && e.message || e)); }
+    if (res.status === 204) return null;
+    let data = null;
+    const ct = res.headers.get('content-type') || '';
+    if (ct.indexOf('json') !== -1) { try { data = await res.json(); } catch (e) { data = null; } }
+    if (!res.ok) throw new ApiError(res.status, data && data.code, data && data.title);
+    return data;
+  }
+  return {
+    ApiError,
+    // sessions
+    session: initData => call('POST', '/sessions', null, { init_data: initData }),
+    devSession: role => call('POST', '/dev/session', { role }),
+    me: () => call('GET', '/sessions/current'),
+    logout: () => call('DELETE', '/sessions/current'),
+    // member reads
+    status: () => call('GET', '/status'),
+    server: id => call('GET', '/servers/' + encodeURIComponent(id)),
+    metrics: (id, period) => call('GET', '/servers/' + encodeURIComponent(id) + '/metrics', { period }),
+    events: (filter, limit, cursor) => call('GET', '/events', { filter, limit, cursor }),
+    help: () => call('GET', '/help'),
+    ready: () => call('GET', '/health/ready'),
+    // admin
+    adminServer: id => call('GET', '/admin/servers/' + encodeURIComponent(id)),
+    adminProbes: () => call('GET', '/admin/probes'),
+    adminOverview: () => call('GET', '/admin/overview'),
+    createEnrollment: (kind, capabilities) => call('POST', '/admin/probe-enrollments', null, { kind, capabilities }),
+    revokeProbe: id => call('POST', '/admin/probes/' + encodeURIComponent(id) + '/revoke'),
+    putNote: (text, expiresAt) => call('PUT', '/admin/note', null, { text, expires_at: expiresAt || null }),
+    deleteNote: () => call('DELETE', '/admin/note'),
+    // analytics
+    analytics: events => call('POST', '/analytics/events:batch', null, { events })
+  };
+};
+
+</script>
+<script>
+/* VPN Pulse — Mini App logic.
+   Renders one view model (window.VPNPulseModel) that comes either from the API
+   (window.VPNPulseApi, live or dev server) or from the inlined demo scenarios
+   (prototype opened as a file, showcase). Strings: window.__I18N (RU/EN). No secrets. */
 (function () {
   'use strict';
-  const I18N = window.__I18N, FX = window.__FIXTURES;
+  const I18N = window.__I18N, FX = window.__FIXTURES, Model = window.VPNPulseModel;
   const q = new URLSearchParams(location.search);
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  // data source: the API when served next to it (/app/) or inside Telegram, demo scenarios otherwise
+  const MODE = q.get('data') || ((tg && tg.initData) || location.pathname.indexOf('/app/') !== -1 ? 'api' : 'fixtures');
 
   // ---------- state ----------
   const store = {
@@ -576,12 +868,16 @@ body { flex-direction: column; }
     filter: 'all', range: '24h', open: 'checks',
     hintDismissed: store.get('hint', '') === '1',
     scrollPos: 0, originRow: null, eventsPage: 1, noteExpanded: false, eventsState: 'ok',
-    text200: q.get('text') === '200'
+    text200: q.get('text') === '200',
+    sessionRole: null, help: null
   };
   if (!I18N[S.lang]) S.lang = 'ru';
   const screenParam = q.get('screen');
   if (screenParam) { const m = screenParam.match(/^server:(\w+)$/); if (m) { S.tab = 'status'; S.server = m[1]; } else if (['status', 'events', 'keys', 'help', 'admin'].includes(screenParam)) S.tab = screenParam; }
   if (q.get('showcase') === 'hidden') document.body.setAttribute('data-showcase', 'hidden');
+  // the dev server accepts ?scenario= — only ever sent when a scenario was asked for or the showcase is visible
+  const devScenarios = q.has('scenario') || document.body.getAttribute('data-showcase') !== 'hidden';
+  const api = MODE === 'api' ? window.VPNPulseApi({ base: q.get('api') || '/api/v1', lang: () => S.lang, scenario: () => (devScenarios ? S.scenario : null) }) : null;
 
   // ---------- analytics (allowlisted, no identity) ----------
   const events = window.__vpnPulseEvents = [];
@@ -598,67 +894,74 @@ body { flex-direction: column; }
   function dur(min) { if (min === null || min === undefined) return '—'; if (min < 1) return t('duration.now'); if (min < 60) return t('duration.min', { n: min }); if (min < 48 * 60) return t('duration.hour', { n: Math.round(min / 60) }); return t('duration.day', { n: Math.round(min / 1440) }); }
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const ico = (n, cls) => '<svg class="i ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
+  const fmtTime = Model.fmtTime;
+  // calendar label for a Date in the viewer's time zone: today / yesterday / "9 сентября"
   function dayLabel(d) {
-    if (d === 0) return t('events.today'); if (d === 1) return t('events.yesterday');
-    try { return new Intl.DateTimeFormat(S.lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long' }).format(new Date(d + 'T12:00:00')); } catch (e) { return String(d); }
+    if (!d) return '';
+    const now = new Date(), today = new Date(now.getFullYear(), now.getMonth(), now.getDate()), that = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diff = Math.round((today - that) / 86400000);
+    if (diff === 0) return t('events.today'); if (diff === 1) return t('events.yesterday');
+    try { return new Intl.DateTimeFormat(S.lang === 'ru' ? 'ru-RU' : 'en-GB', { day: 'numeric', month: 'long' }).format(d); } catch (e) { return d.toISOString().slice(0, 10); }
   }
 
-  // ---------- fixtures ----------
-  function seeded(seed, base, amp) { const a = []; for (let i = 0; i < 48; i++) { const h = i / 2, day = Math.max(0, Math.sin((h - 6) / 24 * Math.PI * 2)); a.push(Math.max(0, Math.round((base + amp * day + ((i * 7 + seed) % 5) * 0.3 - 0.6) * 10) / 10)); } return a; }
-  function resolve(id) {
-    const raw = FX.scenarios[id] || FX.scenarios.operational;
-    const base = raw.inherit ? resolve(raw.inherit) : null;
-    const sc = Object.assign({}, base || {}, raw);
-    if (raw.inherit) { sc.servers = Object.assign({}, base.servers); Object.keys(raw.servers || {}).forEach(id => { sc.servers[id] = Object.assign({}, base.servers[id] || {}, raw.servers[id]); }); if (raw.events === undefined) sc.events = base.events; }
-    sc.id = id;
-    // events
-    let ev = sc.events;
-    if (typeof ev === 'string') ev = FX.eventSets[ev];
-    ev = (ev || []).slice();
-    if (raw.eventsAppend) ev = ev.concat(FX.eventSets[raw.eventsAppend]);
-    sc.eventsList = ev;
-    // servers
-    sc.list = [];
-    if (!sc.empty && !sc.loading && sc.api !== 'auth') {
-      FX.servers.forEach(base_s => {
-        const o = sc.servers[base_s.id]; if (!o) return;
-        const s = Object.assign({}, base_s, o);
-        s.load = Object.assign({}, FX.defaults.load[s.id], o.load || {});
-        s.sources = {};
-        ['pc', 'mobile', 'abroad'].forEach(k => { s.sources[k] = Object.assign({}, FX.defaults.sourcesOk[k], (o.sources || {})[k] || {}); });
-        s.series = seeded(s.seed, s.load.awg ? 1 + s.load.awg / 4 : 0.3, 3 + s.load.awg);
-        if (s.state === 'unavailable') { s.series[46] = 0; s.series[47] = 0; }
-        s.segs = []; for (let i = 0; i < 48; i++) s.segs.push('operational');
-        (o.marks || []).forEach(m => { for (let i = m[0]; i <= m[1]; i++) s.segs[i] = m[2]; });
-        if (o.gapFrom !== undefined) { for (let i = o.gapFrom; i < 48; i++) { s.segs[i] = 'unknown'; s.series[i] = null; } }
-        sc.list.push(s);
-      });
-    }
-    // admin
-    const A = FX.defaults.admin, a = sc.admin === null ? null : (sc.admin || {});
-    if (a !== null) {
-      sc.adminData = {
-        attention: (a.attentionPrepend || []).concat(a.attention !== undefined ? a.attention : A.attention),
-        probes: Object.assign({}, A.probes, a.probes || {}),
-        services: Object.assign({}, A.services, a.services || {}),
-        doctor: a.doctor || A.doctor, enrollCode: A.enrollCode, nextCommand: a.nextCommand || null
-      };
-    } else sc.adminData = null;
-    // a check source exists only after its probe reported at least once: none = not enrolled (hidden),
-    // silent = enrolled but no fresh report, active = reporting. Scenarios may override via `sources`.
-    const kindProbe = { pc: 'pc', mobile: 'android', abroad: 'abroad' }, over = sc.sources || {};
-    sc.presence = {};
-    ['pc', 'mobile', 'abroad'].forEach(k => {
-      if (over[k]) { sc.presence[k] = over[k]; return; }
-      const p = sc.adminData ? sc.adminData.probes[kindProbe[k]] : null;
-      sc.presence[k] = !p || p.enrolled === false ? 'none' : (p.state === 'unknown' ? 'silent' : 'active');
-    });
-    return sc;
-  }
+  // ---------- data ----------
+  const ctx = () => ({ lang: S.lang, now: Date.now(), scenario: S.scenario });
+  let SC = MODE === 'api' ? Model.loading() : Model.fromFixtures(FX, S.scenario, ctx());
+  let lastGood = null, lastGoodAt = null, loadSeq = 0, refreshTimer = null;
   const kinds = () => ['pc', 'mobile', 'abroad'].filter(k => SC.presence[k] !== 'none');
-  let SC = resolve(S.scenario);
   const byId = id => SC.list.find(s => s.id === id);
-  const sname = s => L((typeof s === 'string' ? (FX.servers.find(x => x.id === s) || {}).name : s.name) || { ru: '—', en: '—' });
+  function sname(s) {
+    if (s && typeof s === 'object') return s.name;
+    const found = byId(s); if (found) return found.name;
+    const fx = FX && FX.servers.find(x => x.id === s); return fx ? L(fx.name) : (s || '—');
+  }
+  async function ensureSession() {
+    if (S.sessionRole) return;
+    if (tg && tg.initData) { await api.session(tg.initData); const me = await api.me(); S.role = me.role; }
+    else await api.devSession(S.role);
+    S.sessionRole = S.role;
+  }
+  async function fetchBundle() {
+    const status = await api.status();
+    const details = {}, metrics = {}, adminDetails = {};
+    await Promise.all(status.servers.map(async c => {
+      const [d, m24, m7] = await Promise.all([api.server(c.id), api.metrics(c.id, '24h'), api.metrics(c.id, '7d')]);
+      details[c.id] = d; metrics[c.id] = { '24h': m24, '7d': m7 };
+      if (S.role === 'admin') adminDetails[c.id] = await api.adminServer(c.id);
+    }));
+    const [ev, help] = await Promise.all([api.events('all', 100), api.help()]);
+    let admin = null;
+    if (S.role === 'admin') {
+      const [overview, probes, readiness] = await Promise.all([api.adminOverview(), api.adminProbes(), api.ready()]);
+      admin = { overview, probes, readiness, details: adminDetails };
+    }
+    return { status, details, metrics, events: ev, help, admin };
+  }
+  async function load() {
+    if (MODE !== 'api') { SC = Model.fromFixtures(FX, S.scenario, ctx()); render(); document.body.setAttribute('data-load', 'ready'); return; }
+    const seq = ++loadSeq;
+    document.body.setAttribute('data-load', 'loading');
+    try {
+      await ensureSession();
+      let bundle;
+      try { bundle = await fetchBundle(); }
+      catch (e) { if (e && e.status === 401) { S.sessionRole = null; await ensureSession(); bundle = await fetchBundle(); } else throw e; }
+      if (seq !== loadSeq) return;
+      S.help = bundle.help;
+      SC = Model.fromApi(bundle, ctx()); lastGood = SC; lastGoodAt = new Date();
+      if (S.server && !byId(S.server)) S.server = null;
+    } catch (e) {
+      if (seq !== loadSeq) return;
+      if (e && (e.status === 401 || e.status === 403)) SC = Model.authFailed(e.code);
+      else { SC = Model.offline(lastGood, { lastGoodAt }); if (window.console && e && e.status !== 503) console.warn('vpnpulse: status unavailable', e); }
+    }
+    render();
+    document.body.setAttribute('data-load', 'ready');
+  }
+  function scheduleRefresh() {
+    if (MODE !== 'api' || refreshTimer) return;
+    refreshTimer = setInterval(() => { if (document.visibilityState === 'visible') load(); }, 60000);
+  }
 
   // ---------- DOM ----------
   const $ = sel => document.querySelector(sel);
@@ -685,7 +988,7 @@ body { flex-direction: column; }
       '<div class="ttl">' + titleHtml + '</div>' +
       '<button type="button" class="lang-btn" id="lang-btn" aria-label="' + esc(t('app.lang.switch', { language: S.lang === 'ru' ? 'English' : 'русский' })) + '" data-event="language_changed">' + esc(t('app.lang.other')) + '</button>';
     $('#back-btn').addEventListener('click', () => history.back());
-    $('#lang-btn').addEventListener('click', () => { const from = S.lang; S.lang = S.lang === 'ru' ? 'en' : 'ru'; store.set('lang', S.lang); track('language_changed', { from, to: S.lang }); render(); });
+    $('#lang-btn').addEventListener('click', () => { const from = S.lang; S.lang = S.lang === 'ru' ? 'en' : 'ru'; store.set('lang', S.lang); track('language_changed', { from, to: S.lang }); load(); });
     if (tg) { if (inServer) { tg.BackButton.show(); } else { tg.BackButton.hide(); } }
   }
   function renderNav() {
@@ -736,9 +1039,11 @@ body { flex-direction: column; }
   function sources(s, withLabels) {
     return '<span class="srcs">' + kinds().map(k => { const r = s.sources[k].r; return '<span class="src s-' + r + '"><span class="sr-only">' + esc(t('source.' + k)) + ': ' + esc(t('source.result.' + r)) + '</span>' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span>' + (withLabels ? '<span class="lbl">' + esc(t('source.' + k)) + '</span>' : '') + '</span>'; }).join('') + '</span>';
   }
-  function segsHtml(segs, extra) { return '<span class="segs ' + (extra || '') + '" aria-hidden="true">' + segs.map(x => '<i class="' + x + '"></i>').join('') + '</span>'; }
+  function segsHtml(segs, extra) { return '<span class="segs ' + (extra || '') + '" aria-hidden="true"' + (segs.length !== 48 ? ' style="grid-template-columns:repeat(' + segs.length + ',1fr)"' : '') + '>' + segs.map(x => '<i class="' + x + '"></i>').join('') + '</span>'; }
   function chart(s, big) {
-    return '<span class="' + (big ? 'bigchart' : 'chart') + '" role="img" aria-label="' + esc(t('server.chartSummary', { range: t(S.range === '7d' ? 'server.range7d' : 'server.range24') })) + '"><canvas data-series="' + s.series.map(v => v === null ? '' : v).join(',') + '" data-state="' + s.state + '"></canvas>' + segsHtml(s.segs) + '</span>';
+    const week = big && S.range === '7d' && s.series7;
+    const series = week ? s.series7 : s.series, segs = week ? s.segs7 : s.segs;
+    return '<span class="' + (big ? 'bigchart' : 'chart') + '" role="img" aria-label="' + esc(t('server.chartSummary', { range: t(S.range === '7d' ? 'server.range7d' : 'server.range24') })) + '"><canvas data-series="' + series.map(v => v === null ? '' : v).join(',') + '" data-state="' + s.state + '"></canvas>' + segsHtml(segs) + '</span>';
   }
   function drawCharts() {
     const cs = getComputedStyle(document.documentElement);
@@ -746,22 +1051,28 @@ body { flex-direction: column; }
     root.querySelectorAll('canvas[data-series]').forEach(c => {
       const w = c.clientWidth, h = c.clientHeight; if (!w || !h) return;
       const dpr = window.devicePixelRatio || 1; c.width = w * dpr; c.height = h * dpr;
-      const ctx = c.getContext('2d'); ctx.scale(dpr, dpr);
+      const ctx2 = c.getContext('2d'); ctx2.scale(dpr, dpr);
       const raw = c.getAttribute('data-series').split(','), series = raw.map(v => v === '' ? null : Number(v));
+      if (series.length < 2) return;
       const color = col[c.getAttribute('data-state')] || col.operational, bottom = h - 9, pad = 1;
       const max = Math.max(1, ...series.filter(v => v !== null));
       const x = i => pad + i * (w - pad * 2) / (series.length - 1), y = v => bottom - (v / max) * (bottom - 3);
-      ctx.lineWidth = 1.5; ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineJoin = 'round';
+      ctx2.lineWidth = 1.5; ctx2.strokeStyle = color; ctx2.fillStyle = color; ctx2.lineJoin = 'round';
       let run = [];
-      const flush = () => { if (run.length < 2) { run = []; return; } ctx.beginPath(); run.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.lineTo(run[run.length - 1][0], bottom); ctx.lineTo(run[0][0], bottom); ctx.closePath(); ctx.globalAlpha = .10; ctx.fill(); ctx.globalAlpha = 1; ctx.beginPath(); run.forEach((p, i) => i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])); ctx.stroke(); run = []; };
+      const flush = () => { if (run.length < 2) { run = []; return; } ctx2.beginPath(); run.forEach((p, i) => i ? ctx2.lineTo(p[0], p[1]) : ctx2.moveTo(p[0], p[1])); ctx2.lineTo(run[run.length - 1][0], bottom); ctx2.lineTo(run[0][0], bottom); ctx2.closePath(); ctx2.globalAlpha = .10; ctx2.fill(); ctx2.globalAlpha = 1; ctx2.beginPath(); run.forEach((p, i) => i ? ctx2.lineTo(p[0], p[1]) : ctx2.moveTo(p[0], p[1])); ctx2.stroke(); run = []; };
       series.forEach((v, i) => { if (v === null) flush(); else run.push([x(i), y(v)]); }); flush();
-      const last = series[series.length - 1]; if (last !== null) { ctx.beginPath(); ctx.arc(x(series.length - 1), y(last), 2.5, 0, Math.PI * 2); ctx.fill(); }
+      const last = series[series.length - 1]; if (last !== null) { ctx2.beginPath(); ctx2.arc(x(series.length - 1), y(last), 2.5, 0, Math.PI * 2); ctx2.fill(); }
     });
   }
   function toast(msg) { const el = $('#toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove('show'), 2200); }
-  function copy(text, ev) { try { navigator.clipboard && navigator.clipboard.writeText(text); } catch (e) { /* mock */ } toast(t('action.copied')); }
+  function copy(text) { try { navigator.clipboard && navigator.clipboard.writeText(text); } catch (e) { /* mock */ } toast(t('action.copied')); }
   function copyRow(cmd) { return '<div class="copy-row"><code>' + esc(cmd) + '</code><button type="button" class="btn btn-ghost" data-copy="' + esc(cmd) + '">' + ico('copy') + esc(t('action.copy')) + '</button></div>'; }
   function bindCopy() { root.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copy(b.getAttribute('data-copy')))); }
+  // API-backed actions fall back to a demo toast when there is no API (prototype opened as a file)
+  function apiAction(run, fallbackKey) {
+    if (!api) { toast(t(fallbackKey || 'admin.demoAction')); return Promise.resolve(false); }
+    return run().then(() => true).catch(e => { toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })); return false; });
+  }
 
   // ---------- status ----------
   function overallBlock() {
@@ -770,15 +1081,15 @@ body { flex-direction: column; }
     const fresh = SC.freshnessMin === null || SC.freshnessMin === undefined ? '' : '<span class="chip chip-fresh' + (SC.freshnessMin > 3 ? ' stale' : '') + '"><span aria-hidden="true">' + ico('clock') + '<span class="num">' + esc(dur(SC.freshnessMin)) + '</span></span><span class="sr-only">' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span></span>';
     // the recommendation lives on the server row (chip); here only the absence of one is worth a line
     const recHtml = !SC.empty && !rec && SC.list.length ? '<p class="small muted">' + esc(t('status.noRecommendation')) + '</p>' : '';
-    const title = SC.empty ? t('status.settingUp') : SC.api === 'offline' ? t('status.' + SC.overall) : t('status.' + SC.overall);
+    const title = SC.empty ? t('status.settingUp') : t('status.' + SC.overall);
     const okShare = SC.list.length ? SC.list.filter(x => x.state === 'operational').length / SC.list.length : null;
     const lamp = SC.empty || !SC.overall ? '' : summaryGauge(SC.overall, okShare);
     return '<div class="overall"><div class="ov-row"><h1 class="title" id="screen-title" tabindex="-1">' + lamp + esc(title) + '</h1>' + fresh + '</div>' + recHtml + '</div>';
   }
   function noteBlock() {
     if (!SC.note) return '';
-    const txt = L(SC.note.text), long = txt.length > 140;
-    return '<section class="note-box" aria-label="' + esc(t('events.note')) + '"><div class="txt ' + (long && !S.noteExpanded ? 'clamp' : '') + '" id="note-txt">' + esc(txt) + '</div><div class="who">' + esc(t('status.noteFrom', { time: SC.note.time })) + '</div>' + (long ? '<button type="button" class="btn btn-text" id="note-more" aria-expanded="' + S.noteExpanded + '" aria-controls="note-txt">' + esc(t(S.noteExpanded ? 'action.less' : 'action.more')) + '</button>' : '') + '</section>';
+    const txt = SC.note.text, long = txt.length > 140;
+    return '<section class="note-box" aria-label="' + esc(t('events.note')) + '"><div class="txt ' + (long && !S.noteExpanded ? 'clamp' : '') + '" id="note-txt">' + esc(txt) + '</div><div class="who">' + esc(t('status.noteFrom', { time: fmtTime(SC.note.at) })) + '</div>' + (long ? '<button type="button" class="btn btn-text" id="note-more" aria-expanded="' + S.noteExpanded + '" aria-controls="note-txt">' + esc(t(S.noteExpanded ? 'action.less' : 'action.more')) + '</button>' : '') + '</section>';
   }
   function serverRow(s) {
     const unk = s.state === 'unknown';
@@ -788,7 +1099,7 @@ body { flex-direction: column; }
       : '<span class="up num">' + esc(s.uptime24) + '</span><span class="cap">' + esc(t('status.history24h')) + '</span>';
     return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
       '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
-      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
+      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
       '<span class="side">' + side + ico('chevron', 'chev') + '</span></button>';
   }
   function statusScreen() {
@@ -809,8 +1120,8 @@ body { flex-direction: column; }
     if (ks.length) parts.push('<div class="legend" role="list" aria-label="' + esc(t('status.legend')) + '">' + ks.map(k => { const on = SC.presence[k] === 'active'; return '<span role="listitem"><span class="src ' + (on ? 's-ok' : 's-unknown') + '">' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span></span><span class="lg-t">' + esc(t('source.' + k)) + '</span><span class="sr-only">' + esc(t(on ? 'status.sourceOn' : 'status.sourceOff')) + '</span></span>'; }).join('') + '</div>');
     parts.push('<div class="servers" id="servers">' + SC.list.map(serverRow).join('') + '</div>');
     parts.push('<div class="axis" aria-hidden="true"><span></span><div><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div><span class="spacer"></span></div>');
-    const ctx = window.innerWidth >= 1024 ? '<aside class="ctx">' + (SC.eventsList.length ? '<div class="panel"><h3>' + esc(t('events.title')) + '</h3>' + eventRow(SC.eventsList[0]) + '</div>' : '') + '<div class="panel"><h3>' + esc(t('status.legend')) + '</h3><div class="stack small muted">' + kinds().map(k => '<span>' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k + '.full')) + '</span>').join('') + '</div></div></aside>' : '';
-    return '<div class="status-layout"><div class="screen">' + parts.join('') + '</div>' + ctx + '</div>';
+    const side = window.innerWidth >= 1024 ? '<aside class="ctx">' + (SC.eventsList.length ? '<div class="panel"><h3>' + esc(t('events.title')) + '</h3>' + eventRow(SC.eventsList[0]) + '</div>' : '') + '<div class="panel"><h3>' + esc(t('status.legend')) + '</h3><div class="stack small muted">' + kinds().map(k => '<span>' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k + '.full')) + '</span>').join('') + '</div></div></aside>' : '';
+    return '<div class="status-layout"><div class="screen">' + parts.join('') + '</div>' + side + '</div>';
   }
   function skeleton() {
     const row = '<div class="srow" aria-hidden="true"><span class="sk" style="width:64px;height:64px;border-radius:50%"></span><span class="main"><span class="sk" style="height:20px;width:40%"></span><span class="sk" style="height:14px;width:60%"></span><span class="sk" style="height:30px;width:100%"></span></span><span class="sk" style="width:48px;height:20px"></span></div>';
@@ -825,12 +1136,16 @@ body { flex-direction: column; }
     root.querySelectorAll('.srow[data-server]').forEach(b => b.addEventListener('click', e => openServer(b.getAttribute('data-server'), e.detail === 0 ? 'keyboard' : 'pointer', b)));
     const hk = $('#hint-ok'); if (hk) hk.addEventListener('click', () => { S.hintDismissed = true; store.set('hint', '1'); $('#hint').remove(); });
     const nm = $('#note-more'); if (nm) nm.addEventListener('click', () => { S.noteExpanded = !S.noteExpanded; render(); });
-    root.querySelectorAll('[data-retry]').forEach(b => b.addEventListener('click', () => { track('retry_pressed', { surface: b.getAttribute('data-retry'), error_code: 'STATUS_UNAVAILABLE' }); b.classList.add('loading'); setTimeout(() => { b.classList.remove('loading'); toast(t('error.offline')); }, 700); }));
+    root.querySelectorAll('[data-retry]').forEach(b => b.addEventListener('click', () => {
+      track('retry_pressed', { surface: b.getAttribute('data-retry'), error_code: 'STATUS_UNAVAILABLE' });
+      b.classList.add('loading');
+      if (api) load(); else setTimeout(() => { b.classList.remove('loading'); toast(t('error.offline')); }, 700);
+    }));
     bindCopy();
   }
 
   // ---------- server ----------
-  function openServer(id, input, rowEl) {
+  function openServer(id, input) {
     const s = byId(id); if (!s) return;
     S.scrollPos = root.scrollTop; S.originRow = id; S.open = 'checks';
     if (!S.hintDismissed) { S.hintDismissed = true; store.set('hint', '1'); }
@@ -846,12 +1161,13 @@ body { flex-direction: column; }
   }
   function srcRow(s, k) {
     const src = s.sources[k], r = src.r, cls = { ok: 'ok', fail: 'bad', partial: 'warn', unknown: 'unk' }[r];
-    const via = k === 'abroad' ? t('source.detail.viaServer', { server: sname(s.abroadFrom) }) + ' · ' : '';
+    const via = k === 'abroad' && s.abroadFrom ? t('source.detail.viaServer', { server: sname(s.abroadFrom) }) + ' · ' : '';
     const detail = via + t(src.detailKey) + (src.age === null || src.age === undefined ? '' : ' · ' + t('source.ago', { duration: dur(src.age) }));
     return '<div><span class="k">' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k)) + '<small>' + esc(t('source.' + k + '.full')) + '</small><small>' + esc(detail) + '</small></span><span class="v ' + cls + '">' + { ok: ico('check'), fail: ico('x'), partial: ico('alert'), unknown: '—' }[r] + esc(t('source.result.' + r)) + '</span></div>';
   }
+  const num = v => (v === null || v === undefined ? '—' : v);
   function serverScreen(id) {
-    const s = byId(id); if (!s) { S.server = null; return statusScreen(); }
+    const s = byId(id); if (!s) { if (SC.loading) return skeleton(); S.server = null; return statusScreen(); }
     const by = t(s.state === 'unavailable' ? 'server.failedBy' : 'server.confirmedBy', { by: t('server.by.' + s.confirmedBy) });
     const stale = s.staleMin ? '<div class="banner banner-info">' + ico('clock') + '<div>' + esc(t('server.stale', { duration: dur(s.staleMin) })) + '</div></div>' : '';
     const conflict = s.conflict ? '<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('server.conflict', { a: t(s.conflict.a), b: t(s.conflict.b) })) + '</div></div>' : '';
@@ -860,15 +1176,15 @@ body { flex-direction: column; }
     const checks = (ks.length ? '<div class="kv">' + ks.map(k => srcRow(s, k)).join('') + '</div>' : '<p class="small muted">' + esc(t('server.checksNone')) + '</p>') + '<p class="small muted">' + esc(by) + '</p>';
     const ld = s.load, xr = s.protocols.includes('xray');
     const load = '<div class="metrics"><div class="metric"><div class="k">' + esc(t('server.connections')) + '</div><div class="v num">' + (xr && !ld.xrayKnown ? ld.awg + '+' : ld.awg + (ld.xray || 0)) + '</div><div class="s">' + esc(t('server.awg')) + ' ' + ld.awg + (xr ? ' · ' + esc(t('server.xray')) + ' ' + (ld.xrayKnown ? ld.xray : '—') : '') + '</div></div>' +
-      '<div class="metric"><div class="k">' + esc(t('server.traffic')) + '</div><div class="v num">' + ld.mbit + '<small>' + esc(t('server.mbit')) + '</small></div><div class="s">' + esc(t('server.peak', { n: ld.peak })) + '</div></div>' +
-      '<div class="metric"><div class="k">' + esc(t('server.cpu')) + '</div><div class="v num">' + ld.cpu + '<small>%</small></div></div>' +
-      '<div class="metric"><div class="k">' + esc(t('server.memory')) + '</div><div class="v num">' + ld.ram + '<small>%</small></div><div class="s">' + esc(t('server.swap')) + ' ' + ld.swap + '%</div></div></div>' +
+      '<div class="metric"><div class="k">' + esc(t('server.traffic')) + '</div><div class="v num">' + num(ld.mbit) + '<small>' + esc(t('server.mbit')) + '</small></div><div class="s">' + esc(t('server.peak', { n: num(ld.peak) })) + '</div></div>' +
+      '<div class="metric"><div class="k">' + esc(t('server.cpu')) + '</div><div class="v num">' + num(ld.cpu) + '<small>%</small></div></div>' +
+      '<div class="metric"><div class="k">' + esc(t('server.memory')) + '</div><div class="v num">' + num(ld.ram) + '<small>%</small></div><div class="s">' + esc(t('server.swap')) + ' ' + num(ld.swap) + '%</div></div></div>' +
       (xr && !ld.xrayKnown ? '<p class="small muted">' + esc(t('server.xrayUnknown')) + '</p>' : '') +
       '<div class="seg-ctl" role="group"><button type="button" data-range="24h" aria-pressed="' + (S.range === '24h') + '">' + esc(t('server.range24')) + '</button><button type="button" data-range="7d" aria-pressed="' + (S.range === '7d') + '">' + esc(t('server.range7d')) + '</button></div>' +
       chart(s, true) + '<div class="axis2"><span>' + esc(S.range === '7d' ? '−7 d'.replace('d', S.lang === 'ru' ? 'дн' : 'd') : t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div>' +
       '<div class="kv"><div><span class="k">' + esc(t('server.uptime24')) + '</span><span class="v">' + esc(s.uptime24) + '</span></div><div><span class="k">' + esc(t('server.uptime7')) + '</span><span class="v">' + esc(s.uptime7) + '</span></div><div><span class="k">' + esc(t('server.lastConn')) + '</span><span class="v">' + esc(dur(ld.lastConnMin)) + '</span></div></div>';
-    const soft = '<div class="kv">' + s.software.map(w => '<div><span class="k">' + esc(w.name) + '<small>' + esc(w.noteKey ? t(w.noteKey) : w.note) + '</small></span><span></span></div>').join('') + '</div>';
-    const keys = '<div class="metrics" style="grid-template-columns:repeat(3,1fr)"><div class="metric"><div class="k">' + esc(t('server.keysIssued')) + '</div><div class="v num">' + s.keys.issued + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysEver')) + '</div><div class="v num">' + s.keys.ever + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysActive')) + '</div><div class="v num">' + s.keys.active + '</div></div></div>';
+    const soft = s.software.length ? '<div class="kv">' + s.software.map(w => '<div><span class="k">' + esc(w.name) + '<small>' + esc(w.noteKey ? t(w.noteKey) : (w.note || '')) + '</small></span><span></span></div>').join('') + '</div>' : '<p class="small muted">—</p>';
+    const keys = '<div class="metrics" style="grid-template-columns:repeat(3,1fr)"><div class="metric"><div class="k">' + esc(t('server.keysIssued')) + '</div><div class="v num">' + num(s.keys.issued) + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysEver')) + '</div><div class="v num">' + num(s.keys.ever) + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysActive')) + '</div><div class="v num">' + num(s.keys.active) + '</div></div></div>';
     const yes = '<span class="v ok">' + ico('check') + esc(t('server.yes')) + '</span>';
     const sys = '<div class="kv"><div><span class="k">' + esc(t('server.sshOk')) + '</span>' + yes + '</div><div><span class="k">' + esc(t(s.system.engine === 'module' ? 'server.moduleOk' : 'server.containerOk')) + '</span>' + yes + '</div><div><span class="k">' + esc(t('server.portOk')) + '</span>' + yes + '</div>' + (s.system.dns ? '<div><span class="k">' + esc(t('server.dnsOk')) + '</span>' + yes + '</div><div><span class="k">' + esc(t('server.ddnsOk')) + '</span>' + yes + '</div>' : '') + '</div>';
     const evs = SC.eventsList.filter(e => e.server === s.id);
@@ -876,12 +1192,12 @@ body { flex-direction: column; }
     let adminHtml = '';
     if (S.role === 'admin' && SC.adminData) {
       const att = SC.adminData.attention.filter(a => a.server === s.id);
-      adminHtml = acc('admin', 'shield', t('server.admin'), att.length ? String(att.length) : '', '<div class="admin-block">' + (att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>') + '</div>');
+      adminHtml = acc('admin', 'shield', t('server.admin'), att.length ? String(att.length) : '', '<div class="admin-block">' + (att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + esc(a.text) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>') + '</div>');
     }
     return '<div class="screen">' +
-      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(L(s.country)) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
+      '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
       stale + conflict + diag +
-      '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))), load) + '</div><div>' + acc('software', 'layers', t('server.software'), String(s.protocols.length), soft) + acc('keys', 'key', t('server.keys'), String(s.keys.active), keys) + acc('system', 'server', t('server.system'), s.state === 'unknown' ? '—' : s.uptime7, sys) + acc('events', 'clock', t('server.events'), String(evs.length), evHtml) + adminHtml + '</div></div></div>';
+      '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))), load) + '</div><div>' + acc('software', 'layers', t('server.software'), String(s.protocols.length), soft) + acc('keys', 'key', t('server.keys'), String(num(s.keys.active)), keys) + acc('system', 'server', t('server.system'), s.state === 'unknown' ? '—' : s.uptime7, sys) + acc('events', 'clock', t('server.events'), String(evs.length), evHtml) + adminHtml + '</div></div></div>';
   }
   function bindServer() {
     root.querySelectorAll('.acc-btn').forEach(b => b.addEventListener('click', () => toggleAcc(b)));
@@ -904,25 +1220,25 @@ body { flex-direction: column; }
 
   // ---------- events ----------
   function eventText(e) {
-    if (e.kind === 'note') return '<b>' + esc(t('events.note')) + '</b> · ' + esc(L(e.text));
+    if (e.kind === 'note') return '<b>' + esc(t('events.note')) + '</b> · ' + esc(e.text || '');
     if (e.kind === 'probeSilent') return esc(t('events.probeSilent', { source: t('source.' + e.source) }));
-    const p = { server: ' ', state: e.state ? t('status.state.' + e.state) : '', source: e.source ? t('source.' + e.source) : '' };
-    return esc(t('events.' + e.kind, p)).replace(' ', '<b>' + esc(sname(e.server)) + '</b>');
+    const p = { server: ' ', state: e.state ? t('status.state.' + e.state) : '', source: e.source ? t('source.' + e.source) : '' };
+    return esc(t('events.' + e.kind, p)).replace(' ', '<b>' + esc(sname(e.server)) + '</b>');
   }
-  function eventRow(e) { const ic = { ok: 'check', problem: 'x', note: 'note', info: 'info' }[e.sev]; return '<div class="ev"><span class="ic ' + e.sev + '" aria-hidden="true">' + ico(ic) + '</span><span class="t">' + eventText(e) + '</span><time>' + esc(e.time) + '</time></div>'; }
+  function eventRow(e) { const ic = { ok: 'check', problem: 'x', note: 'note', info: 'info' }[e.sev] || 'info'; return '<div class="ev"><span class="ic ' + e.sev + '" aria-hidden="true">' + ico(ic) + '</span><span class="t">' + eventText(e) + '</span><time>' + esc(fmtTime(e.at)) + '</time></div>'; }
   function eventsScreen() {
     if (SC.api === 'auth') return errorScreen('auth');
     const filters = ['all', 'problems', 'notes'];
     const ctl = '<div class="seg-ctl" role="group" aria-label="' + esc(t('events.title')) + '">' + filters.map(f => '<button type="button" data-filter="' + f + '" aria-pressed="' + (S.filter === f) + '" data-event="events_filter_changed">' + esc(t('events.filter.' + f)) + '</button>').join('') + '</div>';
     let body;
-    if (S.eventsState === 'loading') body = '<p class="small muted" aria-live="polite">' + esc(t('events.loading')) + '</p>';
+    if (S.eventsState === 'loading' || SC.loading) body = '<p class="small muted" aria-live="polite">' + esc(t('events.loading')) + '</p>';
     else if (S.eventsState === 'error' || SC.api === 'offline') body = '<div class="banner banner-bad" role="alert">' + ico('alert') + '<div>' + esc(t('events.error')) + '<br><span class="xs">STATUS_UNAVAILABLE</span></div><div class="act"><button type="button" class="btn btn-ghost" id="ev-retry" data-event="retry_pressed">' + ico('refresh') + esc(t('action.retry')) + '</button></div></div>';
     else {
       const list = SC.eventsList.filter(e => S.filter === 'all' || (S.filter === 'problems' && e.sev === 'problem') || (S.filter === 'notes' && e.sev === 'note'));
-      if (!list.length) body = '<div class="empty">' + ico('clock') + '<h2 class="sub">' + esc(t('events.empty')) + '</h2><p>' + esc(t('events.emptyBody', { date: dayLabel(FX.meta.since) })) + '</p></div>';
+      if (!list.length) body = '<div class="empty">' + ico('clock') + '<h2 class="sub">' + esc(t('events.empty')) + '</h2><p>' + esc(t('events.emptyBody', { date: dayLabel(SC.since) })) + '</p></div>';
       else {
         const page = list.slice(0, S.eventsPage * 6); let day = null, h = '';
-        page.forEach(e => { const dl = dayLabel(e.day); if (dl !== day) { day = dl; h += '<div class="evday">' + esc(dl) + '</div>'; } h += eventRow(e); });
+        page.forEach(e => { const dl = dayLabel(e.at); if (dl !== day) { day = dl; h += '<div class="evday">' + esc(dl) + '</div>'; } h += eventRow(e); });
         if (list.length > page.length) h += '<button type="button" class="btn btn-ghost btn-block" id="ev-more" style="margin-top:12px">' + esc(t('events.more')) + '</button>';
         body = '<div>' + h + '</div>';
       }
@@ -932,59 +1248,79 @@ body { flex-direction: column; }
   function bindEvents() {
     root.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { const from = S.filter; S.filter = b.getAttribute('data-filter'); S.eventsPage = 1; track('events_filter_changed', { from, to: S.filter }); render(); const nb = root.querySelector('[data-filter="' + S.filter + '"]'); if (nb) nb.focus({ preventScroll: true }); }));
     const more = $('#ev-more'); if (more) more.addEventListener('click', () => { S.eventsPage++; render(); });
-    const rt = $('#ev-retry'); if (rt) rt.addEventListener('click', () => { track('retry_pressed', { surface: 'events', error_code: 'STATUS_UNAVAILABLE' }); S.eventsState = 'loading'; render(); setTimeout(() => { S.eventsState = SC.api === 'offline' ? 'error' : 'ok'; render(); }, 700); });
+    const rt = $('#ev-retry'); if (rt) rt.addEventListener('click', () => {
+      track('retry_pressed', { surface: 'events', error_code: 'STATUS_UNAVAILABLE' });
+      if (api) { load(); return; }
+      S.eventsState = 'loading'; render(); setTimeout(() => { S.eventsState = SC.api === 'offline' ? 'error' : 'ok'; render(); }, 700);
+    });
   }
 
   // ---------- keys / help ----------
+  function contactAvailable() { return !S.help || S.help.contact_available !== false; }
   function keysScreen() {
-    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1><div class="stack"><p><b>' + esc(t('keys.mvp')) + '</b></p><p class="muted small">' + esc(t('keys.body')) + '</p></div><button type="button" class="btn btn-primary" data-contact="keys" data-event="contact_admin_pressed">' + ico('send') + esc(t('help.contact')) + '</button><div class="divider"></div><div class="stack"><h2 class="sub">' + esc(t('keys.reserveTitle')) + '</h2><p>' + esc(t('keys.reserve')) + '</p><p class="muted small">' + esc(t('keys.reserveBody')) + '</p></div></div>';
+    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1><div class="stack"><p><b>' + esc(t('keys.mvp')) + '</b></p><p class="muted small">' + esc(t('keys.body')) + '</p></div>' + (contactAvailable() ? '<button type="button" class="btn btn-primary" data-contact="keys" data-event="contact_admin_pressed">' + ico('send') + esc(t('help.contact')) + '</button>' : '') + '<div class="divider"></div><div class="stack"><h2 class="sub">' + esc(t('keys.reserveTitle')) + '</h2><p>' + esc(t('keys.reserve')) + '</p><p class="muted small">' + esc(t('keys.reserveBody')) + '</p></div></div>';
   }
   function helpScreen() {
     const steps = [1, 2, 3, 4].map(n => '<div class="step"><button type="button" class="step-btn" aria-expanded="' + (S.open === 'h' + n) + '" aria-controls="hs-' + n + '" data-step="' + n + '" data-event="help_step_opened"><span class="n">' + n + '</span><span>' + esc(t('help.step' + n + '.title')) + '</span>' + ico('chevron-down', 'chev') + '</button><div class="step-body" id="hs-' + n + '" ' + (S.open === 'h' + n ? '' : 'hidden') + '>' + esc(t('help.step' + n + '.body')) + '</div></div>').join('');
     const why = SC.overall === 'unavailable' ? t('help.whyIncident') : SC.overall === 'unknown' ? t('help.whyUnknown') : t('help.whyOk');
-    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('help.title')) + '</h1><div class="small"><span class="muted">' + esc(t('help.current')) + ':</span> <span class="c-' + SC.overall + '"><span class="state-dot"></span></span> <b>' + esc(t('status.' + SC.overall)) + '</b></div><div>' + steps + '</div><button type="button" class="btn btn-primary btn-block" data-contact="help" data-event="contact_admin_pressed">' + ico('send') + esc(t('help.contact')) + '</button><details class="why"><summary>' + ico('help') + esc(t('help.why')) + '</summary><p>' + esc(why) + '</p></details></div>';
+    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('help.title')) + '</h1><div class="small"><span class="muted">' + esc(t('help.current')) + ':</span> <span class="c-' + SC.overall + '"><span class="state-dot"></span></span> <b>' + esc(t('status.' + SC.overall)) + '</b></div><div>' + steps + '</div>' + (contactAvailable() ? '<button type="button" class="btn btn-primary btn-block" data-contact="help" data-event="contact_admin_pressed">' + ico('send') + esc(t('help.contact')) + '</button>' : '') + '<details class="why"><summary>' + ico('help') + esc(t('help.why')) + '</summary><p>' + esc(why) + '</p></details></div>';
   }
   function bindHelp() {
     root.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => { const id = 'h' + b.getAttribute('data-step'); const was = S.open === id; S.open = was ? null : id; root.querySelectorAll('.step-btn').forEach(x => { const on = 'h' + x.getAttribute('data-step') === S.open; x.setAttribute('aria-expanded', String(on)); document.getElementById('hs-' + x.getAttribute('data-step')).hidden = !on; }); if (!was) track('help_step_opened', { step_id: id }); b.focus({ preventScroll: true }); }));
-    root.querySelectorAll('[data-contact]').forEach(b => b.addEventListener('click', () => { track('contact_admin_pressed', { entry_point: b.getAttribute('data-contact'), overall_state: SC.overall }); toast(t('admin.demoAction')); }));
+    root.querySelectorAll('[data-contact]').forEach(b => b.addEventListener('click', () => {
+      track('contact_admin_pressed', { entry_point: b.getAttribute('data-contact'), overall_state: SC.overall });
+      const url = S.help && S.help.contact_url;
+      if (url) { if (tg && tg.openTelegramLink) tg.openTelegramLink(url); else window.open(url, '_blank', 'noopener'); }
+      else toast(t('admin.demoAction'));
+    }));
   }
 
   // ---------- admin ----------
+  const probeKinds = { pc: 'pc', android: 'android', abroad: 'abroad' };
+  const probeCaps = { pc: ['control_internet', 'handshake', 'https'], android: ['dns', 'tcp'], abroad: ['handshake'] };
   function adminScreen() {
     const A = SC.adminData; if (!A) return '<div class="screen admin-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1><p class="muted">' + esc(t('status.unknown')) + '</p></div>';
     const sevOrder = { high: 0, medium: 1, low: 2 };
     const att = A.attention.slice().sort((a, b) => sevOrder[a.sev] - sevOrder[b.sev]);
-    const attHtml = att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + (a.server ? '<b>' + esc(sname(a.server)) + '</b> · ' : '') + esc(L(a.text)) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>';
+    const attHtml = att.length ? '<div class="attn">' + att.map(a => '<div><span class="lp ' + a.sev + '" aria-hidden="true">' + ico(sevIcon[a.sev]) + '</span><span>' + (a.server ? '<b>' + esc(sname(a.server)) + '</b> · ' : '') + esc(a.text) + '<div class="sev">' + esc(t('admin.severity.' + a.sev)) + '</div></span></div>').join('') + '</div>' : '<p class="small muted">' + esc(t('admin.noAttention')) + '</p>';
     const pr = A.probes;
     function probeRow(k, name) {
-      const p = pr[k] || {}, enrolled = p.enrolled !== false, stateCls = { ok: 'ok', warn: 'warn', fail: 'bad', unknown: 'unk' }[p.state || 'unknown'];
+      const p = pr[k] || {}, enrolled = p.enrolled !== false;
       const meta = enrolled ? [p.lastMin !== undefined ? t('admin.lastReport', { duration: dur(p.lastMin) }) : '', p.route !== undefined ? t(p.route ? 'admin.routeOk' : 'admin.routeBad') : '', p.queue !== undefined ? t('admin.queue', { n: p.queue }) : '', p.version ? t('admin.version', { v: p.version }) : ''].filter(Boolean).join(' · ') : t('admin.notEnrolled');
-      const action = enrolled ? '<button type="button" class="btn btn-ghost btn-revoke" data-revoke="' + esc(name) + '">' + esc(t('admin.revoke')) + '</button>' : '<button type="button" class="btn btn-ghost" data-enroll="' + k + '">' + esc(t('admin.enroll')) + '</button>';
+      const action = enrolled ? '<button type="button" class="btn btn-ghost btn-revoke" data-revoke="' + esc(name) + '" data-probe="' + esc(p.id || 'probe-' + k) + '">' + esc(t('admin.revoke')) + '</button>' : '<button type="button" class="btn btn-ghost" data-enroll="' + k + '">' + esc(t('admin.enroll')) + '</button>';
       return '<div class="probe-row"><div><div class="pn"><span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable', unknown: 'unknown' }[p.state || 'unknown'] + '"><span class="state-dot"></span></span>' + esc(name) + ' <span class="xs muted">' + esc(t('admin.state.' + (p.state || 'unknown'))) + '</span></div><div class="pm">' + esc(meta) + '</div></div>' + action + '</div>';
     }
     const probes = probeRow('pc', t('admin.probe.pc')) + probeRow('android', t('admin.probe.android')) + probeRow('abroad', t('admin.probe.abroad'));
-    const svc = '<div class="svc">' + Object.keys(A.services).map(k => '<div><span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable', unknown: 'unknown' }[A.services[k]] + '"><span class="state-dot"></span></span><span>' + esc(t('admin.service.' + k)) + '</span><span class="xs muted" style="margin-left:auto">' + esc(t('admin.state.' + A.services[k])) + '</span></div>').join('') + '</div>';
+    const svc = '<div class="svc">' + Object.keys(A.services).map(k => '<div><span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable', unknown: 'unknown' }[A.services[k]] + '"><span class="state-dot"></span></span><span>' + esc(t('admin.service.' + k) === 'admin.service.' + k ? k : t('admin.service.' + k)) + '</span><span class="xs muted" style="margin-left:auto">' + esc(t('admin.state.' + A.services[k])) + '</span></div>').join('') + '</div>';
     const d = A.doctor, dc = { ok: 'operational', warn: 'degraded', fail: 'unavailable' }[d.result];
-    const doctor = '<div class="doctor"><div class="res c-' + dc + '">' + ico(d.result === 'ok' ? 'check' : d.result === 'warn' ? 'alert' : 'x') + '<span>' + esc(t('admin.doctor.' + d.result)) + '</span></div>' + d.items.map(it => '<div class="item"><div><b>' + esc(t('admin.service.' + it.name) === 'admin.service.' + it.name ? it.name : t('admin.service.' + it.name)) + '</b> · <span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable' }[it.state] + '">' + esc(t('admin.state.' + it.state)) + '</span></div><div class="muted">' + esc(t('admin.doctor.next')) + ': ' + esc(L(it.next)) + '</div>' + copyRow(it.cmd) + '</div>').join('') + (A.nextCommand && !d.items.length ? copyRow(A.nextCommand) : '') + '</div>';
-    const nt = SC.note, noteVal = noteDraft !== null ? noteDraft : (nt ? L(nt.text) : '');
-    const note = '<div class="stack"><textarea class="note-input" id="note-input" maxlength="' + FX.meta.noteMax + '" placeholder="' + esc(t('admin.note.placeholder')) + '" aria-label="' + esc(t('admin.note')) + '">' + esc(noteVal) + '</textarea><div class="small muted" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span id="note-count">' + esc(t('admin.note.chars', { n: noteVal.length, max: FX.meta.noteMax })) + '</span>' + (nt ? '<span>' + esc(t('admin.note.expires', { time: nt.expires })) + '</span>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="note-save">' + esc(t('action.save')) + '</button>' + (nt ? '<button type="button" class="btn btn-ghost btn-danger" id="note-del">' + esc(t('admin.note.delete')) + '</button>' : '') + '</div>' + (!nt && !noteVal ? '<p class="small muted">' + esc(t('admin.note.empty')) + '</p>' : '') + '</div>';
+    const doctor = '<div class="doctor"><div class="res c-' + dc + '">' + ico(d.result === 'ok' ? 'check' : d.result === 'warn' ? 'alert' : 'x') + '<span>' + esc(t('admin.doctor.' + d.result)) + '</span></div>' + d.items.map(it => '<div class="item"><div><b>' + esc(t('admin.service.' + it.name) === 'admin.service.' + it.name ? it.name : t('admin.service.' + it.name)) + '</b> · <span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable' }[it.state] + '">' + esc(t('admin.state.' + it.state)) + '</span></div><div class="muted">' + esc(t('admin.doctor.next')) + ': ' + esc(it.next) + '</div>' + (it.cmd ? copyRow(it.cmd) : '') + '</div>').join('') + (A.nextCommand && !d.items.length ? copyRow(A.nextCommand) : '') + '</div>';
+    const nt = SC.note, noteVal = noteDraft !== null ? noteDraft : (nt ? nt.text : '');
+    const note = '<div class="stack"><textarea class="note-input" id="note-input" maxlength="' + SC.noteMax + '" placeholder="' + esc(t('admin.note.placeholder')) + '" aria-label="' + esc(t('admin.note')) + '">' + esc(noteVal) + '</textarea><div class="small muted" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span id="note-count">' + esc(t('admin.note.chars', { n: noteVal.length, max: SC.noteMax })) + '</span>' + (nt && nt.expires ? '<span>' + esc(t('admin.note.expires', { time: fmtTime(nt.expires) })) + '</span>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="note-save">' + esc(t('action.save')) + '</button>' + (nt ? '<button type="button" class="btn btn-ghost btn-danger" id="note-del">' + esc(t('admin.note.delete')) + '</button>' : '') + '</div>' + (!nt && !noteVal ? '<p class="small muted">' + esc(t('admin.note.empty')) + '</p>' : '') + '</div>';
     return '<div class="screen admin-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.attention')) + '</h2>' + attHtml + '</section>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.probes')) + '</h2><div>' + probes + '</div></section>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.services')) + '</h2>' + svc + '</section>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.doctor')) + '</h2>' + doctor + '</section>' +
-      '<section class="stack"><h2 class="sub">' + esc(t('admin.note')) + '</h2>' + note + '</section>' +
-      '<p class="xs muted">' + esc(t('admin.demoAction')) + '</p></div>';
+      '<section class="stack"><h2 class="sub">' + esc(t('admin.note')) + '</h2>' + note + '</section></div>';
+  }
+  function enrollSheet(code, origin) {
+    openSheet('<h2>' + esc(t('admin.enroll.title')) + '</h2><div class="code" aria-live="polite">' + esc(code) + '</div><p class="small muted">' + esc(t('admin.enroll.body')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-copy="' + esc(code) + '">' + ico('copy') + esc(t('action.copy')) + '</button><button type="button" class="btn btn-primary" data-close>' + esc(t('action.close')) + '</button></div>', origin);
   }
   function bindAdmin() {
     bindCopy();
-    root.querySelectorAll('[data-enroll]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.enroll.title')) + '</h2><div class="code" aria-live="polite">' + esc(SC.adminData.enrollCode) + '</div><p class="small muted">' + esc(t('admin.enroll.body')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-copy="' + esc(SC.adminData.enrollCode) + '">' + ico('copy') + esc(t('action.copy')) + '</button><button type="button" class="btn btn-primary" data-close>' + esc(t('action.close')) + '</button></div>', b)));
-    root.querySelectorAll('[data-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.revoke')) + '</h2><p>' + esc(t('admin.revokeConfirm', { name: b.getAttribute('data-revoke') })) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b)));
-    const ni = $('#note-input'); if (ni) ni.addEventListener('input', () => { noteDraft = ni.value; $('#note-count').textContent = t('admin.note.chars', { n: ni.value.length, max: FX.meta.noteMax }); });
-    const ns = $('#note-save'); if (ns) ns.addEventListener('click', () => toast(t('admin.demoAction')));
-    const nd = $('#note-del'); if (nd) nd.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.note.delete')) + '</h2><p>' + esc(t('admin.note.deleteConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', nd));
+    root.querySelectorAll('[data-enroll]').forEach(b => b.addEventListener('click', () => {
+      const k = b.getAttribute('data-enroll');
+      if (!api) { enrollSheet(SC.adminData.enrollCode || '—', b); return; }
+      api.createEnrollment(probeKinds[k], probeCaps[k]).then(r => enrollSheet(r.code, b)).catch(e => toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })));
+    }));
+    root.querySelectorAll('[data-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.revoke')) + '</h2><p>' + esc(t('admin.revokeConfirm', { name: b.getAttribute('data-revoke') })) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
+      () => apiAction(() => api.revokeProbe(b.getAttribute('data-probe'))).then(ok => { if (ok) load(); }))));
+    const ni = $('#note-input'); if (ni) ni.addEventListener('input', () => { noteDraft = ni.value; $('#note-count').textContent = t('admin.note.chars', { n: ni.value.length, max: SC.noteMax }); });
+    const ns = $('#note-save'); if (ns) ns.addEventListener('click', () => { const text = ($('#note-input').value || '').trim(); if (!text) return; apiAction(() => api.putNote(text)).then(ok => { if (ok) { noteDraft = null; load(); } }); });
+    const nd = $('#note-del'); if (nd) nd.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.note.delete')) + '</h2><p>' + esc(t('admin.note.deleteConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', nd,
+      () => apiAction(() => api.deleteNote()).then(ok => { if (ok) { noteDraft = null; load(); } })));
   }
-  function openSheet(html, origin) {
+  function openSheet(html, origin, onConfirm) {
     const bd = document.createElement('div'); bd.className = 'sheet-backdrop'; bd.innerHTML = '<div class="sheet" role="dialog" aria-modal="true">' + html + '</div>';
     document.body.appendChild(bd);
     const close = () => { bd.remove(); document.removeEventListener('keydown', onKey); if (origin) origin.focus({ preventScroll: true }); };
@@ -992,7 +1328,7 @@ body { flex-direction: column; }
     document.addEventListener('keydown', onKey);
     bd.addEventListener('click', e => { if (e.target === bd) close(); });
     bd.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
-    bd.querySelectorAll('[data-confirm]').forEach(b => b.addEventListener('click', () => { toast(t('admin.demoAction')); close(); }));
+    bd.querySelectorAll('[data-confirm]').forEach(b => b.addEventListener('click', () => { if (onConfirm) onConfirm(); else toast(t('admin.demoAction')); close(); }));
     bd.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copy(b.getAttribute('data-copy'))));
     const f = bd.querySelector('button'); if (f) f.focus();
   }
@@ -1010,7 +1346,8 @@ body { flex-direction: column; }
     if (S.tab === 'status') { S.server ? bindServer() : bindStatus(); }
     else if (S.tab === 'events') bindEvents(); else if (S.tab === 'help') bindHelp(); else if (S.tab === 'admin') bindAdmin(); else if (S.tab === 'keys') bindHelp();
     drawCharts();
-    try { document.dispatchEvent(new CustomEvent('vpnpulse:render', { detail: { lang: S.lang, scenario: S.scenario, role: S.role, tab: S.tab, server: S.server } })); } catch (e) { /* old webview */ }
+    document.body.setAttribute('data-scenario', SC.id); document.body.setAttribute('data-source', SC.source || MODE);
+    try { document.dispatchEvent(new CustomEvent('vpnpulse:render', { detail: { lang: S.lang, scenario: S.scenario, role: S.role, tab: S.tab, server: S.server, source: SC.source } })); } catch (e) { /* old webview */ }
   }
   window.addEventListener('popstate', () => {
     if (S.server) {
@@ -1025,14 +1362,17 @@ body { flex-direction: column; }
 
   // ---------- showcase controls (not part of the product) ----------
   function applyShowcase(o) {
-    if (o.scenario) { S.scenario = o.scenario; SC = resolve(S.scenario); S.eventsState = 'ok'; S.eventsPage = 1; noteDraft = null; if (S.server && !byId(S.server)) S.server = null; }
-    if (o.role) { S.role = o.role; if (S.role !== 'admin' && S.tab === 'admin') S.tab = 'status'; }
+    let reload = false;
+    if (o.scenario) { S.scenario = o.scenario; S.eventsState = 'ok'; S.eventsPage = 1; noteDraft = null; reload = true; }
+    if (o.role) { S.role = o.role; S.sessionRole = null; if (S.role !== 'admin' && S.tab === 'admin') S.tab = 'status'; reload = true; }
     if (o.theme) S.theme = o.theme;
-    if (o.lang) { S.lang = o.lang; store.set('lang', S.lang); }
+    if (o.lang) { S.lang = o.lang; store.set('lang', S.lang); reload = true; }
     if (o.text200 !== undefined) S.text200 = o.text200;
     if (o.showcase) document.body.setAttribute('data-showcase', o.showcase);
     if (o.screen) { const m = o.screen.match(/^server:(\w+)$/); if (m) { S.tab = 'status'; S.server = m[1]; S.open = 'checks'; } else { S.tab = o.screen; S.server = null; } }
-    render(); syncShowcase();
+    const p = reload ? load() : (render(), Promise.resolve());
+    syncShowcase();
+    return p;
   }
   function syncShowcase() {
     const sc = document.getElementById('sc-scenario'); if (sc) sc.value = S.scenario;
@@ -1040,20 +1380,23 @@ body { flex-direction: column; }
     document.querySelectorAll('[data-sc-theme]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-sc-theme') === S.theme)));
     const tx = document.getElementById('sc-text'); if (tx) tx.setAttribute('aria-pressed', String(S.text200));
   }
-  window.VPNPulseShowcase = { apply: applyShowcase, state: () => JSON.parse(JSON.stringify({ scenario: S.scenario, role: S.role, theme: S.theme, lang: S.lang, tab: S.tab, server: S.server, open: S.open, scrollPos: S.scrollPos })), events };
+  window.VPNPulseShowcase = { apply: applyShowcase, reload: load, mode: MODE, state: () => JSON.parse(JSON.stringify({ scenario: S.scenario, role: S.role, theme: S.theme, lang: S.lang, tab: S.tab, server: S.server, open: S.open, scrollPos: S.scrollPos, source: SC.source })), events };
   const scSel = document.getElementById('sc-scenario');
-  if (scSel) { Object.keys(FX.scenarios).forEach(id => { const o = document.createElement('option'); o.value = id; o.textContent = id; scSel.appendChild(o); }); scSel.addEventListener('change', () => applyShowcase({ scenario: scSel.value })); }
+  if (scSel) { Object.keys(FX.scenarios).forEach(id => { if (MODE === 'api' && id === 'loading') return; const o = document.createElement('option'); o.value = id; o.textContent = id; scSel.appendChild(o); }); scSel.addEventListener('change', () => applyShowcase({ scenario: scSel.value })); }
   document.querySelectorAll('[data-sc-role]').forEach(b => b.addEventListener('click', () => applyShowcase({ role: b.getAttribute('data-sc-role') })));
   document.querySelectorAll('[data-sc-theme]').forEach(b => b.addEventListener('click', () => applyShowcase({ theme: b.getAttribute('data-sc-theme') })));
   const scText = document.getElementById('sc-text'); if (scText) scText.addEventListener('click', () => applyShowcase({ text200: !S.text200 }));
   const scHide = document.getElementById('sc-hide'); if (scHide) scHide.addEventListener('click', () => applyShowcase({ showcase: 'hidden' }));
+  const scLabel = document.querySelector('.showcase .sc-label'); if (scLabel && MODE === 'api') scLabel.textContent = 'Showcase · API';
 
   // ---------- boot ----------
   history.replaceState({ tab: S.tab, server: S.server }, '');
   if (S.server) history.pushState({ tab: 'status', server: S.server }, '');
   render(); syncShowcase();
+  if (MODE !== 'api') document.body.setAttribute('data-load', 'ready');
   track('app_opened', { role: S.role, language: S.lang, theme: S.theme, viewport_bucket: window.innerWidth < 480 ? 'phone' : window.innerWidth < 1024 ? 'tablet' : 'desktop' });
-  if (!SC.loading && SC.api !== 'auth') track('status_ready', { overall_state: SC.overall, freshness_bucket: SC.freshnessMin === null ? 'none' : SC.freshnessMin <= 3 ? 'fresh' : 'stale', load_ms: 0, coverage: SC.coverageMissing ? 'partial' : 'full' });
+  if (MODE === 'api') { load().then(() => { if (!SC.loading && SC.api !== 'auth') track('status_ready', { overall_state: SC.overall, freshness_bucket: SC.freshnessMin === null ? 'none' : SC.freshnessMin <= 3 ? 'fresh' : 'stale', load_ms: 0, coverage: SC.coverageMissing ? 'partial' : 'full' }); }); scheduleRefresh(); }
+  else if (!SC.loading && SC.api !== 'auth') track('status_ready', { overall_state: SC.overall, freshness_bucket: SC.freshnessMin === null ? 'none' : SC.freshnessMin <= 3 ? 'fresh' : 'stale', load_ms: 0, coverage: SC.coverageMissing ? 'partial' : 'full' });
 })();
 
 </script>

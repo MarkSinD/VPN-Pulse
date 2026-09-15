@@ -99,3 +99,6 @@ tmp/
 temp/
 *.bak
 *.orig
+
+# --- Browser QA screenshots (scripts/ui_check.py) ---
+output/

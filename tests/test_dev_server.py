@@ -71,7 +71,7 @@ def test_every_read_route_is_contract_valid(client, scenario, role):
     # every existing source is one of the three kinds, and hidden kinds never appear on cards
     kinds = {s["source"] for s in payload.get("sources", [])}
     for card in payload["servers"]:
-        assert {s["source"] for s in card["sources"]} <= kinds
+        assert {s["source"] for s in card["sources"]} - {"human_activity", "collector"} <= kinds
         for path, schema in (
             (f"/api/v1/servers/{card['id']}", response_schema("/servers/{serverId}", "get", "200")),
             (f"/api/v1/servers/{card['id']}/metrics?period=24h&", response_schema("/servers/{serverId}/metrics", "get", "200")),
@@ -95,8 +95,12 @@ def test_every_read_route_is_contract_valid(client, scenario, role):
         r = client.get("/api/v1/admin/probes" + q)
         assert r.status_code == 200
         validate(response_schema("/admin/probes", "get", "200"), r.json())
+        r = client.get("/api/v1/admin/overview" + q)
+        assert r.status_code == 200, r.text
+        validate(response_schema("/admin/overview", "get", "200"), r.json())
     else:
         assert client.get("/api/v1/admin/probes" + q).status_code == 403
+        assert client.get("/api/v1/admin/overview" + q).status_code == 403
 
 
 def test_offline_scenario_is_a_503_problem(client):
@@ -129,7 +133,7 @@ def test_sources_follow_probe_presence(client):
     login(client, "member", "no_pc")
     payload = client.get("/api/v1/status?scenario=no_pc").json()
     assert [s["source"] for s in payload["sources"]] == ["mobile", "abroad"]
-    assert all({s["source"] for s in card["sources"]} == {"mobile", "abroad"} for card in payload["servers"])
+    assert all({s["source"] for s in card["sources"]} - {"human_activity"} == {"mobile", "abroad"} for card in payload["servers"])
     partial = client.get("/api/v1/status?scenario=partial_coverage").json()
     assert partial["sources"] == [] and partial["coverage"] == 0
     unknown = client.get("/api/v1/status?scenario=unknown").json()
@@ -167,6 +171,24 @@ def test_metrics_shape_matches_period(client):
     assert day["points"][0]["at"] < day["points"][-1]["at"]
     assert client.get("/api/v1/servers/s1/metrics?period=1h&scenario=unknown").status_code == 400
     assert client.get("/api/v1/servers/nope/metrics?period=24h&scenario=unknown").status_code == 404
+
+
+def test_overview_carries_installation_wide_attention_and_doctor(client):
+    login(client, "admin", "clean_install")
+    o = client.get("/api/v1/admin/overview?scenario=clean_install").json()
+    assert o["doctor"]["result"] == "fail" and o["next_command"] == "vpn-pulse server add"
+    o = client.get("/api/v1/admin/overview?scenario=unknown&lang=en").json()
+    assert any(a["server_id"] is None and a["code"] == "PROBE_SILENT" for a in o["attention_items"])
+    assert o["doctor"]["items"][0]["next"].startswith("Wake the computer")
+
+
+def test_session_info_reports_the_role(client):
+    login(client, "admin", "operational")
+    me = client.get("/api/v1/sessions/current").json()
+    validate(response_schema("/sessions/current", "get", "200"), me)
+    assert me["role"] == "admin"
+    client.cookies.clear()
+    assert client.get("/api/v1/sessions/current").status_code == 401
 
 
 def test_static_app_is_served(client):

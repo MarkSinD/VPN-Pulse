@@ -52,13 +52,20 @@ project's UI-to-contract map; the essentials:
 - **Admin**: `attention_items` sorted by severity, `/admin/probes`, `/health/ready` → doctor
   summary built on the client.
 
+## Sessions and language
+
+`POST /sessions` sets the cookie; `GET /sessions/current` tells the client its role (member or
+admin) so the Admin tab is shown only when it will work. Server names, the administrator note and
+doctor hints come back in the language of `Accept-Language` (`ru` or `en`).
+
 ## Trying it locally
 
 `python -m vpnpulse.dev` serves every route above on the demo scenarios of
 `fixtures/ui/scenarios.json` (see the quick start). Server names and the administrator note come
 back in the language of `Accept-Language` (`?lang=` in the dev server); formalising this header in
 the contract is on the list for the SQLite read model. `tests/test_dev_server.py` validates each
-route for each scenario and role against the OpenAPI schemas.
+route for each scenario and role against the OpenAPI schemas, and `scripts/ui_parity_check.py`
+renders every screen of the Mini App from the API and from the scenarios and compares the DOM.
 
 ## Compatibility rules
 

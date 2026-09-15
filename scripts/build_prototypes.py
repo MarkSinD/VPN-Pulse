@@ -1,4 +1,4 @@
-"""Build the self-contained UI prototypes from docs/prototypes/source/.
+"""Build the Mini App and the prototypes from web/src/ into docs/prototypes/.
 
 Inlines the shared tokens, the RU/EN dictionaries (i18n/*.json — the single source of UI
 strings) and the demo scenarios (fixtures/ui/scenarios.json — shared with the dev server) into
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "docs" / "prototypes" / "source"
+SRC = ROOT / "web" / "src"
 OUT = ROOT / "docs" / "prototypes"
 I18N = ROOT / "i18n"
 
@@ -40,6 +40,8 @@ def main() -> int:
         "TOKENS": read(SRC / "ui-tokens.css"),
         "APP_CSS": read(SRC / "app.css"),
         "APP_JS": read(SRC / "app.js"),
+        "MODEL_JS": read(SRC / "model.js"),
+        "API_JS": read(SRC / "api.js"),
         "ANDROID_CSS": read(SRC / "android.css"),
         "ANDROID_JS": read(SRC / "android.js"),
         "ICONS": read(SRC / "icons.svg"),
@@ -59,6 +61,8 @@ def main() -> int:
         doc = head + (title.group(0) if title else "<title>VPN Pulse</title>") + "\n</head>\n<body>\n" + fragment + "\n</body>\n</html>\n"
         (OUT / f"{name}.html").write_text(doc, encoding="utf-8")
         print(f"built docs/prototypes/{name}.html ({len(doc) // 1024} KiB)")
+        if name == "mvp" and len(sys.argv) > 2 and sys.argv[1] == "--artifact":
+            Path(sys.argv[2]).write_text(body, encoding="utf-8")  # fragment for a hosted artifact
     return 0
 
 

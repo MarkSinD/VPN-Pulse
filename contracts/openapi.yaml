@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.2.0
+  version: 1.3.0
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -38,6 +38,18 @@ paths:
         "403": { $ref: "#/components/responses/Problem" }
         "429": { $ref: "#/components/responses/Problem" }
   /sessions/current:
+    get:
+      tags: [Session]
+      summary: Who am I — role of the current web session
+      operationId: getSession
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Session info
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionInfo" }
+        "401": { $ref: "#/components/responses/Problem" }
     delete:
       tags: [Session]
       summary: Revoke current web session
@@ -177,6 +189,19 @@ paths:
               schema:
                 type: array
                 items: { $ref: "#/components/schemas/ProbeSummary" }
+  /admin/overview:
+    get:
+      tags: [Admin]
+      summary: Attention list and doctor summary for the administrator dashboard
+      operationId: getAdminOverview
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AdminOverview" }
+        "403": { $ref: "#/components/responses/Problem" }
   /admin/probe-enrollments:
     post:
       tags: [Admin]
@@ -399,6 +424,9 @@ components:
         state: { $ref: "#/components/schemas/State" }
         freshness: { $ref: "#/components/schemas/Freshness" }
         reason_code: { type: [string, "null"], maxLength: 80 }
+        via_server_id:
+          description: for `abroad` evidence — the public id of the server that performed the cross-check
+          anyOf: [{ $ref: "#/components/schemas/PublicId" }, { type: "null" }]
     ServerCard:
       type: object
       required: [id, name, country_code, state, freshness, recommended, sources, uptime_24h]
@@ -520,6 +548,7 @@ components:
         issued: { type: [integer, "null"], minimum: 0 }
         ever_connected: { type: [integer, "null"], minimum: 0 }
         active_24h: { type: [integer, "null"], minimum: 0 }
+        last_connection_at: { type: [string, "null"], format: date-time, description: last handshake seen by the collector; null when never or unknown }
     ServiceCheck:
       type: object
       additionalProperties: false
@@ -569,6 +598,48 @@ components:
               maxItems: 50
               items: { $ref: "#/components/schemas/AttentionItem" }
             diagnostics: { type: object, additionalProperties: true }
+    SessionInfo:
+      type: object
+      additionalProperties: false
+      required: [role, expires_at]
+      properties:
+        role: { type: string, enum: [member, admin] }
+        expires_at: { type: string, format: date-time }
+    AdminOverview:
+      description: >-
+        one call for the administrator dashboard: attention items across all servers and the
+        installation-wide ones (server_id null), plus the same doctor verdict `vpn-pulse doctor` prints
+      type: object
+      additionalProperties: false
+      required: [attention_items, doctor]
+      properties:
+        attention_items:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/AttentionItem" }
+        doctor: { $ref: "#/components/schemas/DoctorSummary" }
+        next_command:
+          description: the single most useful next command for this installation, or null
+          type: [string, "null"]
+          maxLength: 120
+    DoctorSummary:
+      type: object
+      additionalProperties: false
+      required: [result, items]
+      properties:
+        result: { type: string, enum: [ok, warn, fail] }
+        items:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            additionalProperties: false
+            required: [check, state, next, command]
+            properties:
+              check: { type: string, enum: [servers, probes, collector, storage, bot, https, telegram, queue, backup] }
+              state: { type: string, enum: [ok, warn, fail] }
+              next: { type: string, maxLength: 200, description: one next step, in the language of the request }
+              command: { type: [string, "null"], maxLength: 120 }
     AttentionItem:
       type: object
       additionalProperties: false

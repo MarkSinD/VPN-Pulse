@@ -222,7 +222,11 @@ class FixtureReadModel:
                 "state": RESULT_STATE[src["r"]],
                 "freshness": self._freshness(sc.now, src.get("age")),
                 "reason_code": str(src.get("detailKey", "")).split(".")[-1] or None,
+                "via_server_id": s.get("abroadFrom") if k == "abroad" else None,
             })
+        # member connections are evidence too: present when the state is confirmed by people
+        if s.get("confirmedBy") in ("humans", "both"):
+            out.append({"source": "human_activity", "state": "operational", "freshness": self._freshness(sc.now, s.get("staleMin", 1)), "reason_code": None, "via_server_id": None})
         return out
 
     def _card(self, sc: Scenario, s: dict, lang: str) -> dict:
@@ -232,7 +236,7 @@ class FixtureReadModel:
             "name": self._text(s["name"], lang),
             "country_code": s["cc"].upper(),
             "state": s["state"],
-            "freshness": self._freshness(sc.now, s.get("staleMin", sc.raw.get("freshnessMin"))),
+            "freshness": self._freshness(sc.now, s.get("staleMin", 1 if s["state"] != "unknown" else sc.raw.get("freshnessMin"))),
             "recommended": sc.raw.get("recommended") == s["id"],
             "uptime_24h": _parse_percent(s.get("uptime24")),
             "coverage_24h": None if s["state"] == "unknown" and not known else round(len(known) / 48, 4),
@@ -265,7 +269,8 @@ class FixtureReadModel:
             "coverage_7d": None if s["state"] == "unknown" else 1.0,
             "components": components,
             "resources": {"traffic_mbps": ld["mbit"], "cpu_percent": ld["cpu"], "memory_percent": ld["ram"], "swap_percent": ld["swap"], "peak_connections_24h": ld["peak"]},
-            "profiles": {"issued": s["keys"]["issued"], "ever_connected": s["keys"]["ever"], "active_24h": s["keys"]["active"]},
+            "profiles": {"issued": s["keys"]["issued"], "ever_connected": s["keys"]["ever"], "active_24h": s["keys"]["active"],
+                         "last_connection_at": None if ld.get("lastConnMin") is None else self._iso(sc.now - timedelta(minutes=ld["lastConnMin"]))},
             "service_checks": checks,
         }
 
@@ -348,7 +353,7 @@ class FixtureReadModel:
             "at": self._iso(sc.now - step * (n - 1 - i)),
             "state": segs[i],
             "coverage": 0.0 if segs[i] == "unknown" else 1.0,
-            "connections": None if series[i] is None else int(round(series[i])),
+            "connections": None if series[i] is None else int(math.floor(series[i] + 0.5)),  # JS Math.round
         } for i in range(n)]
         return {"server_id": server_id, "period": period, "coverage": round(sum(1 for p in points if p["coverage"]) / n, 4), "points": points}
 
@@ -402,6 +407,16 @@ class FixtureReadModel:
                 "network_type": PROBE_NETWORK[kind],
             })
         return out
+
+    def admin_overview(self) -> dict:
+        sc, lang = self._ctx()
+        admin = sc.admin or {}
+        items = [{"severity": a["sev"], "code": a.get("code", "ATTENTION"), "message": self._text(a["text"], lang), "server_id": a.get("server")} for a in admin.get("attention", [])]
+        order = {"high": 0, "medium": 1, "low": 2}
+        items.sort(key=lambda a: order[a["severity"]])
+        doctor = admin.get("doctor") or {"result": "ok", "items": []}
+        doc_items = [{"check": it["name"], "state": it["state"], "next": self._text(it.get("next"), lang), "command": it.get("cmd")} for it in doctor.get("items", [])]
+        return {"attention_items": items, "doctor": {"result": doctor["result"], "items": doc_items}, "next_command": admin.get("nextCommand") or (doc_items[0]["command"] if doc_items else None)}
 
     def revoke_probe(self, probe_id: str) -> bool:
         known = {f"probe-{k}" for k in ("pc", "android", "abroad")}

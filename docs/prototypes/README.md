@@ -9,7 +9,7 @@ no server, no network, no secrets. All data is fictional fixtures.
 | `android.html` | the Android probe app: enroll → exclude from VPN → cellular check → run |
 | `onboarding.html` | first-run walkthrough for documentation: demo mode, clean install, partial coverage, doctor |
 | `ui-tokens.css` | shared design tokens: spacing, radius, type scale, the near-black / iOS-grouped palette, materials (`--metal`, `--card-edge`, `--panel-inset`, engraved lines), motion |
-| `source/` | build sources: `app.js`, `app.css`, `android.js`, `android.css`, `icons.svg`, templates |
+| `../../web/src/` | sources: `app.js` (renderer), `model.js` (view model from API or scenarios), `api.js` (contract client), `app.css`, `android.*`, `icons.svg`, templates |
 | `../../fixtures/ui/scenarios.json` | the demo scenarios — shared by the prototypes and the dev server (`python -m vpnpulse.dev`) |
 
 ## Showcase controls
@@ -55,9 +55,20 @@ Screens: `status`, `events`, `keys`, `help`, `admin`, `server:s1..s3`.
 
 ## Rebuilding
 
-The prototypes are generated from `source/`. Edit the sources, not the built files:
+The files here are built from `web/src/`. Edit the sources, not the built files:
 
 ```bash
-python scripts/build_prototypes.py
-python scripts/check_contrast.py   # after changing ui-tokens.css
+python scripts/build_prototypes.py          # web/src → docs/prototypes
+python scripts/check_contrast.py            # after changing ui-tokens.css
+python scripts/ui_check.py                  # browser QA matrix (Playwright)
+python scripts/ui_parity_check.py           # API render == scenario render, every screen
 ```
+
+## Data source
+
+`mvp.html` is the real Mini App. Opened as a file it renders the inlined demo scenarios; served by
+the dev server (`python -m vpnpulse.dev`, then <http://127.0.0.1:8765/app/mvp.html>) or inside
+Telegram it reads the API through `web/src/api.js` — the same screens, the same DOM (checked by
+`scripts/ui_parity_check.py`). `?data=fixtures` / `?data=api` forces a source; in API mode the
+showcase bar switches scenarios by asking the dev server (`?scenario=`), and the 7-day range shows
+real 7-day metrics.
