@@ -170,6 +170,13 @@
     return '<span class="ring r-' + s.state + ' ' + (cls || '') + '" aria-hidden="true">' + gauge(arc) + '<span class="flag">' + face + '</span>' + (cc ? '<span class="cc">' + esc(cc.toUpperCase()) + '</span>' : '') + mark + '</span>';
   }
   const sevIcon = { high: 'x', medium: 'alert', low: 'info' };
+  // summary gauge for the status headline: arc = share of servers that work, colour = overall state,
+  // glyph repeats the state (check / alert / x / clock = no fresh data). No flag, no country code.
+  const stateGlyph = { operational: 'check', degraded: 'alert', unavailable: 'x', unknown: 'clock' };
+  function summaryGauge(state, fraction) {
+    const arc = state === 'unknown' || fraction === null ? '' : ' style="stroke-dasharray:' + Math.max(6, Math.min(300, fraction * 300)).toFixed(1) + ' 300"';
+    return '<span class="ring xs r-' + state + '" aria-hidden="true">' + gauge(arc) + '<span class="glyph">' + ico(stateGlyph[state] || 'clock') + '</span></span>';
+  }
   const srcIcon = { pc: 'pc', mobile: 'signal', abroad: 'globe' };
   function sources(s, withLabels) {
     return '<span class="srcs">' + kinds().map(k => { const r = s.sources[k].r; return '<span class="src s-' + r + '"><span class="sr-only">' + esc(t('source.' + k)) + ': ' + esc(t('source.result.' + r)) + '</span>' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span>' + (withLabels ? '<span class="lbl">' + esc(t('source.' + k)) + '</span>' : '') + '</span>'; }).join('') + '</span>';
@@ -209,7 +216,8 @@
     // the recommendation lives on the server row (chip); here only the absence of one is worth a line
     const recHtml = !SC.empty && !rec && SC.list.length ? '<p class="small muted">' + esc(t('status.noRecommendation')) + '</p>' : '';
     const title = SC.empty ? t('status.settingUp') : SC.api === 'offline' ? t('status.' + SC.overall) : t('status.' + SC.overall);
-    const lamp = SC.empty || !SC.overall ? '' : '<span class="lamp c-' + SC.overall + '" aria-hidden="true"></span>';
+    const okShare = SC.list.length ? SC.list.filter(x => x.state === 'operational').length / SC.list.length : null;
+    const lamp = SC.empty || !SC.overall ? '' : summaryGauge(SC.overall, okShare);
     return '<div class="overall"><div class="ov-row"><h1 class="title" id="screen-title" tabindex="-1">' + lamp + esc(title) + '</h1>' + fresh + '</div>' + recHtml + '</div>';
   }
   function noteBlock() {
