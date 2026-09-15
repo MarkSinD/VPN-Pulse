@@ -12,7 +12,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from vpnpulse.analytics import AnalyticsRegistry
-from vpnpulse.api.read_model import ReadModel, ReadModelUnavailable, StatusOnlyReadModel
+from vpnpulse.api import schemas
+from vpnpulse.api.read_model import ReadModel, ReadModelUnavailable, StatusOnlyReadModel, pick_language
 from vpnpulse.auth import (
     AuthenticationError,
     InMemorySessionStore,
@@ -69,6 +70,7 @@ def create_app(
     status_provider: Callable[[str], dict] | None = None,
     read_model: ReadModel | None = None,
     contact_url: str | None = None,
+    default_language: str = "ru",
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> FastAPI:
     """Build the API. Reads go through `read_model`; `status_provider` is the legacy status-only form."""
@@ -76,7 +78,7 @@ def create_app(
         if status_provider is None:
             raise ValueError("create_app needs read_model or status_provider")
         read_model = StatusOnlyReadModel(status_provider, contact_url)
-    app = FastAPI(title="VPN Pulse API", version="1.2.0")
+    app = FastAPI(title="VPN Pulse API", version="1.4.0")
     sessions = InMemorySessionStore()
     analytics = AnalyticsRegistry(analytics_schema)
     enrollments: dict[str, dict] = {}
@@ -118,6 +120,9 @@ def create_app(
             raise HTTPException(status_code=403, detail={"code": "ROLE_REQUIRED"})
         return session
 
+    def lang_of(request: Request) -> str:
+        return pick_language(request.headers.get("accept-language"), default_language)
+
     def require_probe(authorization: str | None):
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(status_code=401, detail={"code": "PROBE_TOKEN_REQUIRED"})
@@ -154,7 +159,7 @@ def create_app(
             path="/api/v1",
         )
 
-    @app.get("/api/v1/sessions/current")
+    @app.get("/api/v1/sessions/current", response_model=schemas.SessionInfo)
     def current_session(vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
         return {"role": session.identity.role, "expires_at": session.expires_at.isoformat()}
@@ -163,23 +168,23 @@ def create_app(
     def delete_session(vpnpulse_session: str | None = Cookie(default=None)):
         sessions.revoke(vpnpulse_session)
 
-    @app.get("/api/v1/status")
-    def status(vpnpulse_session: str | None = Cookie(default=None)):
+    @app.get("/api/v1/status", response_model=schemas.StatusResponse)
+    def status(request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
-        payload = dict(read_model.status(session.identity.role))
+        payload = dict(read_model.status(session.identity.role, lang_of(request)))
         if note_touched:
             payload["note"] = active_note
         return payload
 
-    @app.get("/api/v1/servers/{server_id}")
-    def server(server_id: str, vpnpulse_session: str | None = Cookie(default=None)):
+    @app.get("/api/v1/servers/{server_id}", response_model=schemas.ServerDetail)
+    def server(server_id: str, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
-        detail = read_model.server(server_id, session.identity.role)
+        detail = read_model.server(server_id, session.identity.role, lang_of(request))
         if detail is None:
             raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
         return detail
 
-    @app.get("/api/v1/servers/{server_id}/metrics")
+    @app.get("/api/v1/servers/{server_id}/metrics", response_model=schemas.MetricsResponse)
     def server_metrics(
         server_id: str,
         period: str = "24h",
@@ -193,32 +198,33 @@ def create_app(
             raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
         return payload
 
-    @app.get("/api/v1/events")
+    @app.get("/api/v1/events", response_model=schemas.EventPage)
     def events(
+        request: Request,
         filter: str = "all",
         cursor: str | None = None,
         limit: int = 50,
         vpnpulse_session: str | None = Cookie(default=None),
     ):
-        require_session(vpnpulse_session)
+        session = require_session(vpnpulse_session)
         if filter not in {"all", "problems", "notes"} or not 1 <= limit <= 100:
             raise HTTPException(status_code=400, detail={"code": "EVENT_QUERY_INVALID"})
-        return read_model.events(filter, cursor, limit)
+        return read_model.events(filter, cursor, limit, session.identity.role, lang_of(request))
 
-    @app.get("/api/v1/help")
-    def help_content(vpnpulse_session: str | None = Cookie(default=None)):
+    @app.get("/api/v1/help", response_model=schemas.HelpResponse)
+    def help_content(request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session)
-        return read_model.help()
+        return read_model.help(lang_of(request))
 
-    @app.get("/api/v1/admin/servers/{server_id}")
-    def admin_server(server_id: str, vpnpulse_session: str | None = Cookie(default=None)):
+    @app.get("/api/v1/admin/servers/{server_id}", response_model=schemas.AdminServerDetail)
+    def admin_server(server_id: str, request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session, "admin")
-        detail = read_model.admin_server(server_id)
+        detail = read_model.admin_server(server_id, lang_of(request))
         if detail is None:
             raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
         return detail
 
-    @app.get("/api/v1/admin/probes")
+    @app.get("/api/v1/admin/probes", response_model=list[schemas.ProbeSummary])
     def admin_probes(vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session, "admin")
         # probes known to the read model first, then the ones enrolled in this process
@@ -229,10 +235,10 @@ def create_app(
                 listed.append({key: value for key, value in probe.items() if key in public_probe_keys})
         return listed
 
-    @app.get("/api/v1/admin/overview")
-    def admin_overview(vpnpulse_session: str | None = Cookie(default=None)):
+    @app.get("/api/v1/admin/overview", response_model=schemas.AdminOverview)
+    def admin_overview(request: Request, vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session, "admin")
-        return read_model.admin_overview()
+        return read_model.admin_overview(lang_of(request))
 
     @app.post("/api/v1/admin/probe-enrollments", status_code=201)
     def create_enrollment(payload: EnrollmentInput, vpnpulse_session: str | None = Cookie(default=None)):
@@ -309,7 +315,7 @@ def create_app(
             raise HTTPException(status_code=400, detail={"code": "ANALYTICS_EVENT_INVALID"}) from error
         return {"accepted": accepted}
 
-    @app.get("/api/v1/health/ready")
+    @app.get("/api/v1/health/ready", response_model=schemas.Readiness)
     def ready():
         return read_model.readiness()
 

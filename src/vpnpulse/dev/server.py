@@ -47,13 +47,28 @@ def create_dev_app(
     app_dir: Path | None = None,
     contact_url: str | None = "https://t.me/example_admin",
     now=None,
+    sqlite_path: Path | None = None,
 ) -> FastAPI:
     root = repo_root()
     catalog = catalog or ScenarioCatalog.load()
     if default_scenario not in catalog.ids:
         raise ValueError(f"unknown scenario {default_scenario!r}; known: {', '.join(catalog.ids)}")
     now = now or (lambda: datetime.now(UTC))
-    read_model = FixtureReadModel(catalog, default_scenario=default_scenario, contact_url=contact_url, now=now)
+    if sqlite_path is not None:
+        # one scenario, written once into a real database and served by the production read model
+        from vpnpulse.dev.seed import seed_scenario
+        from vpnpulse.storage import SqliteReadModel, apply_migrations, connect
+
+        connection = connect(sqlite_path)
+        apply_migrations(connection, root / "migrations")
+        if connection.execute("SELECT count(*) FROM servers").fetchone()[0] == 0 and not connection.execute("SELECT count(*) FROM schema_migrations WHERE version > 1").fetchone()[0]:
+            config = seed_scenario(connection, catalog, default_scenario, now(), contact_url=contact_url)
+        else:
+            from vpnpulse.dev.seed import config_for
+            config = config_for(catalog, catalog.build(default_scenario, now()), contact_url)
+        read_model = SqliteReadModel(connection, config, now=now, mode="demo" if default_scenario == "demo" else "live")
+    else:
+        read_model = FixtureReadModel(catalog, default_scenario=default_scenario, contact_url=contact_url, now=now)
     app = create_app(
         bot_token=DEV_BOT_TOKEN,
         membership=DevMembership(),
@@ -69,17 +84,22 @@ def create_dev_app(
     async def scenario_context(request: Request, call_next):
         params = request.query_params
         scenario = params.get("scenario") or state["scenario"]
+        if sqlite_path is not None:
+            scenario = state["scenario"]  # a database holds one scenario; ?scenario= cannot switch it
         if scenario not in catalog.ids:
             return Response(
                 status_code=400,
                 media_type="application/problem+json",
                 content='{"type":"/problems/scenario_unknown","title":"Scenario Unknown","status":400,"code":"SCENARIO_UNKNOWN"}',
             )
-        lang = params.get("lang") or (request.headers.get("accept-language") or "ru")[:2].lower()
+        if params.get("lang"):  # dev convenience: ?lang= overrides the Accept-Language header
+            headers = [(k, v) for k, v in request.scope["headers"] if k != b"accept-language"]
+            headers.append((b"accept-language", params["lang"].encode()))
+            request.scope["headers"] = headers
         delay = params.get("delay_ms")
         if delay and delay.isdigit():
             await asyncio.sleep(min(int(delay), 10_000) / 1000)
-        token = REQUEST.set({"scenario": scenario, "lang": lang})
+        token = REQUEST.set({"scenario": scenario})
         try:
             response = await call_next(request)
         finally:

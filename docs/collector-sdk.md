@@ -21,6 +21,15 @@ Observation(
 
 See `src/vpnpulse/domain/models.py` and `src/vpnpulse/adapters/fixture.py`.
 
+## What a collector writes
+
+One `collector` observation per server per run. Its `metrics_json` follows
+[`contracts/collector-observation.schema.json`](../contracts/collector-observation.schema.json):
+connection counts per protocol, resources, aggregate profile counts, software components, service
+checks, admin-only attention items (bilingual) and structured diagnostics. Every block is optional —
+a partial collector reports what it knows and nothing else is invented downstream. The read model
+takes the newest payload for the Server screen and the counts of every payload for the charts.
+
 ## Rules for a collector
 
 - Read-only. No writes, no restarts, no configuration changes on the observed system.

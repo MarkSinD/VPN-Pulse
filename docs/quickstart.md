@@ -60,7 +60,8 @@
    ```
 
    It serves the real API on the demo scenarios at `http://127.0.0.1:8765/api/v1/` and the
-   prototypes at `/app/`. Get a session with `POST /api/v1/dev/session?role=member|admin`, then
+   prototypes at `/app/`. Add `--sqlite demo.sqlite3` to seed the chosen scenario into a real
+   database on first start and serve it through the production read model instead. Get a session with `POST /api/v1/dev/session?role=member|admin`, then
    add `?scenario=<id>` (any scenario except `loading`), `?lang=ru|en` or `?delay_ms=<n>` to a
    request. `GET /api/v1/dev/scenarios` lists the ids. The dev routes are not part of the
    contract and never exist in a deployment.

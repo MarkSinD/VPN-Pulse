@@ -55,8 +55,29 @@ project's UI-to-contract map; the essentials:
 ## Sessions and language
 
 `POST /sessions` sets the cookie; `GET /sessions/current` tells the client its role (member or
-admin) so the Admin tab is shown only when it will work. Server names, the administrator note and
-doctor hints come back in the language of `Accept-Language` (`ru` or `en`).
+admin) so the Admin tab is shown only when it will work. Server names and doctor hints come back
+in the language of the documented `Accept-Language` header (`ru` or `en`, first supported tag
+wins, otherwise the installation default); the administrator note is returned as written.
+
+## Where the answers come from
+
+`vpnpulse.storage.SqliteReadModel` serves every read route from the database and the public
+configuration — no in-memory state, so several API workers can share one file:
+
+| Answer | Source |
+|---|---|
+| server names, countries, priorities, contact link | `config.yaml` |
+| state and freshness | `state_snapshots` (a stale snapshot reads as `unknown`) |
+| evidence per source, `via_server_id` | latest `observations` row per source |
+| uptime and coverage (24 h, 7 d), metric points | state timeline from `state_transitions` + which buckets had observations; connection counts from collector payloads |
+| software, resources, profiles, service checks, per-server attention, diagnostics | the latest collector payload — `contracts/collector-observation.schema.json` |
+| check sources (pc / mobile / abroad) | `probes`: present after the first report, `silent` after 15 minutes without one |
+| events, note | `events` (filtered by `visible_to`), the active `admin_notes` row |
+| doctor and installation-wide attention | derived: no servers, no or silent probes, collector not reporting, stuck notifications |
+
+Availability counts `operational` time fully, `degraded` half and `unavailable` not at all, over
+the time whose state is known. Every read response is validated against strict pydantic models
+(`vpnpulse/api/schemas.py`) before it leaves the process.
 
 ## Trying it locally
 

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vpn-pulse.dev/contracts/collector-observation.schema.json",
+  "title": "Collector observation payload",
+  "description": "The metrics_json of one `collector` observation (one server, one collection run). Every block is optional so a partial collector stays honest: missing means unknown, never zero. No hosts, addresses, ports or people appear here; attention messages are admin-only and bilingual.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "connections": {
+      "description": "current connections per protocol; null when the collector could not count",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "amneziawg": { "type": ["integer", "null"], "minimum": 0 },
+        "xray_reality": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "resources": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "traffic_mbps": { "type": ["number", "null"], "minimum": 0 },
+        "cpu_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "memory_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "swap_percent": { "type": ["number", "null"], "minimum": 0, "maximum": 100 },
+        "peak_connections_24h": { "type": ["integer", "null"], "minimum": 0 }
+      }
+    },
+    "profiles": {
+      "description": "aggregate VPN profile counts, never per-person data",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "issued": { "type": ["integer", "null"], "minimum": 0 },
+        "ever_connected": { "type": ["integer", "null"], "minimum": 0 },
+        "active_24h": { "type": ["integer", "null"], "minimum": 0 },
+        "last_connection_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+    "components": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string", "enum": ["amneziawg", "xray", "hiddify", "ddns", "tuning", "other"] },
+          "name": { "type": "string", "maxLength": 40 },
+          "version": { "type": ["string", "null"], "maxLength": 32 },
+          "note_key": { "type": ["string", "null"], "pattern": "^server[.]software[.]" },
+          "note": { "type": ["string", "null"], "maxLength": 60 }
+        }
+      }
+    },
+    "service_checks": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "ok"],
+        "properties": {
+          "check": { "type": "string", "enum": ["ssh", "engine", "port", "dns", "ddns"] },
+          "ok": { "type": ["boolean", "null"] }
+        }
+      }
+    },
+    "attention": {
+      "description": "admin-only findings about this server, e.g. a kernel module built for another kernel",
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["severity", "code", "message"],
+        "properties": {
+          "severity": { "type": "string", "enum": ["high", "medium", "low"] },
+          "code": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "message": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ru", "en"],
+            "properties": {
+              "ru": { "type": "string", "maxLength": 240 },
+              "en": { "type": "string", "maxLength": 240 }
+            }
+          }
+        }
+      }
+    },
+    "diagnostics": {
+      "description": "structured admin diagnostics, e.g. {\"code\": \"BLOCKED_IN_COUNTRY\", \"abroad_reachable\": true, \"ssh_ok\": true}",
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

@@ -289,5 +289,14 @@
   "server.failedBy": "Failure confirmed by: {by}",
   "status.sourceOn": "reporting",
   "status.sourceOff": "not reporting",
-  "server.checksNone": "No probes connected — the state is confirmed by member connections"
+  "server.checksNone": "No probes connected — the state is confirmed by member connections",
+  "doctor.servers.fail": "Connect the first server",
+  "doctor.probes.enroll": "Enroll the computer probe",
+  "doctor.probes.silent": "Wake the computer or check its network; the probe resumes on its own",
+  "doctor.collector.fail": "The collector has not run yet — start the vpn-pulse service",
+  "doctor.collector.stale": "The collector has not reported for a while — check the service and server access",
+  "doctor.queue.stuck": "Notifications are stuck ({n} queued) — check the bot",
+  "attention.probesNotEnrolled": "Probes are not enrolled: server state is confirmed only by member connections.",
+  "attention.probeSilent": "The {name} probe has been silent for {duration}.",
+  "attention.collectorStale": "The collector is not reporting — server data is going stale."
 }

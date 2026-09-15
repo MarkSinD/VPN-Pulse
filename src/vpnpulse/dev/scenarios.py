@@ -175,10 +175,9 @@ class FixtureReadModel:
         self._revoked: set[str] = set()
 
     # ---------- request context ----------
-    def _ctx(self) -> tuple[Scenario, str]:
+    def _ctx(self, lang: str = "ru") -> tuple[Scenario, str]:
         req = REQUEST.get() or {}
         scenario_id = req.get("scenario") or self.default_scenario
-        lang = req.get("lang") or "ru"
         if lang not in ("ru", "en"):
             lang = "ru"
         return self.catalog.build(scenario_id, self._now()), lang
@@ -296,8 +295,8 @@ class FixtureReadModel:
         }
 
     # ---------- ReadModel ----------
-    def status(self, role: str) -> dict:
-        sc, lang = self._ctx()
+    def status(self, role: str, lang: str = "ru") -> dict:
+        sc, lang = self._ctx(lang)
         if sc.raw.get("api") == "offline":
             raise ReadModelUnavailable("STATUS_UNAVAILABLE")
         note = sc.raw.get("note")
@@ -326,8 +325,8 @@ class FixtureReadModel:
             } for k in present],
         }
 
-    def server(self, server_id: str, role: str) -> dict | None:
-        sc, lang = self._ctx()
+    def server(self, server_id: str, role: str, lang: str = "ru") -> dict | None:
+        sc, lang = self._ctx(lang)
         if sc.raw.get("api") == "offline":
             raise ReadModelUnavailable("STATUS_UNAVAILABLE")
         s = sc.server(server_id)
@@ -357,8 +356,8 @@ class FixtureReadModel:
         } for i in range(n)]
         return {"server_id": server_id, "period": period, "coverage": round(sum(1 for p in points if p["coverage"]) / n, 4), "points": points}
 
-    def events(self, filter: str, cursor: str | None, limit: int) -> dict:
-        sc, lang = self._ctx()
+    def events(self, filter: str, cursor: str | None, limit: int, role: str = "member", lang: str = "ru") -> dict:
+        sc, lang = self._ctx(lang)
         if sc.raw.get("api") == "offline":
             raise ReadModelUnavailable("STATUS_UNAVAILABLE")
         items = [self._event(sc, i, e, lang) for i, e in enumerate(sc.events)]
@@ -371,12 +370,12 @@ class FixtureReadModel:
         page = items[start:start + limit]
         return {"items": page, "next_cursor": str(start + limit) if start + limit < len(items) else None}
 
-    def help(self) -> dict:
+    def help(self, lang: str = "ru") -> dict:
         return {"step_keys": ["help.step1", "help.step2", "help.step3", "help.step4"],
                 "contact_available": self.contact_url is not None, "contact_url": self.contact_url}
 
-    def admin_server(self, server_id: str) -> dict | None:
-        sc, lang = self._ctx()
+    def admin_server(self, server_id: str, lang: str = "ru") -> dict | None:
+        sc, lang = self._ctx(lang)
         s = sc.server(server_id)
         if s is None:
             return None
@@ -408,8 +407,8 @@ class FixtureReadModel:
             })
         return out
 
-    def admin_overview(self) -> dict:
-        sc, lang = self._ctx()
+    def admin_overview(self, lang: str = "ru") -> dict:
+        sc, lang = self._ctx(lang)
         admin = sc.admin or {}
         items = [{"severity": a["sev"], "code": a.get("code", "ATTENTION"), "message": self._text(a["text"], lang), "server_id": a.get("server")} for a in admin.get("attention", [])]
         order = {"high": 0, "medium": 1, "low": 2}

@@ -13,6 +13,7 @@ def main() -> int:
     parser.add_argument("--fixtures", type=Path, default=None, help="path to fixtures/ui/scenarios.json")
     parser.add_argument("--app", type=Path, default=None, help="directory with the built Mini App (default: docs/prototypes)")
     parser.add_argument("--contact-url", default="https://t.me/example_admin")
+    parser.add_argument("--sqlite", type=Path, default=None, help="serve --scenario from a real SQLite file through SqliteReadModel (seeded on first run)")
     args = parser.parse_args()
     try:
         import uvicorn
@@ -22,8 +23,9 @@ def main() -> int:
     from vpnpulse.dev.server import create_dev_app
 
     catalog = ScenarioCatalog.load(args.fixtures)
-    app = create_dev_app(catalog=catalog, default_scenario=args.scenario, app_dir=args.app, contact_url=args.contact_url)
-    print(f"VPN Pulse dev server: http://{args.host}:{args.port}/app/mvp.html  (scenarios: {', '.join(catalog.ids)})")
+    app = create_dev_app(catalog=catalog, default_scenario=args.scenario, app_dir=args.app, contact_url=args.contact_url, sqlite_path=args.sqlite)
+    backend = f"sqlite {args.sqlite} · scenario {args.scenario}" if args.sqlite else "scenarios: " + ", ".join(catalog.ids)
+    print(f"VPN Pulse dev server: http://{args.host}:{args.port}/app/mvp.html  ({backend})")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0
 
