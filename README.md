@@ -25,6 +25,7 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | API contract (OpenAPI 3.1, JSON Schemas) | v1.1.0, validated in CI |
 | Interactive UI prototypes (Mini App, Android probe, first run) | complete — [open them](docs/prototypes/README.md) |
 | Backend core: config, SQLite migration, state evaluator, mock-first API, analytics ingestion | tests green (`pytest`) |
+| Dev server: every API route on 13 demo scenarios, contract-validated (`python -m vpnpulse.dev`) | working |
 | Installer, CLI (`vpn-pulse …`), collectors for real servers, Telegram bot, probes | **planned** — not yet runnable |
 
 There is no one-command install yet. Today the repository is a **developer preview**: you can
@@ -49,11 +50,13 @@ python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activat
 pip install -e ".[dev]"
 python -m pytest                                  # backend core + contract tests
 python scripts/validate_specs.py                  # OpenAPI, schemas, RU/EN parity
+python -m vpnpulse.dev                            # API on demo scenarios + the Mini App at /app/
 ```
 
-Then open `docs/prototypes/mvp.html` in a browser and use the showcase bar to switch
-scenarios (operational, degraded, unavailable, unknown, offline, clean install, …), role,
-theme and language.
+Then open <http://127.0.0.1:8765/app/mvp.html> (or `docs/prototypes/mvp.html` directly) and use
+the showcase bar to switch scenarios (operational, degraded, unavailable, unknown, offline, clean
+install, …), role, theme and language. The same scenarios are served by the API:
+`GET /api/v1/status?scenario=unavailable&lang=en` after `POST /api/v1/dev/session?role=admin`.
 
 ## Documentation
 

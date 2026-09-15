@@ -52,6 +52,14 @@ project's UI-to-contract map; the essentials:
 - **Admin**: `attention_items` sorted by severity, `/admin/probes`, `/health/ready` → doctor
   summary built on the client.
 
+## Trying it locally
+
+`python -m vpnpulse.dev` serves every route above on the demo scenarios of
+`fixtures/ui/scenarios.json` (see the quick start). Server names and the administrator note come
+back in the language of `Accept-Language` (`?lang=` in the dev server); formalising this header in
+the contract is on the list for the SQLite read model. `tests/test_dev_server.py` validates each
+route for each scenario and role against the OpenAPI schemas.
+
 ## Compatibility rules
 
 - New fields are optional; enums only grow; `minItems` only shrinks.

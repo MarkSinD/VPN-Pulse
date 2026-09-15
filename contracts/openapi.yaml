@@ -499,6 +499,7 @@ components:
         name: { type: string, maxLength: 40 }
         version: { type: [string, "null"], maxLength: 32 }
         note_key: { type: [string, "null"], pattern: "^server[.]software[.]" }
+        note: { type: [string, "null"], maxLength: 60, description: free member-safe detail such as the transport name; shown when note_key is null }
     ResourceSnapshot:
       description: aggregate load; null means the collector could not measure it
       type: object

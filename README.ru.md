@@ -25,6 +25,7 @@ AmneziaWG (и при желании Xray) для друзей и родных. �
 | Контракт API (OpenAPI 3.1, JSON Schema) | v1.1.0, проверяется в CI |
 | Интерактивные прототипы (Mini App, Android-пробник, первый запуск) | готово — [открыть](docs/prototypes/README.md) |
 | Ядро бэкенда: конфиг, миграция SQLite, вычислитель состояний, mock-first API, приём аналитики | тесты зелёные (`pytest`) |
+| Dev-сервер: все маршруты API на 13 демо-сценариях, ответы проверены по контракту (`python -m vpnpulse.dev`) | работает |
 | Установщик, CLI (`vpn-pulse …`), сборщики для реальных серверов, Telegram-бот, пробники | **в планах** — пока не запускается |
 
 Установки одной командой пока нет. Сегодня репозиторий — **предварительная версия для
@@ -48,6 +49,7 @@ cd VPN-Pulse
 python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\activate
 pip install -e ".[dev]"
 python -m pytest                                  # ядро бэкенда + контрактные тесты
+python -m vpnpulse.dev                            # API на демо-сценариях + Mini App на /app/
 python scripts/validate_specs.py                  # OpenAPI, схемы, паритет RU/EN
 ```
 

@@ -8,6 +8,12 @@ release is cut.
 
 ### Added
 
+- Dev server (`python -m vpnpulse.dev`): the real API on the demo scenarios with `?scenario=`,
+  `?lang=`, `?delay_ms=`, dev sessions, and the built Mini App at `/app/`. The read side of the API
+  now goes through a `ReadModel` protocol (`vpnpulse.api.read_model`); `tests/test_dev_server.py`
+  validates every route × scenario × role against the contract.
+- Contract: `SoftwareComponent.note` (free member-safe detail); demo scenarios moved to
+  `fixtures/ui/scenarios.json` and gained attention codes (`KERNEL_MODULE_MISMATCH`, …).
 - API contract v1.2.0 (`contracts/openapi.yaml`): `StatusResponse.sources` / `SourceAvailability` —
   check sources that exist right now (a source appears after its probe's first report); the UI hides
   missing sources instead of warning members about them.

@@ -53,6 +53,18 @@
    `docs/prototypes/android.html` — сценарий пробника, `docs/prototypes/onboarding.html` —
    первый запуск.
 
+5. Запустите dev-сервер (по желанию).
+
+   ```bash
+   python -m vpnpulse.dev --scenario degraded
+   ```
+
+   Он поднимает настоящий API на демо-сценариях (`http://127.0.0.1:8765/api/v1/`) и раздаёт
+   прототипы на `/app/`. Сессия — `POST /api/v1/dev/session?role=member|admin`; к любому запросу
+   можно добавить `?scenario=<id>` (любой сценарий, кроме `loading`), `?lang=ru|en` или
+   `?delay_ms=<n>`. Список сценариев — `GET /api/v1/dev/scenarios`. Dev-маршруты не входят в
+   контракт и не существуют в развёрнутом приложении.
+
 ## Планируемый путь установки
 
 Когда выйдет установщик, путь будет таким (пока недоступно):

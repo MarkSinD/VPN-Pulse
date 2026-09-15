@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from vpnpulse.analytics import AnalyticsRegistry
+from vpnpulse.api.read_model import ReadModel, ReadModelUnavailable, StatusOnlyReadModel
 from vpnpulse.auth import (
     AuthenticationError,
     InMemorySessionStore,
@@ -64,17 +65,33 @@ def create_app(
     *,
     bot_token: str,
     membership: MembershipChecker,
-    status_provider: Callable[[str], dict],
     analytics_schema: Path,
+    status_provider: Callable[[str], dict] | None = None,
+    read_model: ReadModel | None = None,
+    contact_url: str | None = None,
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> FastAPI:
-    app = FastAPI(title="VPN Pulse API", version="1.0.0")
+    """Build the API. Reads go through `read_model`; `status_provider` is the legacy status-only form."""
+    if read_model is None:
+        if status_provider is None:
+            raise ValueError("create_app needs read_model or status_provider")
+        read_model = StatusOnlyReadModel(status_provider, contact_url)
+    app = FastAPI(title="VPN Pulse API", version="1.2.0")
     sessions = InMemorySessionStore()
     analytics = AnalyticsRegistry(analytics_schema)
     enrollments: dict[str, dict] = {}
     probes: dict[str, dict] = {}
     accepted_reports: set[str] = set()
     active_note: dict | None = None
+    note_touched = False  # a PUT/DELETE in this process overrides the note the read model reports
+    public_probe_keys = {
+        "id", "kind", "status", "last_seen_at", "capabilities",
+        "agent_version", "route_verified", "queued_reports", "network_type",
+    }
+
+    @app.exception_handler(ReadModelUnavailable)
+    async def read_model_unavailable(request: Request, error: ReadModelUnavailable):
+        return await problem_details(request, HTTPException(status_code=503, detail={"code": error.code}))
 
     @app.exception_handler(HTTPException)
     async def problem_details(request: Request, error: HTTPException):
@@ -144,16 +161,18 @@ def create_app(
     @app.get("/api/v1/status")
     def status(vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
-        return status_provider(session.identity.role)
+        payload = dict(read_model.status(session.identity.role))
+        if note_touched:
+            payload["note"] = active_note
+        return payload
 
     @app.get("/api/v1/servers/{server_id}")
     def server(server_id: str, vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
-        status_payload = status_provider(session.identity.role)
-        card = next((item for item in status_payload.get("servers", []) if item["id"] == server_id), None)
-        if card is None:
+        detail = read_model.server(server_id, session.identity.role)
+        if detail is None:
             raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
-        return {**card, "protocols": [], "checks": card.get("sources", [])}
+        return detail
 
     @app.get("/api/v1/servers/{server_id}/metrics")
     def server_metrics(
@@ -164,7 +183,10 @@ def create_app(
         require_session(vpnpulse_session)
         if period not in {"24h", "7d"}:
             raise HTTPException(status_code=400, detail={"code": "PERIOD_INVALID"})
-        return {"server_id": server_id, "period": period, "coverage": 0, "points": []}
+        payload = read_model.metrics(server_id, period)
+        if payload is None:
+            raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
+        return payload
 
     @app.get("/api/v1/events")
     def events(
@@ -176,30 +198,31 @@ def create_app(
         require_session(vpnpulse_session)
         if filter not in {"all", "problems", "notes"} or not 1 <= limit <= 100:
             raise HTTPException(status_code=400, detail={"code": "EVENT_QUERY_INVALID"})
-        return {"items": [], "next_cursor": None}
+        return read_model.events(filter, cursor, limit)
 
     @app.get("/api/v1/help")
     def help_content(vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session)
-        return {
-            "step_keys": ["help.checkStatus", "help.restartVpn", "help.useRecommended", "help.useBackup"],
-            "contact_available": True,
-        }
+        return read_model.help()
 
     @app.get("/api/v1/admin/servers/{server_id}")
     def admin_server(server_id: str, vpnpulse_session: str | None = Cookie(default=None)):
-        session = require_session(vpnpulse_session, "admin")
-        status_payload = status_provider(session.identity.role)
-        card = next((item for item in status_payload.get("servers", []) if item["id"] == server_id), None)
-        if card is None:
+        require_session(vpnpulse_session, "admin")
+        detail = read_model.admin_server(server_id)
+        if detail is None:
             raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
-        return {**card, "protocols": [], "checks": card.get("sources", []), "attention": [], "diagnostics": {}}
+        return detail
 
     @app.get("/api/v1/admin/probes")
     def admin_probes(vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session, "admin")
-        public_keys = {"id", "kind", "status", "last_seen_at", "capabilities"}
-        return [{key: value for key, value in probe.items() if key in public_keys} for probe in probes.values()]
+        # probes known to the read model first, then the ones enrolled in this process
+        listed = list(read_model.admin_probes())
+        seen = {probe["id"] for probe in listed}
+        for probe in probes.values():
+            if probe["id"] not in seen:
+                listed.append({key: value for key, value in probe.items() if key in public_probe_keys})
+        return listed
 
     @app.post("/api/v1/admin/probe-enrollments", status_code=201)
     def create_enrollment(payload: EnrollmentInput, vpnpulse_session: str | None = Cookie(default=None)):
@@ -213,22 +236,27 @@ def create_app(
     def revoke_probe(probe_id: str, vpnpulse_session: str | None = Cookie(default=None)):
         require_session(vpnpulse_session, "admin")
         probe = next((item for item in probes.values() if item["id"] == probe_id), None)
-        if probe is None:
+        if probe is not None:
+            probe["status"] = "revoked"
+            return
+        revoke = getattr(read_model, "revoke_probe", None)
+        if revoke is None or not revoke(probe_id):
             raise HTTPException(status_code=404, detail={"code": "PROBE_NOT_FOUND"})
-        probe["status"] = "revoked"
 
     @app.put("/api/v1/admin/note")
     def put_note(payload: AdminNoteInput, vpnpulse_session: str | None = Cookie(default=None)):
-        nonlocal active_note
+        nonlocal active_note, note_touched
         require_session(vpnpulse_session, "admin")
         active_note = {"id": str(uuid4()), **payload.model_dump(mode="json"), "created_at": now().isoformat()}
+        note_touched = True
         return active_note
 
     @app.delete("/api/v1/admin/note", status_code=204)
     def delete_note(vpnpulse_session: str | None = Cookie(default=None)):
-        nonlocal active_note
+        nonlocal active_note, note_touched
         require_session(vpnpulse_session, "admin")
         active_note = None
+        note_touched = True
 
     @app.post("/api/v1/probe/enroll", status_code=201)
     def enroll_probe(payload: ProbeEnrollInput):
@@ -246,8 +274,7 @@ def create_app(
             "agent_version": payload.agent_version,
         }
         probes[token] = probe
-        public_keys = {"id", "kind", "status", "last_seen_at", "capabilities"}
-        public_probe = {key: value for key, value in probe.items() if key in public_keys}
+        public_probe = {key: value for key, value in probe.items() if key in public_probe_keys}
         return {"token": token, "probe": public_probe, "config": {"schema_version": 1, "interval_seconds": 60, "targets": []}}
 
     @app.get("/api/v1/probe/config")
@@ -274,15 +301,9 @@ def create_app(
 
     @app.get("/api/v1/health/ready")
     def ready():
-        return {
-            "ready": True,
-            "checks": {
-                "database": {"ok": True, "age_seconds": None},
-                "collector": {"ok": True, "age_seconds": 0},
-                "bot": {"ok": True, "age_seconds": 0},
-            },
-        }
+        return read_model.readiness()
 
     app.state.sessions = sessions
     app.state.analytics = analytics
+    app.state.read_model = read_model
     return app

@@ -9,7 +9,8 @@ no server, no network, no secrets. All data is fictional fixtures.
 | `android.html` | the Android probe app: enroll → exclude from VPN → cellular check → run |
 | `onboarding.html` | first-run walkthrough for documentation: demo mode, clean install, partial coverage, doctor |
 | `ui-tokens.css` | shared design tokens: spacing, radius, type scale, the near-black / iOS-grouped palette, materials (`--metal`, `--card-edge`, `--panel-inset`, engraved lines), motion |
-| `source/` | build sources: `app.js`, `app.css`, `android.js`, `android.css`, `fixtures.json`, `icons.svg`, templates |
+| `source/` | build sources: `app.js`, `app.css`, `android.js`, `android.css`, `icons.svg`, templates |
+| `../../fixtures/ui/scenarios.json` | the demo scenarios — shared by the prototypes and the dev server (`python -m vpnpulse.dev`) |
 
 ## Showcase controls
 

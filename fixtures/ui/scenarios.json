@@ -289,7 +289,8 @@
           "text": {
             "ru": "Ядро обновлено, модуль VPN собран только под текущее ядро. Перезагрузка оставит сервер без VPN.",
             "en": "Kernel updated; the VPN module is built only for the current kernel. A reboot would leave the server without VPN."
-          }
+          },
+          "code": "KERNEL_MODULE_MISMATCH"
         },
         {
           "sev": "medium",
@@ -297,7 +298,8 @@
           "text": {
             "ru": "Диск 82%, swap 332 МБ. Есть что освободить.",
             "en": "Disk 82%, swap 332 MB. There is space to reclaim."
-          }
+          },
+          "code": "DISK_PRESSURE"
         },
         {
           "sev": "low",
@@ -305,7 +307,8 @@
           "text": {
             "ru": "Нет доступа к данным Xray — нагрузка показана без него.",
             "en": "No access to Xray data — load is shown without it."
-          }
+          },
+          "code": "XRAY_NO_ACCESS"
         }
       ]
     }
@@ -491,7 +494,8 @@
             "text": {
               "ru": "Не проходит проверка из России 18 минут; из-за границы доступен. Похоже на блокировку адреса.",
               "en": "Failing checks from Russia for 18 minutes; reachable from abroad. Looks like the address is blocked."
-            }
+            },
+            "code": "BLOCKED_IN_COUNTRY"
           }
         ]
       }
@@ -591,7 +595,8 @@
             "text": {
               "ru": "Пробник на компьютере молчит 25 минут. Компьютер спит или без сети.",
               "en": "The computer probe has been silent for 25 minutes. The computer is asleep or offline."
-            }
+            },
+            "code": "PROBE_SILENT"
           }
         ],
         "doctor": {
@@ -825,7 +830,8 @@
             "text": {
               "ru": "Пробники не привязаны: состояние серверов подтверждают только подключения участников.",
               "en": "Probes are not enrolled: server state is confirmed only by member connections."
-            }
+            },
+            "code": "PROBES_NOT_ENROLLED"
           }
         ],
         "probes": {

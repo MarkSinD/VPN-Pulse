@@ -1,7 +1,8 @@
 """Build the self-contained UI prototypes from docs/prototypes/source/.
 
 Inlines the shared tokens, the RU/EN dictionaries (i18n/*.json — the single source of UI
-strings) and the fixtures into three standalone HTML files. No secrets, no network.
+strings) and the demo scenarios (fixtures/ui/scenarios.json — shared with the dev server) into
+three standalone HTML files. No secrets, no network.
 
 Run: python scripts/build_prototypes.py
 """
@@ -43,7 +44,7 @@ def main() -> int:
         "ANDROID_JS": read(SRC / "android.js"),
         "ICONS": read(SRC / "icons.svg"),
         "I18N": i18n,
-        "FIXTURES": minify_json(SRC / "fixtures.json"),
+        "FIXTURES": minify_json(ROOT / "fixtures" / "ui" / "scenarios.json"),
     }
     head = (
         '<!doctype html>\n<html lang="ru">\n<head>\n<meta charset="utf-8">\n'
