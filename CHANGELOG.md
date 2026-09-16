@@ -98,6 +98,8 @@ release is cut.
 
 ### Changed
 
+- CI: the private-data scan of Git history looks at diffs only (commit metadata is not published
+  content); the browser QA/parity and the installer jobs are blocking after their first green runs.
 - The doctor's probes hint on a fresh installation reads "After the server, enroll the probes"
   (`doctor.probes.afterServer`), matching the Admin screen fixtures.
 

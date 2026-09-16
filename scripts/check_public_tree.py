@@ -78,7 +78,8 @@ def scan_tree(findings: list[str]) -> int:
 
 def scan_history(findings: list[str]) -> None:
     try:
-        log = subprocess.run(["git", "log", "-p", "--all", "--no-color"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False).stdout
+        # diffs only: the author identity and the trailers of a commit are metadata, not published content
+        log = subprocess.run(["git", "log", "-p", "--all", "--no-color", "--format=commit %H"], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", check=False).stdout
     except FileNotFoundError:
         print("git not available; history scan skipped")
         return

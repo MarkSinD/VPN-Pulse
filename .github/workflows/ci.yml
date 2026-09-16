@@ -38,9 +38,6 @@ jobs:
   browser:
     name: browser QA and API parity (Playwright)
     runs-on: ubuntu-latest
-    # font metrics differ from the Windows machine the matrix was tuned on: advisory until the
-    # first green run on Linux, then promote to blocking
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -57,9 +54,7 @@ jobs:
   install:
     name: install.sh on a clean Ubuntu (fresh, idempotent, upgrade, rollback, uninstall)
     runs-on: ubuntu-24.04
-    # the runner is a real Ubuntu with systemd: services are started and checked; advisory until the
-    # first green run, then promote to blocking (release gate 2-3 of docs/operations)
-    continue-on-error: true
+    # the runner is a real Ubuntu with systemd: services are started and checked (release gates 2-3)
     steps:
       - uses: actions/checkout@v4
         with:
