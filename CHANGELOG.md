@@ -8,6 +8,21 @@ release is cut.
 
 ### Added
 
+- `install.sh`: `preflight` (read-only checks), `demo` / `demo-stop` (no root: venv, seeded demo
+  database, the loop in demo mode and the API with the Mini App at 127.0.0.1:8765), `install`
+  (system user `vpn-pulse`, per-release directory with its own venv under `/opt/vpn-pulse`,
+  `config.yaml` and `0700/0600` secrets under `/etc/vpn-pulse`, data under `/var/lib/vpn-pulse`,
+  hardened systemd units, Caddy snippet with the domain, the `/usr/local/bin/vpn-pulse` wrapper,
+  doctor as the last step; wizard or flags; `--demo-data` seeds fictional servers), `upgrade`
+  (backup, migrations, switch, restart, doctor, automatic rollback on failure), `rollback`,
+  `uninstall` (data and secrets kept unless `--purge`); `--dry-run` everywhere.
+  `scripts/install_check.sh` runs the whole sequence on a clean Ubuntu 24.04 (CI job `install`;
+  locally `--docker`).
+- `vpn-pulse serve`: the production API process built from `config.yaml` (Telegram membership
+  through the Bot API with a short cache, `mode: demo` when the data directory carries the demo
+  marker, the Mini App served from `/app/`, no dev routes). `vpn-pulse demo seed | clear`: a demo
+  scenario in a real installation. `deploy/systemd/*.service`, `deploy/caddy/vpn-pulse.caddy`.
+
 - The administrator's command line (`vpnpulse.cli`): `vpn-pulse init` (config.yaml, database,
   `0700` secrets directory, bot token stored `0600` from a file or stdin and never echoed),
   `vpn-pulse doctor [section] [--json]` (one next step per finding with the Admin screen's texts;

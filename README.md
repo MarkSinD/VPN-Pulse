@@ -31,11 +31,12 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | SQLite writes: sessions, enrollment codes, probes, reports → observations, note, analytics, audit, retention sweep (`SqliteStore`); the API keeps no state between requests | working |
 | Monitoring loop `vpn-pulse run`: collect → evaluate → snapshots → transitions → events → notification queue with retries; hourly sweep; `--demo` plays the scenarios over a real database | working |
 | Administrator CLI: `vpn-pulse init / doctor / server add|list|remove / probe enroll|list|revoke / note set|clear|show`; `doctor` prints the Admin screen's next steps, exit code as a gate; secrets `0600`, never echoed | working |
-| Installer (`install.sh`), read-only collectors for real servers (`server add` on the server side), Telegram bot in a real group, probes | **planned** — not yet runnable |
+| Installer: `./install.sh demo` (fictional data, no root, no Telegram), `sudo ./install.sh install` (system user, per-release venv, config + secrets, systemd units, Caddy snippet, doctor), `upgrade` with backup and auto-rollback, `rollback`, `uninstall` keeping data; checked end to end on a clean Ubuntu 24.04 (`scripts/install_check.sh`) | working |
+| Read-only collectors for real servers (`server add` on the server side), Telegram bot in a real group, PC / Android / cross-server probes | **planned** |
 
-There is no one-command install yet. Today the repository is a **developer preview**: you can
-run the tests, validate the contracts and click through the prototypes. See
-[docs/quickstart.md](docs/quickstart.md).
+You can install it on a server today and watch fictional data move (`--demo-data`); the real
+sources — collectors on your VPN servers and the probes — are the next increments, so a real
+installation shows "no data yet" until they arrive. See [docs/quickstart.md](docs/quickstart.md).
 
 ## What it looks like
 
@@ -45,6 +46,14 @@ run the tests, validate the contracts and click through the prototypes. See
 
 Every server is one row: a gauge ring with the flag shows the state (arc = 24-hour availability),
 the row shows the three check sources and an availability chart. Tapping a row opens the server screen.
+
+## Two commands to see it
+
+```bash
+git clone https://github.com/MarkSinD/VPN-Pulse.git && cd VPN-Pulse
+./install.sh demo                                 # Mini App + API on fictional data at http://127.0.0.1:8765/app/mvp.html
+sudo ./install.sh install --demo-data             # a real installation on Ubuntu 24.04 (systemd units, doctor); nothing real in it yet
+```
 
 ## Five-minute developer preview
 

@@ -75,6 +75,6 @@ class FixtureCollector:
                     {"via_server_id": s.get("abroadFrom")} if k == "abroad" else {"checks": {"handshake": RESULT_OF[src["r"]], "https": RESULT_OF[src["r"]]} if k == "pc" else {"dns": RESULT_OF[src["r"]]}},
                     error_code=str(src.get("detailKey", "")).split(".")[-1] if src["r"] != "ok" else None,
                     network_scope=SCOPE_OF[k], full_vpn_test=(k == "pc"), control_internet_ok=True if k == "pc" else None,
-                    probe_id=f"fixture-{KIND_PROBE[k]}",
+                    probe_id=f"probe-{KIND_PROBE[k]}",  # the rows the demo seed creates too: one probe per kind in a seeded demo
                 ))
         return out

@@ -2,10 +2,12 @@
 
     vpn-pulse init …                      an installation directory: config.yaml, database, secrets
     vpn-pulse run [--demo] [--once]       the monitoring loop
+    vpn-pulse serve                       the API and the Mini App (behind Caddy)
     vpn-pulse doctor [section] [--json]   one next step per warning — the Admin screen's texts
     vpn-pulse server add|list|remove      servers in config.yaml
     vpn-pulse probe enroll|list|revoke    check sources
     vpn-pulse note set|clear|show         the administrator's note
+    vpn-pulse demo seed|clear             fictional data for a first look
 
 `--config` (or `VPN_PULSE_CONFIG`), `--db` and `--lang` may go before or after the command.
 Everything printed passes through a redactor; secrets are written with 0600 and never echoed.
@@ -15,7 +17,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from vpnpulse.cli import doctor, init, note, probe, run, server
+from vpnpulse.cli import demo, doctor, init, note, probe, run, serve, server
 from vpnpulse.cli.common import CliError, Output
 
 
@@ -34,10 +36,12 @@ def build_parser() -> argparse.ArgumentParser:
     parents = [_common(True)]
     init.add_parser(commands, parents)
     run.add_parser(commands, parents)
+    serve.add_parser(commands, parents)
     doctor.add_parser(commands, parents)
     server.add_parser(commands, parents)
     probe.add_parser(commands, parents)
     note.add_parser(commands, parents)
+    demo.add_parser(commands, parents)
     return parser
 
 

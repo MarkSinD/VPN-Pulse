@@ -54,6 +54,19 @@ jobs:
       - name: API render equals scenario render
         run: python scripts/ui_parity_check.py
 
+  install:
+    name: install.sh on a clean Ubuntu (fresh, idempotent, upgrade, rollback, uninstall)
+    runs-on: ubuntu-24.04
+    # the runner is a real Ubuntu with systemd: services are started and checked; advisory until the
+    # first green run, then promote to blocking (release gate 2-3 of docs/operations)
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fresh install → doctor OK → repeat → upgrade → rollback → uninstall
+        run: sudo -E bash scripts/install_check.sh
+
   secret-scan:
     name: gitleaks
     runs-on: ubuntu-latest

@@ -1,8 +1,8 @@
 # Quick start
 
-> **Status: developer preview.** There is no installer or CLI yet. This page tells you exactly
-> what works today and what is planned, so you do not waste an evening on a command that does
-> not exist.
+> **Status: installable preview.** The installer, the CLI, the monitoring loop and the API run
+> on a clean Ubuntu 24.04; what they monitor is still fictional — collectors for real servers and
+> the probes are the next increments. This page says exactly what works today.
 
 ## What you get today
 
@@ -98,18 +98,28 @@
    exits `0/1/2` for ok/warnings/failures. Every command takes `--config`, `--db` and `--lang`
    before or after the verb.
 
-## Planned installation path
+## Installing on a server (Ubuntu 24.04)
 
-When the installer ships, the intended path is (not available yet):
-
-```text
-./install.sh demo          # UI on fixtures, no Telegram token needed
-./install.sh preflight     # read-only environment checks
-sudo ./install.sh install  # seven-step wizard: environment, app, config, secrets, HTTPS, Telegram, doctor
-vpn-pulse server add       # connect a server (awg-host | awg-docker | hiddify)
-vpn-pulse probe enroll pc  # one-time enrollment code for a probe
-vpn-pulse doctor           # end-to-end diagnostics
+```bash
+./install.sh preflight                 # read-only checks: python 3.12 + venv, disk, systemd, caddy
+./install.sh demo                      # no root: Mini App + API on fictional data, http://127.0.0.1:8765/app/mvp.html
+sudo ./install.sh install --demo-data  # system user vpn-pulse, /opt/vpn-pulse/releases/<id> with its own venv,
+                                       # /etc/vpn-pulse/config.yaml + secrets (0700/0600), /var/lib/vpn-pulse,
+                                       # units vpn-pulse-api + vpn-pulse-run, Caddy snippet, doctor
+sudo vpn-pulse doctor                  # the wrapper runs the CLI as the service user
+sudo ./install.sh upgrade              # from a newer checkout: backup, migrate, switch, restart, doctor — rolls back on failure
+sudo ./install.sh rollback             # the previous release back
+sudo ./install.sh uninstall            # units and application; data and secrets stay (--purge removes them)
 ```
 
-Progress is tracked in [CHANGELOG.md](../CHANGELOG.md). Design of the installer:
-[operations/doctor.md](operations/doctor.md) and [connect-server.md](connect-server.md).
+Without `--yes` the install asks for language, timezone, the Mini App domain (for the Caddy
+snippet), the contact link, the group id and — through a hidden prompt — the bot token; with
+flags it asks nothing (`--language en --timezone UTC --domain monitor.example.org --group-chat-id …
+--telegram-token-stdin`). `--demo-data` seeds three fictional servers and keeps them moving
+(`vpn-pulse run --demo`) so a fresh installation has something to show; `vpn-pulse demo clear`
+removes them when real servers arrive. Every changing command takes `--dry-run`.
+
+The whole sequence — fresh install, `doctor` OK, repeated install unchanged, upgrade with a
+backup, rollback, uninstall keeping data — is `scripts/install_check.sh`, run in CI on a clean
+Ubuntu 24.04 (with systemd) and locally in a container with `scripts/install_check.sh --docker`.
+Design notes: [operations/doctor.md](operations/doctor.md), [connect-server.md](connect-server.md).

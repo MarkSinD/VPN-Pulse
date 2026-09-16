@@ -1,6 +1,8 @@
 # Operations: backup and restore
 
-> **Status: planned.** Behaviour described for review; commands are not implemented.
+> **Status: partly implemented.** `install.sh upgrade` makes a local copy of the database before
+> every upgrade (`/var/lib/vpn-pulse/backups/`, 0600, last seven kept). The encrypted off-host
+> `vpn-pulse backup` / `restore` commands below are planned.
 
 ## What is backed up
 

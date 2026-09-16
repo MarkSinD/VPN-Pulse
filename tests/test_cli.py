@@ -260,9 +260,10 @@ def test_doctor_says_what_the_admin_screen_says(tmp_path, scenario, lang):
     expected = FixtureReadModel(CATALOG, default_scenario=scenario).admin_overview(lang)["doctor"]
     got = [i for i in summary["items"] if i["check"] in ADMIN_CHECKS]
     assert got == expected["items"]
-    assert {i["check"] for i in summary["items"]} - set(ADMIN_CHECKS) == {"telegram"}  # the local check the Mini App cannot make
+    local = [i for i in summary["items"] if i["check"] not in ADMIN_CHECKS]
+    assert [(i["check"], i["state"]) for i in local] == [("telegram", "ok")]  # information the Mini App cannot give: no Telegram yet
     assert code == {"ok": 0, "warn": 1, "fail": 2}[summary["result"]]
-    assert summary["result"] == ("fail" if expected["result"] == "fail" else "warn")
+    assert summary["result"] == expected["result"]
 
 
 def test_doctor_exit_codes_sections_and_local_checks(tmp_path, monkeypatch):
@@ -274,6 +275,9 @@ def test_doctor_exit_codes_sections_and_local_checks(tmp_path, monkeypatch):
     assert sink.lines[1].startswith("  [FAIL] servers: Подключите первый сервер  →  vpn-pulse server add")
     assert sink.lines[2].startswith("  [WARN] probes: После сервера привяжите пробники  →  vpn-pulse probe enroll pc")
     assert "telegram" not in sink.text  # configured and readable: nothing to say
+    code, sink = run_cli("doctor", "--config", init_install(tmp_path / "plain"), "--json")
+    plain = json.loads(sink.text)
+    assert code == 2 and [i["state"] for i in plain["items"]] == ["fail", "warn", "ok"] and plain["next_command"] == "vpn-pulse server add"
     code, sink = run_cli("doctor", "telegram", "--json")
     detail = json.loads(sink.text)
     assert code == 0 and detail["items"] == [] and "token file" in detail["details"][0] and TOKEN not in sink.text

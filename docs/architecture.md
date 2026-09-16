@@ -84,11 +84,16 @@ hosts, addresses or member data.
 - Probe tokens are per device and revocable; enrollment codes are single-use, ten minutes.
 - The monitoring host never stores VPN private keys or member profiles.
 
-## Deployment (planned)
+## Deployment
 
-One systemd unit per process (API, collector, bot) on the monitoring host; Caddy terminates
-HTTPS for the Mini App on a domain **unrelated to the VPN servers**; SQLite on local disk with
-encrypted off-host backups; a watchdog on a second host. See
+Two systemd units on the monitoring host — `vpn-pulse-api` (`vpn-pulse serve`: the API and the
+Mini App on 127.0.0.1:8765) and `vpn-pulse-run` (the loop) — as the system user `vpn-pulse`,
+with a per-release directory and virtual environment under `/opt/vpn-pulse/releases` and a
+`current` symlink (upgrade = new release + switch + restart, rollback = switch back). Caddy
+terminates HTTPS for the Mini App on a domain **unrelated to the VPN servers**
+(`deploy/caddy/vpn-pulse.caddy`); SQLite on local disk with a copy before every upgrade;
+encrypted off-host backups and the watchdog on a second host are planned. `install.sh` does all
+of it and `scripts/install_check.sh` proves it on a clean Ubuntu 24.04. See
 [operations/doctor.md](operations/doctor.md).
 
 ## Why not one big health endpoint?

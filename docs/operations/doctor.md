@@ -1,21 +1,38 @@
 # Operations: doctor and installation
 
-> **Status: `vpn-pulse doctor` works; `install.sh` is planned.** The doctor checks below run
-> against a real installation directory (`vpn-pulse init`) and print the same next steps the
-> administrator sees in the Mini App. HTTPS and backup checks arrive with the installer.
+> **Status: `vpn-pulse doctor` and `install.sh` work.** The installer is checked end to end on a
+> clean Ubuntu 24.04 by `scripts/install_check.sh` (fresh install → doctor OK → repeated install
+> unchanged → upgrade → rollback → uninstall keeping data). HTTPS and backup checks of the doctor
+> are still planned.
 
 ## Two entry points
 
-- `./install.sh demo` — runs the interface on fixtures, prints a local URL, asks for no
-  Telegram token, domain or SSH. "Demo data" is always visible.
-- `./install.sh preflight` then `sudo ./install.sh install` — a seven-step wizard: environment,
-  application, configuration, secrets, HTTPS, Telegram, final diagnostics. Preflight changes
-  nothing; the dry-run summary lists every change before it is made.
+- `./install.sh demo [--prefix DIR] [--port N]` — no root: a virtual environment under
+  `~/.vpn-pulse-demo`, a seeded demo database, the monitoring loop in demo mode and the API with
+  the Mini App at `http://127.0.0.1:8765/app/mvp.html`. No Telegram token, domain or SSH; the
+  "Demo data" mark is always on. `./install.sh demo-stop` stops it.
+- `./install.sh preflight` then `sudo ./install.sh install` — seven steps: environment,
+  application, configuration and secrets, demo data (optional), HTTPS (Caddy snippet), services,
+  doctor. Preflight changes nothing; `--dry-run` lists every change before it is made.
 
-The wizard asks only what cannot be derived safely: language and timezone, the Mini App
-domain, the bot token (file path or hidden prompt), group and admin IDs, confirmation.
-Servers and probes are connected afterwards with separate commands, so you get a working
-interface even before the sources are ready.
+The wizard asks only what cannot be derived safely: language and timezone, the Mini App domain,
+the contact link, the group id and the bot token (hidden prompt; it goes to
+`/etc/vpn-pulse/secrets/telegram-bot.token` with `0600` and nowhere else). With flags it asks
+nothing. Servers and probes are connected afterwards with `vpn-pulse server add` and
+`vpn-pulse probe enroll`, so you get a working interface before the sources are ready; with
+`--demo-data` it shows fictional servers in the meantime.
+
+What the installation looks like:
+
+| Path | Owner / mode | Contents |
+|---|---|---|
+| `/opt/vpn-pulse/releases/<id>` | root, world-readable | the application and its own virtual environment; `current` → the running one |
+| `/etc/vpn-pulse/config.yaml` | `vpn-pulse`, 0640 | the public configuration (the units mount it read-only) |
+| `/etc/vpn-pulse/secrets/` | `vpn-pulse`, 0700 / files 0600 | the bot token, later collector keys |
+| `/etc/vpn-pulse/run.env` | root, 0644 | `VPN_PULSE_RUN_ARGS=--demo` for a demo installation |
+| `/var/lib/vpn-pulse/` | `vpn-pulse`, 0750 | `vpnpulse.sqlite3`, `backups/`, the `demo-data` marker |
+| `/etc/systemd/system/vpn-pulse-{api,run}.service` | root | hardened units (`ProtectSystem=strict`, private tmp, no new privileges) |
+| `/usr/local/bin/vpn-pulse` | root, 0755 | runs the CLI as the service user with the installed configuration |
 
 ## Every step reports the same way
 

@@ -54,7 +54,8 @@ def local_checks(config: dict, db_path: Path, i18n: Translator, lang: str) -> tu
             items.append({"check": "storage", "state": "fail", "next": i18n.t(lang, "doctor.storage.broken"), "command": "vpn-pulse doctor storage"})
     telegram = config.get("telegram") or {}
     if not telegram:
-        items.append({"check": "telegram", "state": "warn", "next": i18n.t(lang, "doctor.telegram.missing"), "command": "vpn-pulse doctor telegram"})
+        # information, not a warning: an installation without Telegram is whole (messages go to the console)
+        items.append({"check": "telegram", "state": "ok", "next": i18n.t(lang, "doctor.telegram.missing"), "command": "vpn-pulse doctor telegram"})
     else:
         status = secret_file_status(Path(telegram["bot_token_file"]))
         if status in ("missing", "empty"):
@@ -71,9 +72,10 @@ def run_doctor(config: dict, db_path: Path, lang: str) -> tuple[dict, object]:
     if connection is not None:
         items.extend(make_read_model(connection, config, translator=i18n).admin_overview(lang)["doctor"]["items"])
     items.extend(local)
-    items.sort(key=lambda i: 0 if i["state"] == "fail" else 1)  # failures first, otherwise the Admin screen's order
-    result = "fail" if any(i["state"] == "fail" for i in items) else "warn" if items else "ok"
-    return {"result": result, "items": items, "next_command": items[0]["command"] if items else None}, connection
+    items.sort(key=lambda i: {"fail": 0, "warn": 1}.get(i["state"], 2))  # failures, warnings, information; the Admin screen's order within
+    result = "fail" if any(i["state"] == "fail" for i in items) else "warn" if any(i["state"] == "warn" for i in items) else "ok"
+    findings = [i for i in items if i["state"] != "ok"]
+    return {"result": result, "items": items, "next_command": findings[0]["command"] if findings else None}, connection
 
 
 def command_doctor(args: argparse.Namespace, out: Output) -> int:
@@ -83,8 +85,9 @@ def command_doctor(args: argparse.Namespace, out: Output) -> int:
     summary, connection = run_doctor(config, db_path, lang)
     if args.section:
         summary["items"] = [i for i in summary["items"] if i["check"] == args.section]
-        summary["result"] = "fail" if any(i["state"] == "fail" for i in summary["items"]) else "warn" if summary["items"] else "ok"
-        summary["next_command"] = summary["items"][0]["command"] if summary["items"] else None
+        summary["result"] = "fail" if any(i["state"] == "fail" for i in summary["items"]) else "warn" if any(i["state"] == "warn" for i in summary["items"]) else "ok"
+        findings = [i for i in summary["items"] if i["state"] != "ok"]
+        summary["next_command"] = findings[0]["command"] if findings else None
         summary["details"] = section_details(args.section, config, db_path, connection)
     if args.json:
         out.json(summary)
@@ -99,7 +102,7 @@ def command_doctor(args: argparse.Namespace, out: Output) -> int:
     if args.section:
         for line in summary["details"]:
             out.line(f"  {line}")
-    if not summary["items"] and not args.section:
+    if not any(i["state"] != "ok" for i in summary["items"]) and not args.section:
         out.line("  every check passed")
     return EXIT[summary["result"]]
 

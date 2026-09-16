@@ -1,0 +1,20 @@
+# VPN Pulse behind Caddy — one origin for the API and the Mini App.
+# install.sh writes this file to /etc/caddy/vpn-pulse.caddy with your domain and adds
+# `import /etc/caddy/vpn-pulse.caddy` to the Caddyfile. Caddy obtains the certificate itself.
+# The domain of the monitor is not the domain of the VPN and reveals nothing about it.
+# No access log on purpose: the application logs what it needs, redacted (docs/privacy.md).
+
+{{DOMAIN}} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		X-Frame-Options "SAMEORIGIN"
+		-Server
+	}
+	# the Mini App and the API live in the same process; nothing else is exposed
+	reverse_proxy 127.0.0.1:8765 {
+		header_up X-Forwarded-Proto {scheme}
+	}
+}

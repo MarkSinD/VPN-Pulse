@@ -1,0 +1,34 @@
+[Unit]
+Description=VPN Pulse API and Mini App (behind Caddy on 127.0.0.1:8765)
+Documentation=https://github.com/MarkSinD/VPN-Pulse
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vpn-pulse
+Group=vpn-pulse
+Environment=VPN_PULSE_CONFIG=/etc/vpn-pulse/config.yaml
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/var/lib/vpn-pulse
+ExecStart=/opt/vpn-pulse/current/venv/bin/vpn-pulse serve --host 127.0.0.1 --port 8765
+Restart=on-failure
+RestartSec=5
+
+# the process needs the data directory, the configuration and nothing else
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
+ReadWritePaths=/var/lib/vpn-pulse
+ReadOnlyPaths=/etc/vpn-pulse
+
+[Install]
+WantedBy=multi-user.target

@@ -1,8 +1,8 @@
 # Быстрый старт
 
-> **Статус: предварительная версия для разработчиков.** Установщика и CLI пока нет. Эта страница
-> честно говорит, что работает сегодня, а что в планах, — чтобы вы не потратили вечер на команду,
-> которой не существует.
+> **Статус: устанавливаемая предварительная версия.** Установщик, CLI, цикл мониторинга и API
+> работают на чистой Ubuntu 24.04; то, что они наблюдают, пока вымышлено — сборщики для настоящих
+> серверов и пробники идут следующими инкрементами. Эта страница честно говорит, что работает сегодня.
 
 ## Что есть сегодня
 
@@ -99,18 +99,29 @@
    администратора, — и завершает с кодом `0/1/2` (всё в порядке / предупреждения / ошибки). Все
    команды принимают `--config`, `--db` и `--lang` до или после глагола.
 
-## Планируемый путь установки
+## Установка на сервер (Ubuntu 24.04)
 
-Когда выйдет установщик, путь будет таким (пока недоступно):
-
-```text
-./install.sh demo          # интерфейс на фикстурах, без токена Telegram
-./install.sh preflight     # проверки окружения без изменений
-sudo ./install.sh install  # мастер из семи шагов: окружение, приложение, конфиг, секреты, HTTPS, Telegram, doctor
-vpn-pulse server add       # подключить сервер (awg-host | awg-docker | hiddify)
-vpn-pulse probe enroll pc  # одноразовый код привязки пробника
-vpn-pulse doctor           # сквозная диагностика
+```bash
+./install.sh preflight                 # проверки без изменений: python 3.12 + venv, диск, systemd, caddy
+./install.sh demo                      # без root: Mini App + API на вымышленных данных, http://127.0.0.1:8765/app/mvp.html
+sudo ./install.sh install --demo-data  # системный пользователь vpn-pulse, /opt/vpn-pulse/releases/<id> со своим venv,
+                                       # /etc/vpn-pulse/config.yaml + секреты (0700/0600), /var/lib/vpn-pulse,
+                                       # юниты vpn-pulse-api + vpn-pulse-run, сниппет Caddy, doctor
+sudo vpn-pulse doctor                  # обёртка запускает CLI от имени служебного пользователя
+sudo ./install.sh upgrade              # из более нового checkout: копия базы, миграции, переключение, рестарт, doctor — при сбое откат
+sudo ./install.sh rollback             # вернуть предыдущий релиз
+sudo ./install.sh uninstall            # юниты и приложение; данные и секреты остаются (--purge удаляет)
 ```
 
-Прогресс — в [CHANGELOG.md](../CHANGELOG.md). Проект установщика:
-[operations/doctor.md](operations/doctor.md) и [connect-server.md](connect-server.md).
+Без `--yes` установка спрашивает язык, таймзону, домен Mini App (для сниппета Caddy), ссылку на
+администратора, id группы и — скрытым вводом — токен бота; с флагами не спрашивает ничего
+(`--language ru --timezone Europe/Riga --domain monitor.example.org --group-chat-id …
+--telegram-token-stdin`). `--demo-data` заводит три вымышленных сервера и держит их в движении
+(`vpn-pulse run --demo`), чтобы свежей установке было что показать; `vpn-pulse demo clear` убирает
+их, когда появятся настоящие. Все изменяющие команды принимают `--dry-run`.
+
+Вся последовательность — чистая установка, `doctor` OK, повторная установка без изменений,
+обновление с резервной копией, откат, удаление с сохранением данных — это `scripts/install_check.sh`;
+она идёт в CI на чистой Ubuntu 24.04 (с systemd), а локально — в контейнере:
+`scripts/install_check.sh --docker`. Проектные заметки: [operations/doctor.md](operations/doctor.md),
+[connect-server.md](connect-server.md).

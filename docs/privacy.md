@@ -43,7 +43,7 @@ tests. No Telegram ID, username, IP, note text or error text is ever stored.
 
 ## Secrets
 
-The Telegram bot token, collector keys and probe tokens are files with `0600` permissions on
+The Telegram bot token, collector keys and probe tokens are files with `0600` permissions (installed under `/etc/vpn-pulse/secrets/`, owner `vpn-pulse`) on
 the monitoring host. They are never written to the repository, the configuration file, logs,
 API responses or the static web bundle. Logs are structured JSON with redaction.
 
