@@ -22,7 +22,7 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | Part | State |
 |---|---|
 | Product & UX specification, design system, RU/EN content | complete |
-| API contract (OpenAPI 3.1, JSON Schemas) | v1.1.0, validated in CI |
+| API contract (OpenAPI 3.1, JSON Schemas) | v1.4.1, validated in CI |
 | Interactive UI prototypes (Mini App, Android probe, first run) | complete — [open them](docs/prototypes/README.md) |
 | Backend core: config, SQLite migration, state evaluator, mock-first API, analytics ingestion | tests green (`pytest`) |
 | Dev server: every API route on 13 demo scenarios, contract-validated (`python -m vpnpulse.dev`) | working |
@@ -32,6 +32,7 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | Monitoring loop `vpn-pulse run`: collect → evaluate → snapshots → transitions → events → notification queue with retries; hourly sweep; `--demo` plays the scenarios over a real database | working |
 | Administrator CLI: `vpn-pulse init / doctor / server add|list|remove / probe enroll|list|revoke / note set|clear|show`; `doctor` prints the Admin screen's next steps, exit code as a gate; secrets `0600`, never echoed | working |
 | Installer: `./install.sh demo` (fictional data, no root, no Telegram), `sudo ./install.sh install` (system user, per-release venv, config + secrets, systemd units, Caddy snippet, doctor), `upgrade` with backup and auto-rollback, `rollback`, `uninstall` keeping data; checked end to end on a clean Ubuntu 24.04 (`scripts/install_check.sh`) | working |
+| Gate A — the whole local chain in one test: scripted world → loop → SQLite → API → Mini App in a browser → Telegram Bot API on a fake transport (`tests/test_e2e_gate_a.py`); the Mini App sends its allowlisted analytics | green |
 | Read-only collectors for real servers (`server add` on the server side), Telegram bot in a real group, PC / Android / cross-server probes | **planned** |
 
 You can install it on a server today and watch fictional data move (`--demo-data`); the real

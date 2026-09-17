@@ -8,6 +8,19 @@ release is cut.
 
 ### Added
 
+- Gate A, the local vertical slice, in one test (`tests/test_e2e_gate_a.py`): the scripted world
+  → `vpn-pulse run` → SQLite → the Telegram Bot API adapter on a fake transport → `vpn-pulse serve`
+  built from `config.yaml` → the Mini App in Chromium, opened the way Telegram opens it (signed
+  `initData`) → the page's analytics back into the same database. CI runs it in the `browser` job;
+  without Playwright it is skipped, not silently passed.
+- The Mini App sends its allowlisted product events to `POST /analytics/events:batch` in batches
+  (shape per `contracts/analytics-events.schema.json`, a random session id, no identity) once a
+  session exists — after the render or interaction that caused them, never in their way;
+  `quick_start_opened` is tracked. `TelegramNotifier` tests on a fake transport (chats, silent
+  administrator messages, public texts, `False` on any failure, token read at send time);
+  `vpnpulse.cli.run.make_notifier` is the one place that picks Telegram or the console.
+- Tests for the two Gate A rows that had none: a probe report arriving out of order never
+  rewrites newer evidence (API-03); unknown time lowers coverage and never uptime (MON-04).
 - `install.sh`: `preflight` (read-only checks), `demo` / `demo-stop` (no root: venv, seeded demo
   database, the loop in demo mode and the API with the Mini App at 127.0.0.1:8765), `install`
   (system user `vpn-pulse`, per-release directory with its own venv under `/opt/vpn-pulse`,
@@ -105,6 +118,6 @@ release is cut.
 
 ### Planned
 
-- Installer (`install.sh`), the server side of `vpn-pulse server add` (read-only helpers for
-  `awg-host`, `awg-docker`, `hiddify`), Telegram bot in a real group, PC and Android probes,
-  cross-server checks. See `docs/` pages marked *planned*.
+- The server side of `vpn-pulse server add` (read-only helpers for `awg-host`, `awg-docker`,
+  `hiddify`), Telegram bot in a real group, `doctor https`, PC and Android probes, cross-server
+  checks, watchdog and off-host backups. See `docs/` pages marked *planned*.

@@ -39,7 +39,9 @@ Optional, privacy-preserving: a random 24-hour `session_id`, an allowlisted even
 allowlisted set of properties (role, language, theme, viewport bucket, state buckets, public
 server id, timings). The allowlist is enforced by
 [`contracts/analytics-events.schema.json`](../contracts/analytics-events.schema.json) and by
-tests. No Telegram ID, username, IP, note text or error text is ever stored.
+tests. No Telegram ID, username, IP, note text or error text is ever stored. The Mini App sends
+its events in small batches after a screen has rendered or an interaction happened (never before,
+never blocking); the queue lives in the page's memory, so closing the app drops what was not sent.
 
 ## Secrets
 

@@ -5,7 +5,7 @@ snapshots, transitions, events, note, probes — and the API is served by Sqlite
 """
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -98,6 +98,33 @@ def test_unknown_scenario_shows_gaps_and_stale_evidence(tmp_path):
     detail = client.get("/api/v1/servers/s1").json()
     pc = next(e for e in detail["checks"] if e["source"] == "pc")
     assert pc["state"] == "unknown" and pc["reason_code"] == "pcSilent"
+
+
+def test_unknown_time_is_not_in_uptime_but_is_in_coverage(tmp_path):
+    """MON-04: availability is computed over known time only; unknown stretches lower coverage, never uptime."""
+    connection = connect(tmp_path / "timeline.sqlite3")
+    apply_migrations(connection, ROOT / "migrations")
+    config = {"app": {"default_language": "ru", "languages": ["ru", "en"], "timezone": "UTC"},
+              "servers": [{"id": "s1", "type": "awg-host", "name": {"ru": "Сервер 1", "en": "Server 1"}, "country_code": "LV", "enabled": True, "recommended_priority": 10}],
+              "monitoring": {"freshness_seconds": 180, "collection_interval_seconds": 60}}
+    start = NOW - timedelta(hours=24)
+    iso = lambda at: at.isoformat().replace("+00:00", "Z")  # noqa: E731
+    # observed from the start; operational 12 h → unknown 6 h (the probes went silent) → unavailable 3 h → operational 3 h
+    timeline = [("unknown", "operational", start), ("operational", "unknown", start + timedelta(hours=12)),
+                ("unknown", "unavailable", start + timedelta(hours=18)), ("unavailable", "operational", start + timedelta(hours=21))]
+    with connection:
+        connection.execute("INSERT INTO servers VALUES ('s1', 's1', 'awg-host', 1, 1, ?, ?)", (iso(start), iso(start)))
+        connection.execute("INSERT INTO observations VALUES ('o1', 's1', NULL, 'collector', 'all', ?, ?, 'success', ?, 'sufficient', '{}', NULL, NULL, NULL)",
+                           (iso(start), iso(start), iso(start + timedelta(minutes=3))))
+        for index, (from_state, to_state, at) in enumerate(timeline):
+            connection.execute("INSERT INTO state_transitions VALUES (?, 'server:s1', ?, ?, 'TEST', ?, ?, ?, ?, '{}')",
+                               (f"t{index}", from_state, to_state, iso(at), iso(at), None if index == len(timeline) - 1 else iso(timeline[index + 1][2]), f"d{index}"))
+        connection.execute("INSERT INTO state_snapshots VALUES ('server:s1', 's1', NULL, 'all', 'operational', 'TEST', 'high', ?, ?, ?, '{}', 1)",
+                           (iso(NOW - timedelta(minutes=1)), iso(NOW), iso(NOW + timedelta(minutes=2))))
+    card = SqliteReadModel(connection, config, now=lambda: NOW).status("member")["servers"][0]
+    assert card["coverage_24h"] == 0.75  # 6 of 24 hours were unknown
+    assert card["uptime_24h"] == round(15 / 18, 4)  # 15 operational hours out of 18 known ones — the unknown 6 h count for nobody
+    assert card["state"] == "operational"
 
 
 def test_language_note_events_and_role_visibility(tmp_path):

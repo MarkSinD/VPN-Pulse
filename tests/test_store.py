@@ -122,6 +122,38 @@ def test_report_is_idempotent_and_becomes_evidence(tmp_path):
     assert probes[0]["status"] == "active" and probes[0]["route_verified"] is True and probes[0]["network_type"] == "home"
 
 
+def test_late_report_does_not_rewrite_newer_evidence(tmp_path):
+    """API-03: a report that arrives out of order is stored, but the latest evidence stays the latest."""
+    connection = new_database(tmp_path / "db.sqlite3")
+    clock = Clock(NOW)
+    admin = process(tmp_path / "db.sqlite3", clock)
+    login(admin, 2, NOW)
+    code = admin.post("/api/v1/admin/probe-enrollments", json={"kind": "pc", "capabilities": ["report_pc"]}).json()["code"]
+    token = admin.post("/api/v1/probe/enroll", json={"code": code, "agent_version": "0.1.0", "schema_version": 1}).json()["token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    def report(observed_at: datetime, result: str) -> dict:
+        return {
+            "report_id": str(uuid4()), "schema_version": 1, "agent_version": "0.1.0", "observed_at": observed_at.isoformat(),
+            "network": {"type": "home", "ip_family": "ipv4", "route_verified": True},
+            "results": [
+                {"target_id": "s1", "check": "control_internet", "result": "success", "duration_ms": 30},
+                {"target_id": "s1", "check": "handshake", "result": result, "duration_ms": 80, **({"error_code": "timeout"} if result == "failure" else {})},
+                {"target_id": "s1", "check": "https", "result": result, "duration_ms": 120, **({"error_code": "timeout"} if result == "failure" else {})},
+            ],
+        }
+
+    newer = report(NOW - timedelta(seconds=10), "success")
+    older = report(NOW - timedelta(seconds=70), "failure")  # taken first, delivered second (a queue on the agent)
+    assert admin.post("/api/v1/probe/reports", json=newer, headers=headers).json()["duplicate"] is False
+    assert admin.post("/api/v1/probe/reports", json=older, headers=headers).json()["duplicate"] is False
+    rows = connection.execute("SELECT observed_at, result FROM observations WHERE server_id = 's1' ORDER BY observed_at").fetchall()
+    assert [r[1] for r in rows] == ["failure", "success"]  # both are evidence, in observation order
+    pc = next(e for e in admin.get("/api/v1/status").json()["servers"][0]["sources"] if e["source"] == "pc")
+    assert pc["state"] == "operational" and pc["freshness"]["observed_at"] == newer["observed_at"].replace("+00:00", "Z")
+    assert admin.get("/api/v1/status").json()["sources"][0]["last_report_at"] == NOW.isoformat().replace("+00:00", "Z")  # the probe was seen now
+
+
 def test_revoked_probe_loses_access_everywhere(tmp_path):
     new_database(tmp_path / "db.sqlite3")
     clock = Clock(NOW)

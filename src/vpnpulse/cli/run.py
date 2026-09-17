@@ -38,8 +38,23 @@ def demo_config(now) -> dict:
     return config_for(catalog, catalog.build("operational", now))
 
 
-def command_run(args: argparse.Namespace, out: Output) -> int:
+def make_notifier(config: dict, out: Output, *, telegram: dict | None = None, opener=None):
+    """The messenger `vpn-pulse run` uses: Telegram when a token file and a group are configured
+    (config.yaml `telegram:` or the flags), the console otherwise. `opener` replaces urllib (tests)."""
     from vpnpulse.notify import ConsoleNotifier, MessageFormatter, TelegramNotifier
+
+    formatter = MessageFormatter(config)
+    telegram = {**(config.get("telegram") or {}), **{k: v for k, v in (telegram or {}).items() if v}}
+    if telegram.get("bot_token_file") and telegram.get("group_chat_id"):
+        token_file = Path(telegram["bot_token_file"])
+        status = secret_file_status(token_file)
+        if status != "ok":
+            raise CliError(f"telegram token file {token_file}: {status} (vpn-pulse doctor telegram)")
+        return TelegramNotifier(formatter, token_file=token_file, group_chat_id=telegram["group_chat_id"], admin_chat_id=telegram.get("admin_chat_id"), opener=opener)
+    return ConsoleNotifier(formatter, out=out.line)
+
+
+def command_run(args: argparse.Namespace, out: Output) -> int:
     from vpnpulse.pipeline import Pipeline
 
     if not args.quiet:
@@ -61,22 +76,11 @@ def command_run(args: argparse.Namespace, out: Output) -> int:
 
         collectors.append(FixtureCollector(ScenarioCatalog.load(), speed=args.demo_speed))
 
-    formatter = MessageFormatter(config)
-    telegram = dict(config.get("telegram") or {})
-    if args.telegram_token_file:
-        telegram["bot_token_file"] = str(args.telegram_token_file)
-    if args.group_chat_id:
-        telegram["group_chat_id"] = args.group_chat_id
-    if args.admin_chat_id:
-        telegram["admin_chat_id"] = args.admin_chat_id
-    if telegram.get("bot_token_file") and telegram.get("group_chat_id"):
-        token_file = Path(telegram["bot_token_file"])
-        status = secret_file_status(token_file)
-        if status != "ok":
-            raise CliError(f"telegram token file {token_file}: {status} (vpn-pulse doctor telegram)")
-        notifier = TelegramNotifier(formatter, token_file=token_file, group_chat_id=telegram["group_chat_id"], admin_chat_id=telegram.get("admin_chat_id"))
-    else:
-        notifier = ConsoleNotifier(formatter, out=out.line)
+    notifier = make_notifier(config, out, telegram={
+        "bot_token_file": str(args.telegram_token_file) if args.telegram_token_file else None,
+        "group_chat_id": args.group_chat_id,
+        "admin_chat_id": args.admin_chat_id,
+    })
 
     pipeline = Pipeline(connection, config, collectors=collectors, notifier=notifier, now=now_utc)
 

@@ -6,14 +6,17 @@
 
 ## What you get today
 
-- the backend core with tests (state evaluator, configuration, SQLite migration, mock-first API);
-- validated contracts (OpenAPI 3.1, JSON Schemas, RU/EN dictionaries);
-- interactive prototypes of every screen, including error and first-run states.
+- the monitoring loop, the SQLite store and read model, the API and the Mini App, the
+  administrator CLI and the installer — the whole local chain is covered by one end-to-end test;
+- a demo on fictional data (`./install.sh demo` or `python -m vpnpulse.dev`) that changes state
+  within minutes; a real installation shows "no data yet" until the collectors and probes arrive;
+- validated contracts (OpenAPI 3.1, JSON Schemas, RU/EN dictionaries) and interactive prototypes
+  of every screen, including error and first-run states.
 
 ## Requirements
 
-- Python 3.12 or newer;
-- a browser for the prototypes.
+- Python 3.12 or newer (Ubuntu 24.04 on a server);
+- a browser for the Mini App and the prototypes.
 
 ## Steps
 

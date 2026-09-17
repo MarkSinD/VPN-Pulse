@@ -1,4 +1,4 @@
-/* VPN Pulse — API client for contracts/openapi.yaml (v1.3).
+/* VPN Pulse — API client for contracts/openapi.yaml (v1.4).
    One fetch wrapper: same-origin cookies, Accept-Language, problem+json errors.
    `scenario` is a dev-server affordance (?scenario=…); a real deployment ignores it. */
 window.VPNPulseApi = function (opts) {

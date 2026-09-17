@@ -1,7 +1,7 @@
 # API
 
 The contract is [`contracts/openapi.yaml`](../contracts/openapi.yaml) (OpenAPI 3.1, version
-1.1.0). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
+1.4.1). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
 Problem Details with a stable `code` and a `trace_id`.
 
 ## Authentication
@@ -102,10 +102,12 @@ the time whose state is known. Every read response is validated against strict p
 
 `python -m vpnpulse.dev` serves every route above on the demo scenarios of
 `fixtures/ui/scenarios.json` (see the quick start). Server names and the administrator note come
-back in the language of `Accept-Language` (`?lang=` in the dev server); formalising this header in
-the contract is on the list for the SQLite read model. `tests/test_dev_server.py` validates each
-route for each scenario and role against the OpenAPI schemas, and `scripts/ui_parity_check.py`
-renders every screen of the Mini App from the API and from the scenarios and compares the DOM.
+back in the language of `Accept-Language` (`?lang=` in the dev server). `tests/test_dev_server.py`
+validates each route for each scenario and role against the OpenAPI schemas, and
+`scripts/ui_parity_check.py` renders every screen of the Mini App from the API and from the
+scenarios and compares the DOM. `tests/test_e2e_gate_a.py` runs the whole local chain once — the
+loop writes the database, `vpn-pulse serve` answers from it, the Mini App renders it in Chromium
+and posts its analytics back, and the Telegram adapter's requests are asserted on a fake transport.
 
 ## Compatibility rules
 

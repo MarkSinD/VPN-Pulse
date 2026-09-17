@@ -37,16 +37,16 @@ What the installation looks like:
 ## Every step reports the same way
 
 ```text
-[4/7] HTTPS
-Checking A/AAAA records for monitor.example.org ... FAILED
-Expected: this server's public address
-Found: no record
-Next: create the DNS record, then run `vpn-pulse doctor https`
+[5/7] doctor
+  [OK]   storage: database ready, schema 1
+  [FAIL] servers: Connect the first server  →  vpn-pulse server add
+  [WARN] probes: After the server, enroll the probes  →  vpn-pulse probe enroll pc
 No system changes were made in this step.
 ```
 
-Success is never signalled by colour alone; every failure carries a safe re-check command.
-Full debug output is behind `--verbose` and redacts secrets.
+Success is never signalled by colour alone; every failure carries a safe re-check command. The
+HTTPS step (records and certificate of the Mini App domain, `vpn-pulse doctor https`) is planned
+with the real domain; today the installer writes the Caddy snippet and leaves DNS to you.
 
 ## `vpn-pulse doctor`
 
@@ -55,7 +55,7 @@ $ vpn-pulse doctor
 doctor: FAIL
   [FAIL] servers: Connect the first server  →  vpn-pulse server add
   [WARN] probes: After the server, enroll the probes  →  vpn-pulse probe enroll pc
-  [WARN] telegram: Telegram is not configured — messages are printed to the console; …  →  vpn-pulse doctor telegram
+  [OK]   telegram: Telegram is not configured — messages are printed to the console; …  →  vpn-pulse doctor telegram
 ```
 
 One line per finding, one next step each, failures first. Exit code `0` when everything passed,
@@ -70,7 +70,7 @@ hints (default: `app.default_language`).
 | `collector` | `collection_runs` | never ran → start the `vpn-pulse` service; last run failed or older than three intervals → check the service and server access |
 | `queue` | `notification_queue` | messages pending for more than ten minutes → check the bot |
 | `storage` | the database file | missing → `vpn-pulse init`; cannot be opened → path and permissions |
-| `telegram` | `telegram` block and the token file | not configured (warning: messages go to the console); token file missing or empty (failure); readable by others (`chmod 600`) |
+| `telegram` | `telegram` block and the token file | not configured (information: messages go to the console — a demo or a fresh installation stays green); token file missing or empty (failure); readable by others (`chmod 600`) |
 
 `servers`, `probes`, `collector` and `queue` are computed by the same code that serves
 `GET /admin/overview`, so the terminal and the Mini App never disagree; `storage` and `telegram`

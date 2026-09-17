@@ -27,7 +27,8 @@ python scripts/check_public_tree.py
 
 The Mini App and the prototypes are generated from `web/src/` with `python scripts/build_prototypes.py`;
 `python scripts/ui_check.py` runs the browser QA and `python scripts/ui_parity_check.py` proves the app
-renders the same DOM from the API as from the demo scenarios (both need Playwright + Chromium).
+renders the same DOM from the API as from the demo scenarios (both need Playwright + Chromium, as does
+`tests/test_e2e_gate_a.py`, the end-to-end test — `pytest -rs` shows it as skipped without them).
 Edit the sources, not the built HTML.
 
 ## Pull requests

@@ -783,7 +783,7 @@ window.VPNPulseModel = (function () {
 
 </script>
 <script>
-/* VPN Pulse — API client for contracts/openapi.yaml (v1.3).
+/* VPN Pulse — API client for contracts/openapi.yaml (v1.4).
    One fetch wrapper: same-origin cookies, Accept-Language, problem+json errors.
    `scenario` is a dev-server affordance (?scenario=…); a real deployment ignores it. */
 window.VPNPulseApi = function (opts) {
@@ -880,8 +880,44 @@ window.VPNPulseApi = function (opts) {
   const api = MODE === 'api' ? window.VPNPulseApi({ base: q.get('api') || '/api/v1', lang: () => S.lang, scenario: () => (devScenarios ? S.scenario : null) }) : null;
 
   // ---------- analytics (allowlisted, no identity) ----------
+  // Every event stays on the page (showcase counter, QA). With the API it is also shaped per
+  // contracts/analytics-events.schema.json and sent in batches once a session exists — after the
+  // render or the interaction that caused it, never in its way. The queue is in-memory (≤ 200);
+  // a rejected batch is dropped, an unreachable API is retried on the next flush.
   const events = window.__vpnPulseEvents = [];
-  function track(name, props) { const e = { name, at: Date.now(), props: props || {} }; events.push(e); if (window.console && q.get('debug')) console.debug('analytics', e); const c = document.getElementById('sc-events'); if (c) c.textContent = String(events.length); }
+  const analytics = { queue: [], timer: null, session: uuid(), inflight: false, sent: 0 };
+  function uuid() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    const b = new Uint8Array(16);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(b); else for (let i = 0; i < 16; i++) b[i] = Math.random() * 256 | 0;
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    const h = Array.from(b, x => ('0' + x.toString(16)).slice(-2)).join('');
+    return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+  }
+  function track(name, props) {
+    const e = { name, at: Date.now(), props: props || {} }; events.push(e);
+    if (window.console && q.get('debug')) console.debug('analytics', e);
+    const c = document.getElementById('sc-events'); if (c) c.textContent = String(events.length);
+    if (!api) return;
+    analytics.queue.push({ event_id: uuid(), name, occurred_at: new Date(e.at).toISOString(), schema_version: 1, session_id: analytics.session, surface: 'mini_app', properties: e.props });
+    if (analytics.queue.length > 200) analytics.queue.splice(0, analytics.queue.length - 200);
+    scheduleFlush(1500);
+  }
+  function scheduleFlush(delay) {
+    if (!api) return;
+    if (analytics.timer) clearTimeout(analytics.timer);
+    analytics.timer = setTimeout(() => { analytics.timer = null; flushAnalytics(); }, delay);
+  }
+  async function flushAnalytics() {
+    if (!api || !S.sessionRole || analytics.inflight || !analytics.queue.length) return;
+    const batch = analytics.queue.slice(0, 50);
+    analytics.inflight = true;
+    try { await api.analytics(batch); analytics.queue.splice(0, batch.length); analytics.sent += batch.length; }
+    catch (e) { if (e && e.status === 400) analytics.queue.splice(0, batch.length); }
+    finally { analytics.inflight = false; }
+    if (analytics.queue.length && S.sessionRole) scheduleFlush(0);
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAnalytics(); });
 
   // ---------- i18n ----------
   function t(key, params) {
@@ -957,6 +993,7 @@ window.VPNPulseApi = function (opts) {
     }
     render();
     document.body.setAttribute('data-load', 'ready');
+    scheduleFlush(0);
   }
   function scheduleRefresh() {
     if (MODE !== 'api' || refreshTimer) return;
@@ -1141,6 +1178,7 @@ window.VPNPulseApi = function (opts) {
       b.classList.add('loading');
       if (api) load(); else setTimeout(() => { b.classList.remove('loading'); toast(t('error.offline')); }, 700);
     }));
+    root.querySelectorAll('[data-event="quick_start_opened"]').forEach(a => a.addEventListener('click', () => track('quick_start_opened', { entry_point: 'status' })));
     bindCopy();
   }
 
@@ -1380,7 +1418,7 @@ window.VPNPulseApi = function (opts) {
     document.querySelectorAll('[data-sc-theme]').forEach(b => b.setAttribute('aria-pressed', String(b.getAttribute('data-sc-theme') === S.theme)));
     const tx = document.getElementById('sc-text'); if (tx) tx.setAttribute('aria-pressed', String(S.text200));
   }
-  window.VPNPulseShowcase = { apply: applyShowcase, reload: load, mode: MODE, state: () => JSON.parse(JSON.stringify({ scenario: S.scenario, role: S.role, theme: S.theme, lang: S.lang, tab: S.tab, server: S.server, open: S.open, scrollPos: S.scrollPos, source: SC.source })), events };
+  window.VPNPulseShowcase = { apply: applyShowcase, reload: load, mode: MODE, state: () => JSON.parse(JSON.stringify({ scenario: S.scenario, role: S.role, theme: S.theme, lang: S.lang, tab: S.tab, server: S.server, open: S.open, scrollPos: S.scrollPos, source: SC.source })), events, analytics: () => ({ queued: analytics.queue.length, sent: analytics.sent }), flush: flushAnalytics };
   const scSel = document.getElementById('sc-scenario');
   if (scSel) { Object.keys(FX.scenarios).forEach(id => { if (MODE === 'api' && id === 'loading') return; const o = document.createElement('option'); o.value = id; o.textContent = id; scSel.appendChild(o); }); scSel.addEventListener('change', () => applyShowcase({ scenario: scSel.value })); }
   document.querySelectorAll('[data-sc-role]').forEach(b => b.addEventListener('click', () => applyShowcase({ role: b.getAttribute('data-sc-role') })));
