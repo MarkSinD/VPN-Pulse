@@ -90,8 +90,21 @@ def wait_for(predicate, timeout: float = 10.0, what: str = "condition"):
     raise AssertionError(f"timed out waiting for {what}")
 
 
+REQUIRE_BROWSER = os.environ.get("VPNPULSE_REQUIRE_BROWSER") == "1"  # CI's browser job: a skip would hide a broken gate
+
+
+def browser_or_skip():
+    """Playwright's sync API and a launchable Chromium, or a skip — a failure when the browser is required."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        if REQUIRE_BROWSER:
+            pytest.fail("VPNPULSE_REQUIRE_BROWSER=1 but Playwright is not installed")
+        pytest.skip("Playwright is not installed; stages 1-2 passed, the browser stage is skipped")
+    return sync_playwright
+
+
 def test_gate_a_vertical_slice(tmp_path):
-    sync_playwright = pytest.importorskip("playwright.sync_api").sync_playwright
     uvicorn = pytest.importorskip("uvicorn")
     cfg, config, db = install(tmp_path)
     names = {s["id"]: s["name"]["ru"] for s in config["servers"]}
@@ -145,6 +158,7 @@ def test_gate_a_vertical_slice(tmp_path):
     assert telegram.calls and all(TOKEN in url for url in telegram.calls)
 
     # ---- 3. the Mini App in a browser, from that API, the way Telegram opens it ----
+    sync_playwright = browser_or_skip()
     port = free_port()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
     thread = threading.Thread(target=server.run, daemon=True)
@@ -154,7 +168,9 @@ def test_gate_a_vertical_slice(tmp_path):
         with sync_playwright() as playwright:
             try:
                 browser = playwright.chromium.launch()
-            except Exception as error:  # noqa: BLE001 - the browser is an optional tool, not a code path
+            except Exception as error:  # noqa: BLE001 - a missing Chromium is a tooling gap, not a code path
+                if REQUIRE_BROWSER:
+                    raise
                 pytest.skip(f"Chromium for Playwright is not installed ({type(error).__name__}); run: playwright install chromium")
             page = browser.new_page(viewport={"width": 390, "height": 844})
             page.add_init_script(TELEGRAM_STUB % (json.dumps(member_init), MEMBER))

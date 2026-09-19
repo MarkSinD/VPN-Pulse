@@ -5,10 +5,15 @@ token formats (GitHub, AWS, Telegram bot tokens, Porkbun-style API keys), absolu
 e-mail addresses outside example/noreply domains, and stray build/cache artefacts.
 
 Run: python scripts/check_public_tree.py [--history]
+
+An operator can add their own literal markers (hostnames, ports, container names — one per line)
+through a file named by VPNPULSE_PRIVATE_MARKERS, kept outside this repository; the scanner never
+prints such a marker back, only the file and line where it appeared.
 """
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import sys
@@ -34,6 +39,16 @@ ALLOWED_EMAIL_DOMAINS = ("example.com", "example.org", "users.noreply.github.com
 ARTEFACT_GLOBS = ("*.db", "*.sqlite", "*.sqlite3", "*.log", "*.pyc")
 
 
+def private_markers() -> list[str]:
+    path = os.environ.get("VPNPULSE_PRIVATE_MARKERS")
+    if not path or not Path(path).is_file():
+        return []
+    return [line.strip() for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip() and not line.startswith("#")]
+
+
+MARKERS = private_markers()
+
+
 def scan_text(label: str, text: str, findings: list[str]) -> None:
     for name, pattern in PATTERNS.items():
         for match in pattern.findall(text):
@@ -42,6 +57,11 @@ def scan_text(label: str, text: str, findings: list[str]) -> None:
             if name == "email" and match.lower().endswith(ALLOWED_EMAIL_DOMAINS):
                 continue
             findings.append(f"{label}: {name}: {match}")
+    lowered = text.lower()
+    for index, marker in enumerate(MARKERS):
+        if marker.lower() in lowered:
+            line = lowered[: lowered.index(marker.lower())].count("\n") + 1
+            findings.append(f"{label}: private marker #{index + 1} at line {line}")  # never the value itself
 
 
 def candidate_files() -> list[Path]:

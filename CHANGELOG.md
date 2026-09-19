@@ -109,6 +109,17 @@ release is cut.
 - Repository scaffolding: documentation set, CI (tests, contract validation, link check,
   private-data scan, secret scan), security policy, contributing guide.
 
+### Fixed
+
+- Mini App analytics: a failed batch no longer re-arms the flush immediately — after a network error
+  or a 5xx it backs off (2 s … 60 s), a 401/403 stops the flushes until the next refresh signs in
+  again; only a 400 drops the batch. Before, an unreachable API turned into a tight POST loop.
+- Gate A in CI: the browser job sets `VPNPULSE_REQUIRE_BROWSER=1`, so a missing Playwright or
+  Chromium fails the job instead of skipping the test; stages 1-2 of the end-to-end test run in the
+  regular test job too.
+- `scripts/ui_check.py` checks member screens for infrastructure markers by pattern (addresses,
+  host:port pairs, hostnames) instead of a list of literal values.
+
 ### Changed
 
 - CI: the private-data scan of Git history looks at diffs only (commit metadata is not published

@@ -9,6 +9,7 @@ Run: python scripts/ui_check.py            (needs: pip install playwright && pla
 """
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -61,6 +62,14 @@ def targets(page, label: str, sel: str, minimum: int) -> None:
     sizes = page.evaluate("([s]) => Array.from(document.querySelectorAll(s)).filter(e => e.offsetParent !== null && getComputedStyle(e).visibility !== 'hidden').map(e => { const r = e.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })", [sel])
     for w, h in sizes:
         ok(w >= minimum and h >= minimum, f"{label}: target {sel} is {w}x{h} < {minimum}")
+
+
+INFRA_PATTERNS = (
+    ("an IPv4 address", re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")),
+    ("a host:port pair", re.compile(r"\b(?=[a-z0-9.-]*[a-z])[a-z0-9-]+(?:\.[a-z0-9-]+)+:\d{2,5}\b", re.I)),  # a dotted name, not a clock time
+    ("a hostname", re.compile(r"\b[a-z0-9-]+\.(?:[a-z]{2,3}\.)?(?:xyz|org|com|net|io|ru|lv|nl|fi|de|dev|app|me)\b", re.I)),
+    ("an SSH port", re.compile(r"(?<![\d.:])\d{1,5}:22\b|\bport 22\b", re.I)),
+)
 
 
 def console_clean(page, label: str, errors: list) -> None:
@@ -253,8 +262,11 @@ def main() -> int:
             pg.goto(url(MVP, scenario=scenario, role="member", lang="ru", showcase="hidden"))
             pg.wait_for_timeout(100)
             body = pg.locator("body").inner_text()
-            for marker in ("192.0.2.", "198.51.100.", ".example", ":22"):
-                ok(marker not in body, f"{scenario}: user screen contains {marker!r}")
+            # anything that looks like infrastructure is a leak on a member screen: addresses, host:port
+            # pairs, hostnames with a TLD (the UI shows public names, flags and counts only)
+            for name, pattern in INFRA_PATTERNS:
+                hit = pattern.search(body)
+                ok(hit is None, f"{scenario}: user screen contains {name} {hit.group(0)!r}" if hit else f"{scenario}: no {name}")
         console_clean(pg, "states2", errs)
         ctx.close()
 

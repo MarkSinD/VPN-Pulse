@@ -883,9 +883,11 @@ window.VPNPulseApi = function (opts) {
   // Every event stays on the page (showcase counter, QA). With the API it is also shaped per
   // contracts/analytics-events.schema.json and sent in batches once a session exists — after the
   // render or the interaction that caused it, never in its way. The queue is in-memory (≤ 200);
-  // a rejected batch is dropped, an unreachable API is retried on the next flush.
+  // a rejected batch (400) is dropped; any other failure waits — next trigger or a growing back-off
+  // (2 s, 4 s, … up to 60 s) — so an unreachable or restarting API never sees a tight loop; a lost
+  // session (401/403) stops the flushes until the next refresh signs in again.
   const events = window.__vpnPulseEvents = [];
-  const analytics = { queue: [], timer: null, session: uuid(), inflight: false, sent: 0 };
+  const analytics = { queue: [], timer: null, session: uuid(), inflight: false, sent: 0, failures: 0 };
   function uuid() {
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
     const b = new Uint8Array(16);
@@ -912,10 +914,17 @@ window.VPNPulseApi = function (opts) {
     if (!api || !S.sessionRole || analytics.inflight || !analytics.queue.length) return;
     const batch = analytics.queue.slice(0, 50);
     analytics.inflight = true;
-    try { await api.analytics(batch); analytics.queue.splice(0, batch.length); analytics.sent += batch.length; }
-    catch (e) { if (e && e.status === 400) analytics.queue.splice(0, batch.length); }
+    let ok = false;
+    try { await api.analytics(batch); analytics.queue.splice(0, batch.length); analytics.sent += batch.length; ok = true; }
+    catch (e) {
+      if (e && e.status === 400) { analytics.queue.splice(0, batch.length); ok = true; }   // the batch itself is wrong: drop it
+      else if (e && (e.status === 401 || e.status === 403)) { S.sessionRole = null; }        // the session is gone: the next refresh signs in again
+    }
     finally { analytics.inflight = false; }
-    if (analytics.queue.length && S.sessionRole) scheduleFlush(0);
+    if (ok) analytics.failures = 0; else analytics.failures = Math.min(analytics.failures + 1, 6);
+    if (!analytics.queue.length || !S.sessionRole) return;
+    // drain a long queue right away after a success; after a failure wait 2 s, 4 s, … 60 s at most
+    scheduleFlush(ok ? 0 : Math.min(60000, 1000 * Math.pow(2, analytics.failures)));
   }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAnalytics(); });
 
