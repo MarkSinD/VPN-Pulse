@@ -8,6 +8,10 @@ release is cut.
 
 ### Added
 
+- Dev server: `python -m vpnpulse.dev --sqlite <db> --config <config.yaml>` serves a real
+  installation's database with dev sessions instead of Telegram (nothing seeded, mode `live`) — the
+  way to look at live data in the Mini App before the bot exists. `vpn-pulse doctor collectors`
+  prints the map entries, the server each serves and the last collection per server.
 - Real servers (R-11/R-12): `deploy/helper/` — `vpn-pulse-helper` (the `vpnpulse` user's SSH forced
   command; system facts as one JSON document) and `vpn-pulse-dump` (root through one sudoers line;
   the interface dump with keys, endpoints, allowed IPs and the port stripped before printing), plus
