@@ -125,7 +125,7 @@ def command_doctor(args: argparse.Namespace, out: Output) -> int:
         summary["result"] = "fail" if any(i["state"] == "fail" for i in summary["items"]) else "warn" if any(i["state"] == "warn" for i in summary["items"]) else "ok"
         findings = [i for i in summary["items"] if i["state"] != "ok"]
         summary["next_command"] = findings[0]["command"] if findings else None
-        summary["details"] = section_details(args.section, config, db_path, connection)
+        summary["details"] = section_details(args.section, config, db_path, connection, config_path)
     if args.json:
         out.json(summary)
         return EXIT[summary["result"]]
@@ -144,8 +144,42 @@ def command_doctor(args: argparse.Namespace, out: Output) -> int:
     return EXIT[summary["result"]]
 
 
-def section_details(section: str, config: dict, db_path: Path, connection) -> list[str]:
+def collectors_details(config: dict, config_path: Path | None, connection) -> list[str]:
+    """Map entries with the server each serves and the last collection per server — never a host."""
+    from vpnpulse.cli.run import collectors_map_path
+    from vpnpulse.collectors import load_collectors_map, unreferenced
+    from vpnpulse.config import ConfigurationError
+
+    path = collectors_map_path(config, config_path)
+    if path is None:
+        return ["no collectors map configured (storage.collectors_file): servers are read through probes only"]
+    if not path.exists():
+        return [f"collectors map not found: {path.name} — vpn-pulse collector keygen <server> --host <server>"]
+    try:
+        collectors_map = load_collectors_map(path)
+    except ConfigurationError as error:
+        return [str(error)]
+    servers = {s.get("collector_ref"): s["id"] for s in config.get("servers", []) if s.get("enabled", True)}
+    lines = []
+    for ref, entry in (collectors_map.get("collectors") or {}).items():
+        state = "disabled" if not entry.get("enabled", True) else "ok" if all(secret_file_status(path.parent / entry[k]) == "ok" for k in ("key_file", "known_hosts_file")) else "key or host key missing"
+        last = ""
+        if connection is not None and ref in servers:
+            row = connection.execute(
+                "SELECT observed_at, result, error_code FROM observations WHERE server_id = ? AND source_kind = 'collector' ORDER BY observed_at DESC LIMIT 1", (servers[ref],)
+            ).fetchone()
+            last = f", last collection {row[1]} {_age(row[0], datetime.now(UTC))}" + (f" ({row[2]})" if row[2] else "") if row else ", no collection yet"
+        lines.append(f"{ref}: {entry.get('kind', '?')} → {servers.get(ref, 'no server refers to it')} [{state}]{last}")
+    without, _ = unreferenced(config, collectors_map)
+    if without:
+        lines.append("servers without a helper (probes only): " + ", ".join(without))
+    return lines or ["the map has no entries"]
+
+
+def section_details(section: str, config: dict, db_path: Path, connection, config_path: Path | None = None) -> list[str]:
     now = datetime.now(UTC)
+    if section == "collectors":
+        return collectors_details(config, config_path, connection)
     if section == "storage":
         lines = [f"database: {db_path}"]
         if db_path.exists():
