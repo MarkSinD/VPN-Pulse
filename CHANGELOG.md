@@ -132,6 +132,17 @@ release is cut.
 - The doctor's probes hint on a fresh installation reads "After the server, enroll the probes"
   (`doctor.probes.afterServer`), matching the Admin screen fixtures.
 
+### Fixed
+
+- Mini App analytics: a failed batch backs off (2 s … 60 s) instead of re-arming the flush at once;
+  401/403 stop the flushes until the next refresh signs in again; only a 400 drops the batch.
+- Gate A in CI: `VPNPULSE_REQUIRE_BROWSER=1` in the browser job fails on a missing Playwright or
+  Chromium instead of skipping; stages 1-2 of the end-to-end test run in the regular test job too.
+- `scripts/ui_check.py` checks member screens for infrastructure by pattern (addresses, host:port
+  pairs, hostnames) instead of a list of literal values.
+- Mini App opened in a plain browser against a production API (no dev session route) shows the
+  members-only screen with code `TELEGRAM_REQUIRED` instead of "service unreachable".
+
 ### Planned
 
 - The `hiddify` helper, Telegram bot in a real group, `doctor https`, PC and Android probes,
