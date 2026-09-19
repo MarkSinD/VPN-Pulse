@@ -119,7 +119,12 @@
   async function ensureSession() {
     if (S.sessionRole) return;
     if (tg && tg.initData) { await api.session(tg.initData); const me = await api.me(); S.role = me.role; }
-    else await api.devSession(S.role);
+    else {
+      // no Telegram around us: the dev server hands out a session; production has no such route (404),
+      // which means "open this from Telegram" rather than "the service is down"
+      try { await api.devSession(S.role); }
+      catch (e) { if (e && e.status === 404) { const denied = new Error('open from Telegram'); denied.status = 401; denied.code = 'TELEGRAM_REQUIRED'; throw denied; } throw e; }
+    }
     S.sessionRole = S.role;
   }
   async function fetchBundle() {
