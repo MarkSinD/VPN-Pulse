@@ -21,6 +21,8 @@ HELPER = ROOT / "deploy" / "helper"
 BASH = shutil.which("bash")
 pytestmark = pytest.mark.skipif(BASH is None, reason="bash is not available")
 
+# canaries shaped like WireGuard keys (43 base64 chars + "=") but obviously not keys — secret scanners
+# must not mistake the test for a leak, and the scripts must never print them
 PRIVATE_KEY = "CANARYPRIVATE000000000000000000000000000000="
 PEER_KEY = "CANARYPEERPUB000000000000000000000000000000="
 PSK = "CANARYPRESHARED0000000000000000000000000000="
