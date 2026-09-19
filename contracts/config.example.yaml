@@ -7,6 +7,7 @@ app:
     - ru
   timezone: UTC
   admin_contact_url: https://t.me/example_admin
+  public_url: https://monitor.example.org/app/mvp.html   # the bot's /start button opens this
 
 storage:
   database: /var/lib/vpn-pulse/vpnpulse.sqlite3      # shared by the API and `vpn-pulse run`

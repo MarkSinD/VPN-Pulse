@@ -25,6 +25,7 @@ an invalid file. Changing the file requires a restart of the API and the collect
 | `languages` | list of `ru` \| `en` | — | enabled languages; the UI switch shows only these |
 | `timezone` | IANA name | `UTC` | used for event grouping and note expiry display |
 | `admin_contact_url` | `https://t.me/…` | — | target of the "Contact administrator" button; omit to hide the button |
+| `public_url` | `https://…` | — | where the Mini App is served (`https://<domain>/app/mvp.html`); the bot's `/start` button points here |
 
 ## `storage` (optional)
 

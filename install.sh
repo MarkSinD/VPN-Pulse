@@ -314,19 +314,21 @@ caddy_snippet() {
 services() {
   step "6/7" "Services"
   local u
-  for u in vpn-pulse-api vpn-pulse-run; do
+  for u in vpn-pulse-api vpn-pulse-run vpn-pulse-bot; do
     plan "install $UNIT_DIR/$u.service" || { install -m 0644 "$PREFIX/current/deploy/systemd/$u.service" "$UNIT_DIR/$u.service"; }
   done
   [ "$DRY" = 1 ] && return 0
-  ok "units installed: vpn-pulse-api.service, vpn-pulse-run.service"
+  ok "units installed: vpn-pulse-api.service, vpn-pulse-run.service, vpn-pulse-bot.service"
   if systemd_running; then
     systemctl daemon-reload
-    systemctl enable --quiet vpn-pulse-api.service vpn-pulse-run.service
-    if [ "${RESTART_SERVICES:-0}" = 1 ]; then systemctl restart vpn-pulse-api.service vpn-pulse-run.service; else systemctl start vpn-pulse-api.service vpn-pulse-run.service; fi
+    systemctl enable --quiet vpn-pulse-api.service vpn-pulse-run.service vpn-pulse-bot.service
+    if [ "${RESTART_SERVICES:-0}" = 1 ]; then systemctl restart vpn-pulse-api.service vpn-pulse-run.service vpn-pulse-bot.service; else systemctl start vpn-pulse-api.service vpn-pulse-run.service vpn-pulse-bot.service; fi
     sleep 2
     for u in vpn-pulse-api vpn-pulse-run; do
       if systemctl is-active --quiet "$u.service"; then ok "$u: active"; else fail "$u: not active — journalctl -u $u.service -n 50"; return 2; fi
     done
+    # the bot listener exits at once without a telegram block: inactive is fine then
+    if systemctl is-active --quiet vpn-pulse-bot.service; then ok "vpn-pulse-bot: active"; else ok "vpn-pulse-bot: inactive (Telegram not configured yet, or see journalctl -u vpn-pulse-bot)"; fi
   else
     warn "systemd is not running here: start the processes yourself —"
     say "          VPN_PULSE_CONFIG=$ETC_DIR/config.yaml $PREFIX/current/venv/bin/vpn-pulse serve"
@@ -465,7 +467,7 @@ uninstall_cmd() {
     read -r -p "  Continue? [y/N] " answer; case "$answer" in y|Y|yes) ;; *) say "nothing changed"; return 1 ;; esac
   fi
   local u
-  for u in vpn-pulse-api vpn-pulse-run; do
+  for u in vpn-pulse-api vpn-pulse-run vpn-pulse-bot; do
     if systemd_running; then plan "stop and disable $u" || { systemctl disable --now --quiet "$u.service" 2>/dev/null || true; }; fi
     plan "remove $UNIT_DIR/$u.service" || rm -f "$UNIT_DIR/$u.service"
   done

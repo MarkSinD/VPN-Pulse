@@ -62,5 +62,7 @@ def test_units_and_caddy_snippet_reference_the_installed_layout():
         assert "/opt/vpn-pulse/current/venv/bin/vpn-pulse" in unit and "VPN_PULSE_CONFIG=/etc/vpn-pulse/config.yaml" in unit
     assert "serve --host 127.0.0.1 --port 8765" in api
     assert "EnvironmentFile=-/etc/vpn-pulse/run.env" in run and "$VPN_PULSE_RUN_ARGS" in run
+    bot = (ROOT / "deploy" / "systemd" / "vpn-pulse-bot.service").read_text(encoding="utf-8")
+    assert "User=vpn-pulse" in bot and "/opt/vpn-pulse/current/venv/bin/vpn-pulse bot" in bot and "ReadOnlyPaths=/etc/vpn-pulse" in bot
     caddy = (ROOT / "deploy" / "caddy" / "vpn-pulse.caddy").read_text(encoding="utf-8")
     assert "{{DOMAIN}}" in caddy and "reverse_proxy 127.0.0.1:8765" in caddy and "log" not in caddy.split("{{DOMAIN}}")[1].split("reverse_proxy")[0]

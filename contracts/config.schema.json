@@ -52,6 +52,12 @@
           "format": "uri",
           "pattern": "^https://t[.]me/",
           "description": "Telegram deep link used by the \"Contact administrator\" button"
+        },
+        "public_url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "description": "where the Mini App is served (https://<domain>/app/mvp.html); the bot's /start button and the menu button point here"
         }
       }
     },

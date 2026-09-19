@@ -309,6 +309,8 @@
   "bot.recovered": "🟢 {server}: снова работает",
   "bot.degraded": "🟡 {server}: есть проблемы ({state})",
   "bot.unknown": "⚪ {server}: нет свежих данных ({state})",
+  "bot.start": "Здесь видно, работают ли VPN-серверы прямо сейчас и к какому лучше подключиться. Нажмите кнопку — приложение откроется в Telegram.",
+  "bot.open": "Открыть статус",
   "attention.KERNEL_MODULE_MISMATCH": "Ядро обновлено, модуль VPN собран только под текущее ядро. Перезагрузка оставит сервер без VPN.",
   "attention.ENGINE_UNREADABLE": "Сборщик не смог прочитать интерфейс VPN: проверьте helper (sudo, имя интерфейса или контейнера).",
   "attention.DISK_PRESSURE": "Диск {disk}%, swap {swap}%. Есть что освободить.",

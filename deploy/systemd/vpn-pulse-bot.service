@@ -1,0 +1,34 @@
+[Unit]
+Description=VPN Pulse bot listener (/start → Mini App button)
+Documentation=https://github.com/MarkSinD/VPN-Pulse
+After=network-online.target vpn-pulse-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=vpn-pulse
+Group=vpn-pulse
+Environment=VPN_PULSE_CONFIG=/etc/vpn-pulse/config.yaml
+Environment=PYTHONUNBUFFERED=1
+WorkingDirectory=/var/lib/vpn-pulse
+# exits 0 at once when Telegram is not configured; long-polls otherwise
+ExecStart=/opt/vpn-pulse/current/venv/bin/vpn-pulse bot
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=65
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictRealtime=yes
+ReadOnlyPaths=/etc/vpn-pulse
+
+[Install]
+WantedBy=multi-user.target

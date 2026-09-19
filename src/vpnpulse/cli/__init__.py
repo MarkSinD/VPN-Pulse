@@ -3,6 +3,7 @@
     vpn-pulse init …                      an installation directory: config.yaml, database, secrets
     vpn-pulse run [--demo] [--once]       the monitoring loop
     vpn-pulse serve                       the API and the Mini App (behind Caddy)
+    vpn-pulse bot                         /start → the Mini App button (long polling)
     vpn-pulse doctor [section] [--json]   one next step per warning — the Admin screen's texts
     vpn-pulse server add|list|remove      servers in config.yaml
     vpn-pulse probe enroll|list|revoke    check sources
@@ -18,7 +19,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from vpnpulse.cli import collector, demo, doctor, init, note, probe, run, serve, server
+from vpnpulse.cli import bot, collector, demo, doctor, init, note, probe, run, serve, server
 from vpnpulse.cli.common import CliError, Output
 
 
@@ -38,6 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     init.add_parser(commands, parents)
     run.add_parser(commands, parents)
     serve.add_parser(commands, parents)
+    bot.add_parser(commands, parents)
     doctor.add_parser(commands, parents)
     server.add_parser(commands, parents)
     probe.add_parser(commands, parents)

@@ -55,7 +55,7 @@ echo "== install (fresh)"
 check "config.yaml exists" "[ -f /etc/vpn-pulse/config.yaml ]"
 check "database exists and is owned by the service user" "[ \"\$(stat -c %U /var/lib/vpn-pulse/vpnpulse.sqlite3)\" = vpn-pulse ]"
 check "secrets directory is 0700" "[ \"\$(stat -c %a /etc/vpn-pulse/secrets)\" = 700 ]"
-check "units installed" "[ -f /etc/systemd/system/vpn-pulse-api.service ] && [ -f /etc/systemd/system/vpn-pulse-run.service ]"
+check "units installed" "[ -f /etc/systemd/system/vpn-pulse-api.service ] && [ -f /etc/systemd/system/vpn-pulse-run.service ] && [ -f /etc/systemd/system/vpn-pulse-bot.service ]"
 check "wrapper installed" "[ -x /usr/local/bin/vpn-pulse ]"
 check "demo marker and run.env" "[ -f /var/lib/vpn-pulse/demo-data ] && grep -q -- '--demo' /etc/vpn-pulse/run.env"
 vpn-pulse doctor --json >/tmp/doctor.json; rc=$?

@@ -309,6 +309,8 @@
   "bot.recovered": "🟢 {server}: working again",
   "bot.degraded": "🟡 {server}: has problems ({state})",
   "bot.unknown": "⚪ {server}: no fresh data ({state})",
+  "bot.start": "See whether the VPN servers work right now and which one to pick. Tap the button — the app opens inside Telegram.",
+  "bot.open": "Open the status",
   "attention.KERNEL_MODULE_MISMATCH": "Kernel updated; the VPN module is built only for the current kernel. A reboot would leave the server without VPN.",
   "attention.ENGINE_UNREADABLE": "The collector could not read the VPN interface: check the helper (sudo, interface or container name).",
   "attention.DISK_PRESSURE": "Disk {disk}%, swap {swap}%. There is something to free.",

@@ -8,6 +8,9 @@ release is cut.
 
 ### Added
 
+- `vpn-pulse bot` (unit `vpn-pulse-bot`): the bot's listener — answers `/start` and `/help` in private
+  chats with one Web App button that opens the Mini App (`app.public_url`), in the sender's language;
+  ignores everything else and stores nothing. Outage messages still come from the loop's queue.
 - Dev server: `python -m vpnpulse.dev --sqlite <db> --config <config.yaml>` serves a real
   installation's database with dev sessions instead of Telegram (nothing seeded, mode `live`) — the
   way to look at live data in the Mini App before the bot exists. `vpn-pulse doctor collectors`
