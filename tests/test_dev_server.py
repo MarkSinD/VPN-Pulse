@@ -195,3 +195,24 @@ def test_static_app_is_served(client):
     r = client.get("/app/mvp.html")
     assert r.status_code == 200 and "VPN Pulse" in r.text
     assert client.get("/", follow_redirects=False).status_code == 307
+
+
+def test_dev_server_serves_a_real_config_over_a_real_database(tmp_path):
+    """--sqlite + --config: the loop's database as it is, with dev sessions instead of Telegram."""
+    import yaml
+    from vpnpulse.cli import main as cli_main
+    from vpnpulse.cli.common import Output
+
+    sink = Output(out=lambda _: None, err=lambda _: None)
+    assert cli_main(["init", "--dir", str(tmp_path / "inst"), "--language", "en"], out=sink) == 0
+    cfg = tmp_path / "inst" / "config.yaml"
+    assert cli_main(["server", "add", "--config", str(cfg), "--id", "real-1", "--type", "awg-host", "--name-ru", "Первый", "--name-en", "First", "--country", "NL"], out=sink) == 0
+    assert cli_main(["run", "--config", str(cfg), "--once", "--quiet"], out=sink) == 0
+    config = yaml.safe_load(cfg.read_text(encoding="utf-8"))
+    app = create_dev_app(catalog=CATALOG, default_scenario="demo", sqlite_path=Path(config["storage"]["database"]), config=config)
+    client = TestClient(app, base_url="https://testserver")
+    assert client.post("/api/v1/dev/session?role=admin").status_code == 204
+    status = client.get("/api/v1/status").json()
+    assert status["mode"] == "live" and [s["id"] for s in status["servers"]] == ["real-1"]  # nothing seeded, no demo mark
+    assert status["servers"][0]["name"] == "First"
+    assert client.get("/api/v1/admin/overview").status_code == 200

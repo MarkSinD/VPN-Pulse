@@ -14,6 +14,7 @@ def main() -> int:
     parser.add_argument("--app", type=Path, default=None, help="directory with the built Mini App (default: docs/prototypes)")
     parser.add_argument("--contact-url", default="https://t.me/example_admin")
     parser.add_argument("--sqlite", type=Path, default=None, help="serve --scenario from a real SQLite file through SqliteReadModel (seeded on first run)")
+    parser.add_argument("--config", type=Path, default=None, help="with --sqlite: a real config.yaml over that database (nothing seeded) — live data with dev sessions, no Telegram needed")
     args = parser.parse_args()
     try:
         import uvicorn
@@ -23,8 +24,15 @@ def main() -> int:
     from vpnpulse.dev.server import create_dev_app
 
     catalog = ScenarioCatalog.load(args.fixtures)
-    app = create_dev_app(catalog=catalog, default_scenario=args.scenario, app_dir=args.app, contact_url=args.contact_url, sqlite_path=args.sqlite)
-    backend = f"sqlite {args.sqlite} · scenario {args.scenario}" if args.sqlite else "scenarios: " + ", ".join(catalog.ids)
+    config = None
+    if args.config is not None:
+        if args.sqlite is None:
+            parser.error("--config needs --sqlite (the database the loop writes)")
+        from vpnpulse.cli.common import load_public_config
+
+        config = load_public_config(args.config)
+    app = create_dev_app(catalog=catalog, default_scenario=args.scenario, app_dir=args.app, contact_url=args.contact_url, sqlite_path=args.sqlite, config=config)
+    backend = f"sqlite {args.sqlite} · config {args.config}" if config else f"sqlite {args.sqlite} · scenario {args.scenario}" if args.sqlite else "scenarios: " + ", ".join(catalog.ids)
     print(f"VPN Pulse dev server: http://{args.host}:{args.port}/app/mvp.html  ({backend})")
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
     return 0

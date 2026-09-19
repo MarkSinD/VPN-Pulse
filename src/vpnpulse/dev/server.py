@@ -50,22 +50,27 @@ def create_dev_app(
     contact_url: str | None = "https://t.me/example_admin",
     now=None,
     sqlite_path: Path | None = None,
+    config: dict | None = None,
 ) -> FastAPI:
+    """`config` + `sqlite_path`: a real configuration over a real database (filled by `vpn-pulse run`),
+    served with dev sessions instead of Telegram — the way to look at live data before the bot exists."""
     root = repo_root()
     catalog = catalog or ScenarioCatalog.load()
     if default_scenario not in catalog.ids:
         raise ValueError(f"unknown scenario {default_scenario!r}; known: {', '.join(catalog.ids)}")
     now = now or (lambda: datetime.now(UTC))
     analytics_schema = root / "contracts" / "analytics-events.schema.json"
-    config = config_for(catalog, catalog.build(default_scenario, now()), contact_url)
+    real_config = config is not None
+    config = config or config_for(catalog, catalog.build(default_scenario, now()), contact_url)
     if sqlite_path is not None:
-        # one scenario, written once into a real database and served by the production read model
+        # one scenario, written once into a real database and served by the production read model —
+        # or, with a real config, that database as it is (nothing is seeded into a real installation)
         connection = connect(sqlite_path)
         apply_migrations(connection, root / "migrations")
-        if connection.execute("SELECT count(*) FROM servers").fetchone()[0] == 0:
+        if not real_config and connection.execute("SELECT count(*) FROM servers").fetchone()[0] == 0:
             config = seed_scenario(connection, catalog, default_scenario, now(), contact_url=contact_url)
         store = SqliteStore(connection, analytics_schema=analytics_schema, config=config, pepper=DEV_BOT_TOKEN, now=now)
-        read_model = SqliteReadModel(connection, config, now=now, mode="demo" if default_scenario == "demo" else "live")
+        read_model = SqliteReadModel(connection, config, now=now, mode="demo" if default_scenario == "demo" and not real_config else "live")
     else:
         # scenarios stay in memory; writes (sessions, enrollments, notes) go to an in-memory SQLite database
         connection = connect(":memory:")
@@ -80,6 +85,7 @@ def create_dev_app(
         store=store,
         config=config,
         contact_url=contact_url,
+        default_language=(config.get("app") or {}).get("default_language", "ru"),
         now=now,
     )
     app.title = "VPN Pulse API — dev server"
