@@ -480,7 +480,7 @@ class SqliteReadModel:
                 items.append({"severity": "medium", "code": "PROBE_SILENT", "message": self.i18n.t(lang, "attention.probeSilent", name=self.i18n.t(lang, "admin.probe." + p["kind"]), duration=self.i18n.duration(lang, minutes)), "server_id": None})
             if silent:
                 doctor_items.append({"check": "probes", "state": "warn", "next": self.i18n.t(lang, "doctor.probes.silent"), "command": "vpn-pulse doctor probes"})
-        last_run = self.db.execute("SELECT finished_at, result FROM collection_runs ORDER BY started_at DESC LIMIT 1").fetchone()
+        last_run = self.db.execute("SELECT finished_at, result FROM collection_runs WHERE finished_at IS NOT NULL ORDER BY started_at DESC LIMIT 1").fetchone()  # a run in progress is not staleness
         if servers:
             if last_run is None:
                 doctor_items.append({"check": "collector", "state": "fail", "next": self.i18n.t(lang, "doctor.collector.fail"), "command": "vpn-pulse doctor collector"})
@@ -505,7 +505,7 @@ class SqliteReadModel:
             checks["database"] = {"ok": True, "age_seconds": None}
         except sqlite3.Error:
             checks["database"] = {"ok": False, "age_seconds": None}
-        last_run = self.db.execute("SELECT finished_at, result FROM collection_runs ORDER BY started_at DESC LIMIT 1").fetchone()
+        last_run = self.db.execute("SELECT finished_at, result FROM collection_runs WHERE finished_at IS NOT NULL ORDER BY started_at DESC LIMIT 1").fetchone()  # a run in progress is not staleness
         if last_run and last_run[0]:
             age = int((now - _dt(last_run[0])).total_seconds())
             checks["collector"] = {"ok": last_run[1] == "ok" and age <= 3 * self.collection_interval.total_seconds(), "age_seconds": max(0, age)}
