@@ -8,6 +8,18 @@ release is cut.
 
 ### Added
 
+- Real servers (R-11/R-12): `deploy/helper/` — `vpn-pulse-helper` (the `vpnpulse` user's SSH forced
+  command; system facts as one JSON document) and `vpn-pulse-dump` (root through one sudoers line;
+  the interface dump with keys, endpoints, allowed IPs and the port stripped before printing), plus
+  `install-helper.sh` (user, forced command with `restrict`, sudoers, config, self-test, `--remove`,
+  `--dry-run`). `SshCollector` reads a server through the helper (batch mode, pinned host key,
+  per-server key, whole-call deadline) and writes the contract payload: connections from handshake
+  ages, profiles, traffic as a byte delta, components, service checks, admin attention
+  (`KERNEL_MODULE_MISMATCH`, `ENGINE_UNREADABLE`, `DISK_PRESSURE`, `DDNS_MISMATCH`, `TUNING_LOST`,
+  RU/EN), diagnostics; fresh handshakes become a `human_activity` observation; failures are codes.
+  `contracts/collectors.schema.json` and `storage.collectors_file` (the private map next to the
+  secrets); `vpn-pulse collector keygen | pin | test | list`; `doctor collectors`.
+  `tests/test_helper_sh.py` runs the shell helpers on fake tools with a secret canary.
 - Gate A, the local vertical slice, in one test (`tests/test_e2e_gate_a.py`): the scripted world
   → `vpn-pulse run` → SQLite → the Telegram Bot API adapter on a fake transport → `vpn-pulse serve`
   built from `config.yaml` → the Mini App in Chromium, opened the way Telegram opens it (signed
@@ -109,17 +121,6 @@ release is cut.
 - Repository scaffolding: documentation set, CI (tests, contract validation, link check,
   private-data scan, secret scan), security policy, contributing guide.
 
-### Fixed
-
-- Mini App analytics: a failed batch no longer re-arms the flush immediately — after a network error
-  or a 5xx it backs off (2 s … 60 s), a 401/403 stops the flushes until the next refresh signs in
-  again; only a 400 drops the batch. Before, an unreachable API turned into a tight POST loop.
-- Gate A in CI: the browser job sets `VPNPULSE_REQUIRE_BROWSER=1`, so a missing Playwright or
-  Chromium fails the job instead of skipping the test; stages 1-2 of the end-to-end test run in the
-  regular test job too.
-- `scripts/ui_check.py` checks member screens for infrastructure markers by pattern (addresses,
-  host:port pairs, hostnames) instead of a list of literal values.
-
 ### Changed
 
 - CI: the private-data scan of Git history looks at diffs only (commit metadata is not published
@@ -129,6 +130,5 @@ release is cut.
 
 ### Planned
 
-- The server side of `vpn-pulse server add` (read-only helpers for `awg-host`, `awg-docker`,
-  `hiddify`), Telegram bot in a real group, `doctor https`, PC and Android probes, cross-server
-  checks, watchdog and off-host backups. See `docs/` pages marked *planned*.
+- The `hiddify` helper, Telegram bot in a real group, `doctor https`, PC and Android probes,
+  cross-server checks, watchdog and off-host backups. See `docs/` pages marked *planned*.

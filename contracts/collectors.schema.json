@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/vpn-pulse/contracts/collectors.schema.json",
+  "title": "VPN Pulse collectors map (private file on the monitoring host)",
+  "description": "How the loop reaches each server's read-only helper. This file names hosts and key paths, so it lives next to the secrets (0600) and never in the public configuration; config.yaml refers to an entry by `servers[].collector_ref`. No secrets here either — only paths to them.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "collectors"],
+  "properties": {
+    "version": { "const": 1 },
+    "collectors": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]{0,78}[a-z0-9]$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "host", "key_file", "known_hosts_file"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["awg-host", "awg-docker"], "description": "what the helper on that server reads; informational here — the helper's own config decides" },
+          "host": { "type": "string", "minLength": 1, "maxLength": 253, "description": "hostname, address or an alias from the monitoring user's ssh config" },
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535, "default": 22 },
+          "user": { "type": "string", "pattern": "^[a-z_][a-z0-9_-]{0,31}$", "default": "vpnpulse" },
+          "key_file": { "type": "string", "minLength": 1, "description": "the collector's private key for this server only (0600); made by `vpn-pulse collector keygen`" },
+          "known_hosts_file": { "type": "string", "minLength": 1, "description": "the pinned host key of this server (`vpn-pulse collector pin`); StrictHostKeyChecking=yes" },
+          "timeout_seconds": { "type": "integer", "minimum": 5, "maximum": 60, "default": 20, "description": "whole-call deadline: connect, helper, transfer" },
+          "enabled": { "type": "boolean", "default": true }
+        }
+      }
+    }
+  }
+}

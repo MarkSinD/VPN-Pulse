@@ -1,8 +1,10 @@
 # Collector SDK
 
-> **Status: interface fixed, real adapters pending.** Today there is one collector,
-> `FixtureCollector` (`src/vpnpulse/collectors/fixture.py`), which plays the demo scenarios for
-> `vpn-pulse run --demo` and the tests. The interface below is what a real collector implements.
+> **Status: two collectors.** `FixtureCollector` (`src/vpnpulse/collectors/fixture.py`) plays the
+> demo scenarios for `vpn-pulse run --demo` and the tests; `SshCollector`
+> (`src/vpnpulse/collectors/ssh.py`) reads a real server through the read-only helper in
+> `deploy/helper/` — `awg-host` and `awg-docker` today, see [connect-server.md](connect-server.md).
+> The interface below is what any collector implements.
 
 ## What a collector is
 
@@ -48,8 +50,34 @@ takes the newest payload for the Server screen and the counts of every payload f
 - Honest about coverage: return `NOT_RUN` with a reason instead of inventing a value.
 - Time-bounded: respect the deadline; a late answer is history, not the present.
 
+## The SSH collector and its helper
+
+`SshCollector` runs one `ssh` per server per run (batch mode, strict host-key checking against a
+pinned file, a key made for that server only, a whole-call deadline) whose forced command on the
+server is `deploy/helper/vpn-pulse-helper`. The helper answers with one JSON document:
+
+| Block | What it holds | Where it comes from |
+|---|---|---|
+| `engine` | `ok` (the interface could be read), `listening` (a UDP socket is bound to its port) | `sudo vpn-pulse-dump`, the only privileged step |
+| `peers` | `count`, `handshake_ages` (seconds; `-1` = never), `rx_bytes`, `tx_bytes` | the same dump, keys/endpoints/allowed IPs stripped before printing |
+| `system` | cpu, memory, swap, disk percent; uptime; running kernel, installed kernels, DKMS-built kernels; AWG version; congestion control and qdisc | `/proc`, `df`, `dkms status`, `/lib/modules`, `tc` |
+| `dns` | `configured`, `resolves`, `matches_public_ip` — booleans only | `getent` against `DOMAIN` from the helper's config |
+| `errors` | codes such as `DUMP_FAILED` | — |
+
+From that the collector derives the contract payload: `connections.amneziawg` = peers whose
+handshake is younger than `freshness_seconds`; `profiles.issued / ever_connected / active_24h /
+last_connection_at`; `resources.traffic_mbps` as the byte delta between two runs; `components`
+(AmneziaWG with the host/container note, the congestion control as *tuning*, DDNS); `service_checks`
+(`ssh`, `engine`, `port`, and `dns`/`ddns` when a domain is configured); admin `attention` items —
+`KERNEL_MODULE_MISMATCH` (a newer kernel without the module), `ENGINE_UNREADABLE`,
+`DISK_PRESSURE`, `DDNS_MISMATCH`, `TUNING_LOST` — with RU/EN texts from `i18n/`; and
+`diagnostics`. When at least one peer handshaked within the freshness window the collector also
+writes a `human_activity` observation: members proving the server works. A failed call becomes a
+`collector` observation with `result = failure` and a code (`SSH_TIMEOUT`, `SSH_UNREACHABLE`,
+`SSH_AUTH_FAILED`, `SSH_HOST_KEY_MISMATCH`, `HELPER_FAILED`, `HELPER_INVALID_ANSWER`) — never a
+host in it.
+
 ## Planned adapters
 
-`awg-host`, `awg-docker`, `hiddify` (see [connect-server.md](connect-server.md)). Contributions
-for other VPN stacks are welcome — open an issue describing the read-only data the stack can
-expose.
+`hiddify` (Xray connections through the panel's read-only data). Contributions for other VPN
+stacks are welcome — open an issue describing the read-only data the stack can expose.

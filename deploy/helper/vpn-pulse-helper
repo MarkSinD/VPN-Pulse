@@ -1,0 +1,109 @@
+#!/bin/sh
+# vpn-pulse-helper — what the collector user may run on a VPN server (its SSH forced command).
+#
+# Prints one JSON document with aggregate, key-free facts about this server and exits. It reads
+# only: the sanitized interface view from `sudo vpn-pulse-dump` (one sudoers line), /proc, `df`,
+# `ss`, `dkms status`, the list of installed kernels, the qdisc of the default route interface
+# and — when DOMAIN is set in the helper config — whether that name resolves to this host's own
+# address. It writes nothing, restarts nothing, and never prints keys, addresses, ports or names.
+#
+# Config (/etc/vpn-pulse-helper/config, shell syntax):  KIND=awg-host|awg-docker  IFACE=awg0
+#                                                       CONTAINER=amnezia-awg      DOMAIN=vpn.example.org
+set -u
+CONF="${VPN_PULSE_HELPER_CONF:-/etc/vpn-pulse-helper/config}"
+DUMP="${VPN_PULSE_DUMP:-/usr/local/bin/vpn-pulse-dump}"
+PROC="${VPN_PULSE_PROC:-/proc}"
+KIND=""; IFACE="awg0"; CONTAINER=""; DOMAIN=""
+# shellcheck disable=SC1090
+[ -r "$CONF" ] && . "$CONF"
+errors=""
+err() { errors="$errors${errors:+,}\"$1\""; }
+num() { case "$1" in ''|*[!0-9.]*) echo null ;; *) echo "$1" ;; esac; }
+bool() { case "$1" in 1|true|yes) echo true ;; 0|false|no) echo false ;; *) echo null ;; esac; }
+now=$(date +%s)
+
+# ---- interface: peers and the listening socket, through the privileged sanitizer ----
+listening=""; ages=""; peers=0; rx=0; tx=0; engine_ok=false
+if [ -n "$KIND" ] && dump=$(sudo -n "$DUMP" 2>/dev/null); then
+  engine_ok=true
+  while read -r kind a b c; do
+    case "$kind" in
+      listening) listening="$a" ;;
+      peer)
+        peers=$((peers + 1)); rx=$((rx + b)); tx=$((tx + c))
+        if [ "$a" -gt 0 ] 2>/dev/null; then age=$((now - a)); [ "$age" -lt 0 ] && age=0; else age=-1; fi
+        ages="$ages${ages:+,}$age" ;;
+    esac
+  done <<EOF
+$dump
+EOF
+else
+  err "DUMP_FAILED"
+fi
+
+# ---- system: cpu (1-second sample of /proc/stat), memory, swap, disk, uptime, kernel ----
+cpu=null
+if [ -r "$PROC/stat" ]; then
+  read -r _ u1 n1 s1 i1 w1 q1 sq1 st1 _ < "$PROC/stat"
+  sleep "${VPN_PULSE_CPU_SAMPLE:-1}"
+  read -r _ u2 n2 s2 i2 w2 q2 sq2 st2 _ < "$PROC/stat"
+  busy=$(( (u2+n2+s2+q2+sq2+st2) - (u1+n1+s1+q1+sq1+st1) )); idle=$(( (i2+w2) - (i1+w1) )); total=$((busy + idle))
+  [ "$total" -gt 0 ] && cpu=$(( busy * 100 / total ))
+fi
+mem=null; swap=null
+if [ -r "$PROC/meminfo" ]; then
+  mt=$(awk '/^MemTotal:/{print $2}' "$PROC/meminfo"); ma=$(awk '/^MemAvailable:/{print $2}' "$PROC/meminfo")
+  st=$(awk '/^SwapTotal:/{print $2}' "$PROC/meminfo"); sf=$(awk '/^SwapFree:/{print $2}' "$PROC/meminfo")
+  [ -n "$mt" ] && [ "$mt" -gt 0 ] && [ -n "$ma" ] && mem=$(( (mt - ma) * 100 / mt ))
+  [ -n "$st" ] && [ "$st" -gt 0 ] && [ -n "$sf" ] && swap=$(( (st - sf) * 100 / st ))
+  [ -n "$st" ] && [ "$st" -eq 0 ] && swap=0
+fi
+disk=$(df -P / 2>/dev/null | awk 'NR==2{gsub("%","",$5); print $5}'); disk=$(num "${disk:-}")
+uptime_s=null; [ -r "$PROC/uptime" ] && uptime_s=$(awk '{printf "%d", $1}' "$PROC/uptime")
+kernel=$(uname -r 2>/dev/null || echo "")
+kernels=""
+for d in "${VPN_PULSE_MODULES:-/lib/modules}"/*/; do
+  d=${d%/}; k=${d##*/}
+  [ -f "$d/modules.dep" ] || continue   # a real, complete kernel tree — not a leftover directory
+  kernels="$kernels${kernels:+,}\"$k\""
+done
+dkms_built=""; dkms_module=""
+if command -v dkms >/dev/null 2>&1; then
+  # "amneziawg/1.0.0, 5.15.0-76-generic, x86_64: installed" (dkms 3) or "amneziawg, 1.0.0, 5.15…: installed" (dkms 2)
+  while read -r mod ver k _ status; do
+    case "$mod" in amneziawg*|wireguard*) ;; *) continue ;; esac
+    case "$status" in *installed*) ;; *) continue ;; esac
+    [ -z "$dkms_module" ] && dkms_module="$mod"
+    dkms_built="$dkms_built${dkms_built:+,}\"$k\""
+  done <<EOF
+$(dkms status 2>/dev/null | tr ',' ' ' | sed 's#/# #')
+EOF
+fi
+awg_version=""
+for tool in awg wg; do
+  if command -v "$tool" >/dev/null 2>&1; then awg_version=$("$tool" --version 2>/dev/null | head -1 | awk '{print $2}'); break; fi
+done
+cc=$(cat "$PROC/sys/net/ipv4/tcp_congestion_control" 2>/dev/null || echo "")
+defif=$(ip -o route show default 2>/dev/null | awk '{print $5; exit}')
+qdisc=""; [ -n "$defif" ] && qdisc=$(tc qdisc show dev "$defif" 2>/dev/null | awk 'NR==1{print $2}')
+
+# ---- dns: does our public name resolve to this host? (booleans only) ----
+dns_json=null
+if [ -n "$DOMAIN" ]; then
+  resolved=$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk '{print $1; exit}')
+  mine=""; [ -n "$defif" ] && mine=$(ip -o -4 addr show dev "$defif" 2>/dev/null | awk '{print $4; exit}'); mine=${mine%%/*}
+  resolves=false; matches=null
+  [ -n "$resolved" ] && resolves=true && { [ -n "$mine" ] && { [ "$resolved" = "$mine" ] && matches=true || matches=false; }; }
+  dns_json="{\"configured\":true,\"resolves\":$resolves,\"matches_public_ip\":$matches}"
+fi
+
+cat <<JSON
+{"schema":1,"kind":"$KIND","observed_at":$now,
+ "engine":{"ok":$engine_ok,"listening":$(bool "${listening:-}")},
+ "peers":{"count":$peers,"handshake_ages":[${ages}],"rx_bytes":$rx,"tx_bytes":$tx},
+ "system":{"cpu_percent":$cpu,"memory_percent":$mem,"swap_percent":$swap,"disk_percent":$disk,"uptime_s":$uptime_s,
+  "kernel":"$kernel","kernels_installed":[${kernels}],"dkms_module":"$dkms_module","dkms_built_for":[${dkms_built}],
+  "awg_version":"$awg_version","congestion_control":"$cc","qdisc":"$qdisc"},
+ "dns":$dns_json,
+ "errors":[${errors}]}
+JSON

@@ -1,9 +1,9 @@
 # Connect a server
 
-> **Status: partly implemented.** `vpn-pulse server add | list | remove` edit the servers block
-> of `config.yaml` today (validated against the contract, written atomically); the SSH steps and
-> the read-only helpers below are designed but not implemented yet. Until they exist, probe
-> reports are the evidence for a server.
+> **Status: implemented for `awg-host` and `awg-docker`.** `vpn-pulse server add | list | remove`
+> edit the servers block of `config.yaml`; `vpn-pulse collector keygen | pin | test | list` and
+> `deploy/helper/install-helper.sh` connect the server side. `hiddify` is still planned; until a
+> server has a helper, probe reports are its evidence.
 
 ## Principle
 
@@ -15,9 +15,9 @@ a bug in the design — please open an issue.
 
 | `type` | Observed through | Minimum access |
 |---|---|---|
-| `awg-host` | AmneziaWG kernel interface on the host (`awg show <iface> dump`) | dedicated helper user allowed to run one wrapper script |
-| `awg-docker` | AmneziaWG inside a Docker container | helper user allowed to run one wrapper that executes `wg show` inside the named container; no docker group membership, no shell |
-| `hiddify` | Hiddify Manager (Xray) plus optional AmneziaWG container | read access to the panel's connection data; connections are reported per protocol |
+| `awg-host` | AmneziaWG kernel interface on the host (`awg show <iface> dump`) | user `vpnpulse` whose only privilege is `sudo /usr/local/bin/vpn-pulse-dump` |
+| `awg-docker` | AmneziaWG inside a Docker container | the same user; the dump runs `wg show` inside the named container — no docker group membership, no shell |
+| `hiddify` | Hiddify Manager (Xray) plus optional AmneziaWG container | planned: read access to the panel's connection data; connections reported per protocol |
 
 The helper returns aggregate numbers only: handshake ages, connection counts, interface
 counters, service checks. Peer keys and any per-person data never leave the server.
@@ -33,23 +33,58 @@ vpn-pulse server remove primary-vpn --yes
 `add` refuses duplicate ids and ids that look like hostnames; `remove` takes the server out of the
 configuration and keeps its history in the database. Nothing on the VPN server is touched.
 
-## Planned flow: `vpn-pulse server add` on the server side
+## The server side, step by step
 
-1. Choose the type, a display name (RU/EN) and the country code.
-2. Confirm the SSH host key fingerprint; it is pinned for future connections.
-3. VPN Pulse generates a **separate** collector key for this server.
-4. Dry run: the wizard prints the exact helper setup it wants to perform on the target server.
-5. You confirm; the helper (an unprivileged user and one wrapper script) is installed.
-6. A test collection runs and shows the fields and coverage it obtained — no sensitive values.
-7. The configuration is saved atomically and `doctor` checks the new source.
+1. **Key and map entry** (on the monitoring host):
 
-Cancelling at any step leaves no half-configured source.
+   ```bash
+   vpn-pulse collector keygen primary-vpn --host vpn1.internal.example   # or an alias from ~/.ssh/config
+   ```
+
+   creates a separate ed25519 key for this server (`secrets/collector-primary-vpn.key`, 0600),
+   an entry in the collectors map (`secrets/collectors.yaml` — hosts and key paths, never in
+   `config.yaml` and never in git), sets `servers[].collector_ref` and prints the command for
+   step 2 with the public key in it.
+
+2. **The helper** (on the VPN server, as root; the two scripts are in `deploy/helper/`):
+
+   ```bash
+   sudo ./install-helper.sh --kind awg-host --iface awg0 --pubkey 'ssh-ed25519 AAAA… vpn-pulse collector-primary-vpn'
+   sudo ./install-helper.sh --kind awg-docker --container amnezia-awg --domain vpn.example.org --pubkey-file collector.pub
+   ```
+
+   creates the user `vpnpulse` (no password, home under `/var/lib`), installs
+   `/usr/local/bin/vpn-pulse-helper` as that user's SSH **forced command** (`restrict`: no shell,
+   no pty, no forwarding), `/usr/local/bin/vpn-pulse-dump` (root, 0750) with one sudoers line, and
+   `/etc/vpn-pulse-helper/config`. It ends with a self-test as `vpnpulse`. `--dry-run` prints the
+   plan, `--remove` takes everything away. Nothing in the VPN configuration is touched.
+   Reinstallation backs up changed files beside the originals (`.bak-YYYY-MM-DD`, with a suffix
+   on repeated runs). The home and authorized keys are root-owned; the account cannot replace
+   its forced command. Sudo permits only the sanitizer with no arguments.
+
+3. **Pin the host key** (monitoring host): `vpn-pulse collector pin primary-vpn` fetches the
+   server's key, shows its `SHA256:` fingerprint and stores it as the only accepted key; compare it
+   with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` on the server, or pass
+   `--fingerprint SHA256:…` to make the pin refuse anything else.
+
+4. **Test**: `vpn-pulse collector test primary-vpn` runs one collection and prints the coverage
+   (which contract blocks came back, which attention items) — no values that could name a host or
+   a person. `vpn-pulse doctor` reports servers without a helper, missing keys and unpinned hosts.
+
+5. `vpn-pulse run` reads the map (`storage.collectors_file`) at start and collects every server
+   that has an enabled entry, once per `collection_interval_seconds`, each call bounded by the
+   entry's `timeout_seconds`.
+
+The helper's output is aggregate only — handshake ages, byte counters, booleans, percentages,
+kernel names. Peer keys, preshared keys, endpoints and allowed IPs are stripped by
+`vpn-pulse-dump` before anything leaves the server; `tests/test_helper_sh.py` feeds it a dump with
+fake keys and asserts none of them come back.
 
 ## Removing a server
 
-`vpn-pulse server remove <id>` stops collection and revokes the collector key first. Removing
-the helper from the target server is a separate printed command run by the server owner; it
-does not touch the VPN.
+`vpn-pulse server remove <id>` takes the server out of the configuration (its history stays in
+the database); delete its entry and key from `secrets/collectors.yaml` and run
+`sudo ./install-helper.sh --remove` on the server. Neither step touches the VPN.
 
 ## Test peers for probes
 

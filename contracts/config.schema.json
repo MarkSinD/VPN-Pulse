@@ -66,6 +66,11 @@
           "type": "string",
           "minLength": 1,
           "description": "SQLite file shared by the API and the monitoring loop (vpn-pulse run); created by vpn-pulse init"
+        },
+        "collectors_file": {
+          "type": "string",
+          "minLength": 1,
+          "description": "private map of server helpers (contracts/collectors.schema.json) — hosts and key paths, kept next to the secrets; servers[].collector_ref names an entry"
         }
       },
       "description": "where the data lives; optional — commands accept --db and default to ./vpnpulse.sqlite3"

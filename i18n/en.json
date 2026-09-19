@@ -308,5 +308,15 @@
   "bot.unavailable": "🔴 {server}: connections fail — the check confirmed an outage",
   "bot.recovered": "🟢 {server}: working again",
   "bot.degraded": "🟡 {server}: has problems ({state})",
-  "bot.unknown": "⚪ {server}: no fresh data ({state})"
+  "bot.unknown": "⚪ {server}: no fresh data ({state})",
+  "attention.KERNEL_MODULE_MISMATCH": "Kernel updated; the VPN module is built only for the current kernel. A reboot would leave the server without VPN.",
+  "attention.ENGINE_UNREADABLE": "The collector could not read the VPN interface: check the helper (sudo, interface or container name).",
+  "attention.DISK_PRESSURE": "Disk {disk}%, swap {swap}%. There is something to free.",
+  "attention.DDNS_MISMATCH": "The server's domain does not point at its current address — check DDNS.",
+  "attention.TUNING_LOST": "Network tuning lost: congestion control is {cc} instead of bbr.",
+  "doctor.collectors.none": "No server collectors configured — state comes from probes only; create a collector key",
+  "doctor.collectors.invalid": "The collectors map cannot be read — check secrets/collectors.yaml against the contract",
+  "doctor.collectors.missing": "No collector (probes only): {servers} — create a key and install the helper on the server",
+  "doctor.collectors.key": "The collector key for {collector} is missing or readable by others — create it again",
+  "doctor.collectors.pin": "The host key for {collector} is not pinned — run pin and compare the fingerprint"
 }

@@ -54,6 +54,40 @@ def make_notifier(config: dict, out: Output, *, telegram: dict | None = None, op
     return ConsoleNotifier(formatter, out=out.line)
 
 
+def collectors_map_path(config: dict, config_path: Path | None) -> Path | None:
+    """`storage.collectors_file` from config.yaml, relative to the config's directory."""
+    value = (config.get("storage") or {}).get("collectors_file")
+    if not value:
+        return None
+    path = Path(value)
+    if not path.is_absolute() and config_path is not None:
+        path = config_path.parent / path
+    return path
+
+
+def real_collectors(config: dict, config_path: Path | None, out: Output) -> list:
+    """SshCollectors for the servers that have a helper in the collectors map (none without the map)."""
+    from vpnpulse.collectors import build_collectors, load_collectors_map
+    from vpnpulse.config import ConfigurationError
+
+    path = collectors_map_path(config, config_path)
+    if path is None:
+        return []
+    if not path.exists():
+        raise CliError(f"collectors map not found: {path} (storage.collectors_file; vpn-pulse collector keygen creates entries)")
+    try:
+        collectors_map = load_collectors_map(path)
+    except ConfigurationError as error:
+        raise CliError(str(error)) from error
+    collectors = build_collectors(config, collectors_map, base_dir=path.parent)
+    for collector in collectors:
+        for secret in (collector.target.key_file, collector.target.known_hosts_file):
+            status = secret_file_status(secret)
+            if status != "ok":
+                raise CliError(f"collector {collector.name}: {secret.name}: {status} (vpn-pulse collector keygen / pin)")
+    return collectors
+
+
 def command_run(args: argparse.Namespace, out: Output) -> int:
     from vpnpulse.pipeline import Pipeline
 
@@ -75,6 +109,7 @@ def command_run(args: argparse.Namespace, out: Output) -> int:
         from vpnpulse.dev.scenarios import ScenarioCatalog
 
         collectors.append(FixtureCollector(ScenarioCatalog.load(), speed=args.demo_speed))
+    collectors.extend(real_collectors(config, config_path, out))
 
     notifier = make_notifier(config, out, telegram={
         "bot_token_file": str(args.telegram_token_file) if args.telegram_token_file else None,

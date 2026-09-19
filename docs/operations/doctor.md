@@ -71,6 +71,7 @@ hints (default: `app.default_language`).
 | `queue` | `notification_queue` | messages pending for more than ten minutes → check the bot |
 | `storage` | the database file | missing → `vpn-pulse init`; cannot be opened → path and permissions |
 | `telegram` | `telegram` block and the token file | not configured (information: messages go to the console — a demo or a fresh installation stays green); token file missing or empty (failure); readable by others (`chmod 600`) |
+| `collectors` | the collectors map and its files | no map yet (information: probes are the evidence); a server without an entry (warning: `collector keygen`); a key missing or readable by others (failure); host key not pinned (warning: `collector pin`) |
 
 `servers`, `probes`, `collector` and `queue` are computed by the same code that serves
 `GET /admin/overview`, so the terminal and the Mini App never disagree; `storage` and `telegram`

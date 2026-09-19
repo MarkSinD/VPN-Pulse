@@ -6,6 +6,7 @@
     vpn-pulse doctor [section] [--json]   one next step per warning — the Admin screen's texts
     vpn-pulse server add|list|remove      servers in config.yaml
     vpn-pulse probe enroll|list|revoke    check sources
+    vpn-pulse collector keygen|pin|test|list   server helpers (the server side of connect-server)
     vpn-pulse note set|clear|show         the administrator's note
     vpn-pulse demo seed|clear             fictional data for a first look
 
@@ -17,7 +18,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from vpnpulse.cli import demo, doctor, init, note, probe, run, serve, server
+from vpnpulse.cli import collector, demo, doctor, init, note, probe, run, serve, server
 from vpnpulse.cli.common import CliError, Output
 
 
@@ -40,6 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
     doctor.add_parser(commands, parents)
     server.add_parser(commands, parents)
     probe.add_parser(commands, parents)
+    collector.add_parser(commands, parents)
     note.add_parser(commands, parents)
     demo.add_parser(commands, parents)
     return parser

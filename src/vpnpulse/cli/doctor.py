@@ -13,7 +13,7 @@ from pathlib import Path
 from vpnpulse.cli.common import CliError, Output, config_path_of, lang_of, load_public_config, make_read_model, open_database, resolve_db, secret_file_status
 from vpnpulse.i18n import Translator
 
-SECTIONS = ("servers", "probes", "collector", "queue", "storage", "telegram")
+SECTIONS = ("servers", "probes", "collector", "queue", "storage", "telegram", "collectors")
 EXIT = {"ok": 0, "warn": 1, "fail": 2}
 
 
@@ -39,8 +39,43 @@ def _age(value: str | None, now: datetime) -> str:
     return f"{minutes} min ago" if minutes < 120 else f"{minutes // 60} h ago"
 
 
-def local_checks(config: dict, db_path: Path, i18n: Translator, lang: str) -> tuple[list[dict], object]:
-    """storage and telegram items; returns (items, connection or None)."""
+def collectors_checks(config: dict, config_path: Path | None, i18n: Translator, lang: str) -> list[dict]:
+    """The collectors map: servers without a helper (probes only), keys and pinned host keys that are not in place."""
+    from vpnpulse.cli.run import collectors_map_path
+    from vpnpulse.collectors import load_collectors_map, unreferenced
+    from vpnpulse.config import ConfigurationError
+
+    servers = [s for s in config.get("servers", []) if s.get("enabled", True)]
+    if not servers:
+        return []
+    path = collectors_map_path(config, config_path)
+    if path is None or not path.exists():
+        # information, not a warning: probes are evidence on their own and a demo has no servers to read
+        first = servers[0]["id"]
+        return [{"check": "collectors", "state": "ok", "next": i18n.t(lang, "doctor.collectors.none"), "command": f"vpn-pulse collector keygen {first} --host <server>"}]
+    try:
+        collectors_map = load_collectors_map(path)
+    except ConfigurationError:
+        return [{"check": "collectors", "state": "fail", "next": i18n.t(lang, "doctor.collectors.invalid"), "command": "vpn-pulse collector list"}]
+    items: list[dict] = []
+    without, _ = unreferenced(config, collectors_map)
+    if without:
+        items.append({"check": "collectors", "state": "warn", "next": i18n.t(lang, "doctor.collectors.missing", servers=", ".join(without)), "command": f"vpn-pulse collector keygen {without[0]} --host <server>"})
+    for ref, entry in (collectors_map.get("collectors") or {}).items():
+        if not entry.get("enabled", True):
+            continue
+        server_id = next((s["id"] for s in servers if s.get("collector_ref") == ref), None)
+        if server_id is None:
+            continue
+        if secret_file_status(path.parent / entry["key_file"]) != "ok":
+            items.append({"check": "collectors", "state": "fail", "next": i18n.t(lang, "doctor.collectors.key", collector=ref), "command": f"vpn-pulse collector keygen {server_id} --host <server> --force"})
+        elif secret_file_status(path.parent / entry["known_hosts_file"]) != "ok":
+            items.append({"check": "collectors", "state": "warn", "next": i18n.t(lang, "doctor.collectors.pin", collector=ref), "command": f"vpn-pulse collector pin {server_id}"})
+    return items
+
+
+def local_checks(config: dict, db_path: Path, i18n: Translator, lang: str, config_path: Path | None = None) -> tuple[list[dict], object]:
+    """storage, telegram and collectors items; returns (items, connection or None)."""
     items: list[dict] = []
     connection = None
     if not db_path.exists():
@@ -62,12 +97,13 @@ def local_checks(config: dict, db_path: Path, i18n: Translator, lang: str) -> tu
             items.append({"check": "telegram", "state": "fail", "next": i18n.t(lang, "doctor.telegram.tokenMissing"), "command": "vpn-pulse doctor telegram"})
         elif status == "permissions":
             items.append({"check": "telegram", "state": "warn", "next": i18n.t(lang, "doctor.telegram.permissions"), "command": f"chmod 600 {telegram['bot_token_file']}"})
+    items.extend(collectors_checks(config, config_path, i18n, lang))
     return items, connection
 
 
-def run_doctor(config: dict, db_path: Path, lang: str) -> tuple[dict, object]:
+def run_doctor(config: dict, db_path: Path, lang: str, config_path: Path | None = None) -> tuple[dict, object]:
     i18n = Translator()
-    local, connection = local_checks(config, db_path, i18n, lang)
+    local, connection = local_checks(config, db_path, i18n, lang, config_path)
     items: list[dict] = []
     if connection is not None:
         items.extend(make_read_model(connection, config, translator=i18n).admin_overview(lang)["doctor"]["items"])
@@ -79,10 +115,11 @@ def run_doctor(config: dict, db_path: Path, lang: str) -> tuple[dict, object]:
 
 
 def command_doctor(args: argparse.Namespace, out: Output) -> int:
-    config = load_public_config(config_path_of(args))
+    config_path = config_path_of(args)
+    config = load_public_config(config_path)
     lang = lang_of(args, config)
     db_path = resolve_db(args, config)
-    summary, connection = run_doctor(config, db_path, lang)
+    summary, connection = run_doctor(config, db_path, lang, config_path)
     if args.section:
         summary["items"] = [i for i in summary["items"] if i["check"] == args.section]
         summary["result"] = "fail" if any(i["state"] == "fail" for i in summary["items"]) else "warn" if any(i["state"] == "warn" for i in summary["items"]) else "ok"

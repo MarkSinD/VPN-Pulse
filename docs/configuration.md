@@ -31,6 +31,7 @@ an invalid file. Changing the file requires a restart of the API and the collect
 | Field | Type | Default | Notes |
 |---|---|---|---|
 | `database` | path | `./vpnpulse.sqlite3` | the SQLite file shared by the API and `vpn-pulse run`; `vpn-pulse init` creates it |
+| `collectors_file` | path | — | the private collectors map ([`contracts/collectors.schema.json`](../contracts/collectors.schema.json)): hosts, users, key and pinned-host-key paths; `vpn-pulse collector keygen` writes `secrets/collectors.yaml` and sets this field. Relative paths are resolved from the config file's directory |
 
 ## `telegram` (optional)
 
@@ -55,9 +56,10 @@ and the administrator sees the next command.
 | `country_code` | ISO 3166-1 alpha-2 | — | flag and country name in the UI |
 | `enabled` | boolean | — | disabled servers are not collected or shown |
 | `recommended_priority` | integer ≥ 0 | `0` | tie-breaker among equally confirmed servers; lower wins |
-| `collector_ref` | string | — | reference to the collector credential file (not the credential itself) |
+| `collector_ref` | string | — | the entry in the collectors map that reads this server (`collector-<id>` by default); no host or credential here |
 
-Sensitive: none of these fields is secret, but `collector_ref` points to one.
+Sensitive: none of these fields is secret; the hosts and key paths behind `collector_ref` live in
+the collectors map next to the secrets.
 
 ## `monitoring`
 

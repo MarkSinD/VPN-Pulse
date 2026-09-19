@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://vpn-pulse.dev/contracts/collector-observation.schema.json",
+  "$id": "https://example.invalid/vpn-pulse/collector-observation.schema.json",
   "title": "Collector observation payload",
   "description": "The metrics_json of one `collector` observation (one server, one collection run). Every block is optional so a partial collector stays honest: missing means unknown, never zero. No hosts, addresses, ports or people appear here; attention messages are admin-only and bilingual.",
   "type": "object",

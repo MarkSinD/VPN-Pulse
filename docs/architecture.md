@@ -31,7 +31,7 @@
 | `storage/` | SQLite schema (`migrations/0001_initial.sql`), `SqliteStore` (all API writes), `SqliteReadModel` (all API reads), `StateRepository` + `NotificationWorker` (snapshots, transitions, queue) | done |
 | `domain/evaluator.py` | evidence → state per server × protocol × network; freshness; two confirmations; recommendation | done, fixture-tested |
 | `pipeline.py` | the loop: collect → evaluate → snapshots → transitions → events → notification queue; hourly sweep and aggregates | done, deterministic tests |
-| `collectors/` | `Collected` / `Collector` interface and `FixtureCollector` (demo); `awg-host` / `awg-docker` / `hiddify` planned | fixture only |
+| `collectors/` | `Collected` / `Collector` interface; `FixtureCollector` (demo); `SshCollector` + `deploy/helper/` for `awg-host` and `awg-docker` (read-only helper over SSH, key-free output); `hiddify` planned | done for AmneziaWG |
 | `notify.py` | message texts from `i18n/*.json` (public names only); console, fake and Telegram Bot API senders; `cli/run.make_notifier` picks one | done (Bot API adapter tested on a fake transport, not yet against a real bot) |
 | `cli/` | `vpn-pulse init / run / doctor / server / probe / note` — installation directory, the loop, one next step per finding, config edits, probe lifecycle, the note; output redacted, secrets `0600` | done (server-side helper install planned) |
 | `auth.py` | Telegram `initData` HMAC, `auth_date`, member/admin roles | done |

@@ -1,0 +1,48 @@
+#!/bin/sh
+# vpn-pulse-dump — the only privileged step of the collector helper (root, via one sudoers line).
+#
+# Reads the AmneziaWG interface either on the host (`awg show <iface> dump`) or inside a Docker
+# container and prints an aggregate, key-free view of it:
+#
+#   listening <0|1>                    a UDP socket is bound to the interface's listen port
+#   peer <handshake-epoch> <rx> <tx>   one line per peer; handshake 0 = never
+#
+# The private key, the peers' public keys, preshared keys, endpoints, allowed IPs and the port
+# itself never leave this script. Anything unexpected in the dump makes it print nothing and
+# exit 3 rather than print a line it does not understand.
+set -eu
+CONF="${VPN_PULSE_HELPER_CONF:-/etc/vpn-pulse-helper/config}"
+[ -r "$CONF" ] || { echo "helper config missing" >&2; exit 2; }
+# shellcheck disable=SC1090
+. "$CONF"
+: "${KIND:?KIND missing in $CONF}"
+IFACE="${IFACE:-awg0}"
+
+case "$KIND" in
+  awg-host)
+    tool=""
+    for candidate in awg wg; do
+      if command -v "$candidate" >/dev/null 2>&1; then tool="$candidate"; break; fi
+    done
+    [ -n "$tool" ] || { echo "no awg/wg tool" >&2; exit 2; }
+    dump=$("$tool" show "$IFACE" dump) ;;
+  awg-docker)
+    : "${CONTAINER:?CONTAINER missing in $CONF}"
+    dump=$(docker exec "$CONTAINER" sh -c 'tool=$(command -v awg || command -v wg) && exec "$tool" show "$1" dump' sh "$IFACE") ;;
+  *) echo "unsupported KIND: $KIND" >&2; exit 2 ;;
+esac
+
+# line 1: private-key public-key listen-port fwmark; peers: pub psk endpoint allowed-ips handshake rx tx keepalive
+printf '%s\n' "$dump" | awk '
+  NR == 1 { if (NF < 3 || $3 !~ /^[0-9]+$/) { bad = 1; exit } port = $3; next }
+  NF >= 7 && $5 ~ /^[0-9]+$/ && $6 ~ /^[0-9]+$/ && $7 ~ /^[0-9]+$/ { out[++n] = "peer " $5 " " $6 " " $7; next }
+  { bad = 1; exit }
+  END {
+    if (bad || port == "") exit 3
+    cmd = "ss -Hlun 2>/dev/null"
+    listening = 0
+    while ((cmd | getline line) > 0) { if (line ~ (":" port "[[:space:]]")) listening = 1 }
+    close(cmd)
+    print "listening " listening
+    for (i = 1; i <= n; i++) print out[i]
+  }'

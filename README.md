@@ -33,11 +33,12 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | Administrator CLI: `vpn-pulse init / doctor / server add|list|remove / probe enroll|list|revoke / note set|clear|show`; `doctor` prints the Admin screen's next steps, exit code as a gate; secrets `0600`, never echoed | working |
 | Installer: `./install.sh demo` (fictional data, no root, no Telegram), `sudo ./install.sh install` (system user, per-release venv, config + secrets, systemd units, Caddy snippet, doctor), `upgrade` with backup and auto-rollback, `rollback`, `uninstall` keeping data; checked end to end on a clean Ubuntu 24.04 (`scripts/install_check.sh`) | working |
 | Gate A — the whole local chain in one test: scripted world → loop → SQLite → API → Mini App in a browser → Telegram Bot API on a fake transport (`tests/test_e2e_gate_a.py`); the Mini App sends its allowlisted analytics | green |
-| Read-only collectors for real servers (`server add` on the server side), Telegram bot in a real group, PC / Android / cross-server probes | **planned** |
+| Real servers: `vpn-pulse collector keygen | pin | test` + `deploy/helper/` — a `vpnpulse` user with one forced command, key-free aggregate output (handshake ages, counters, system facts), pinned host keys, `SshCollector` in the loop; `awg-host` and `awg-docker` | working (`hiddify` planned) |
+| Telegram bot in a real group, PC / Android / cross-server probes | **planned** |
 
-You can install it on a server today and watch fictional data move (`--demo-data`); the real
-sources — collectors on your VPN servers and the probes — are the next increments, so a real
-installation shows "no data yet" until they arrive. See [docs/quickstart.md](docs/quickstart.md).
+You can install it on a server today and watch fictional data move (`--demo-data`), or connect
+your AmneziaWG servers through the read-only helper ([docs/connect-server.md](docs/connect-server.md));
+the probes are the next increments. See [docs/quickstart.md](docs/quickstart.md).
 
 ## What it looks like
 

@@ -308,5 +308,15 @@
   "bot.unavailable": "🔴 {server}: подключение не проходит — проверка подтвердила сбой",
   "bot.recovered": "🟢 {server}: снова работает",
   "bot.degraded": "🟡 {server}: есть проблемы ({state})",
-  "bot.unknown": "⚪ {server}: нет свежих данных ({state})"
+  "bot.unknown": "⚪ {server}: нет свежих данных ({state})",
+  "attention.KERNEL_MODULE_MISMATCH": "Ядро обновлено, модуль VPN собран только под текущее ядро. Перезагрузка оставит сервер без VPN.",
+  "attention.ENGINE_UNREADABLE": "Сборщик не смог прочитать интерфейс VPN: проверьте helper (sudo, имя интерфейса или контейнера).",
+  "attention.DISK_PRESSURE": "Диск {disk}%, swap {swap}%. Есть что освободить.",
+  "attention.DDNS_MISMATCH": "Домен сервера указывает не на его текущий адрес — проверьте DDNS.",
+  "attention.TUNING_LOST": "Сетевой тюнинг сброшен: congestion control {cc} вместо bbr.",
+  "doctor.collectors.none": "Сборщики для серверов не настроены — состояние берётся только из пробников; создайте ключ сборщика",
+  "doctor.collectors.invalid": "Карта сборщиков не читается — проверьте secrets/collectors.yaml по контракту",
+  "doctor.collectors.missing": "Без сборщика (только пробники): {servers} — создайте ключ и поставьте helper на сервер",
+  "doctor.collectors.key": "Ключ сборщика {collector} отсутствует или доступен другим — создайте заново",
+  "doctor.collectors.pin": "Ключ хоста для {collector} не закреплён — выполните pin и сверьте отпечаток"
 }

@@ -261,7 +261,8 @@ def test_doctor_says_what_the_admin_screen_says(tmp_path, scenario, lang):
     got = [i for i in summary["items"] if i["check"] in ADMIN_CHECKS]
     assert got == expected["items"]
     local = [i for i in summary["items"] if i["check"] not in ADMIN_CHECKS]
-    assert [(i["check"], i["state"]) for i in local] == [("telegram", "ok")]  # information the Mini App cannot give: no Telegram yet
+    # information the Mini App cannot give: no Telegram yet; no server helpers yet (only once there are servers)
+    assert [(i["check"], i["state"]) for i in local] == [("telegram", "ok")] + ([("collectors", "ok")] if scenario != "clean_install" else [])
     assert code == {"ok": 0, "warn": 1, "fail": 2}[summary["result"]]
     assert summary["result"] == expected["result"]
 
@@ -277,7 +278,7 @@ def test_doctor_exit_codes_sections_and_local_checks(tmp_path, monkeypatch):
     assert "telegram" not in sink.text  # configured and readable: nothing to say
     code, sink = run_cli("doctor", "--config", init_install(tmp_path / "plain"), "--json")
     plain = json.loads(sink.text)
-    assert code == 2 and [i["state"] for i in plain["items"]] == ["fail", "warn", "ok"] and plain["next_command"] == "vpn-pulse server add"
+    assert code == 2 and [i["state"] for i in plain["items"]] == ["fail", "warn", "ok"] and plain["next_command"] == "vpn-pulse server add"  # no servers: nothing to say about collectors
     code, sink = run_cli("doctor", "telegram", "--json")
     detail = json.loads(sink.text)
     assert code == 0 and detail["items"] == [] and "token file" in detail["details"][0] and TOKEN not in sink.text
