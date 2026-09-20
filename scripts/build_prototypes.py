@@ -18,6 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "web" / "src"
 VENDOR = ROOT / "web" / "vendor"
+BRAND = ROOT / "web" / "brand"
 TELEGRAM_JS = "telegram-web-app.js"
 OUT = ROOT / "docs" / "prototypes"
 I18N = ROOT / "i18n"
@@ -55,9 +56,11 @@ def main() -> int:
         '<!doctype html>\n<html lang="ru">\n<head>\n<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
         '<meta name="color-scheme" content="light dark">\n'
+        '<link rel="icon" type="image/svg+xml" href="favicon.svg">\n'
     )
     (OUT / "ui-tokens.css").write_text(parts["TOKENS"], encoding="utf-8")
     (OUT / TELEGRAM_JS).write_bytes((VENDOR / TELEGRAM_JS).read_bytes())
+    (OUT / "favicon.svg").write_bytes((BRAND / "logo.svg").read_bytes())
     for name in ("mvp", "android", "onboarding"):
         body = fill(read(SRC / f"{name}.src.html"), parts)
         title = re.search(r"<title>(.*?)</title>", body, re.S)

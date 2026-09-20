@@ -1,4 +1,4 @@
-# VPN Pulse
+# <img src="web/brand/logo.svg" width="30" alt=""> VPN Pulse
 
 **Работает ли мой VPN прямо сейчас — и к какому серверу подключаться?**
 

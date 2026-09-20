@@ -8,6 +8,8 @@ release is cut.
 
 ### Added
 
+- The mark: the pulse line in operational green (`web/brand/logo.svg`) — the page's favicon, the header of
+  the Mini App (in the theme's green) and the README.
 - `vpn-pulse bot` (unit `vpn-pulse-bot`): the bot's listener — answers `/start` and `/help` in private
   chats with one Web App button that opens the Mini App (`app.public_url`), in the installation's language;
   ignores everything else and stores nothing. Outage messages still come from the loop's queue.

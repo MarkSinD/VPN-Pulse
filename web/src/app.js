@@ -195,7 +195,7 @@
     const s = inServer ? byId(S.server) : null;
     const titleHtml = inServer && s
       ? '<span class="t">' + esc(sname(s)) + '</span><span class="st">' + esc(t('status.state.' + s.state)) + '</span>'
-      : '<span class="t">' + esc(t('app.title')) + '</span>' + (SC.demo ? '<span class="demo-mark">' + esc(t('app.demo')) + '</span>' : '');
+      : ico('pulse', 'logo') + '<span class="t">' + esc(t('app.title')) + '</span>' + (SC.demo ? '<span class="demo-mark">' + esc(t('app.demo')) + '</span>' : '');
     header.innerHTML =
       '<button type="button" class="icon-btn ' + (inServer ? '' : 'hidden') + '" id="back-btn" aria-label="' + esc(t('action.back')) + '" data-event="back">' + ico('back') + '</button>' +
       '<div class="ttl">' + titleHtml + '</div>' +

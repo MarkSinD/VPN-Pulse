@@ -1,4 +1,4 @@
-# VPN Pulse
+# <img src="web/brand/logo.svg" width="30" alt=""> VPN Pulse
 
 **Is my self-hosted VPN reachable right now — and which server should I pick?**
 
