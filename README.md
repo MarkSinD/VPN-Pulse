@@ -84,7 +84,7 @@ install, …), role, theme and language. The same scenarios are served by the AP
 - [Connect a server](docs/connect-server.md) · [PC probe](docs/probes/pc.md) · [Android probe](docs/probes/android.md)
 - [User guide](docs/user-guide/status-and-recommendations.md) · [Admin actions](docs/user-guide/admin-actions.md)
 - [Architecture](docs/architecture.md) · [API](docs/api.md) · [Privacy](docs/privacy.md) · [Compatibility](docs/compatibility.md)
-- [Operations](docs/operations/doctor.md) · [Troubleshooting](docs/troubleshooting.md)
+- [Operations](docs/operations/doctor.md) · [Backup and restore](docs/operations/backup-restore.md) · [Independent watchdog](docs/operations/watchdog.md) · [Troubleshooting](docs/troubleshooting.md)
 - [Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Changelog](CHANGELOG.md)
 
 ## Limitations

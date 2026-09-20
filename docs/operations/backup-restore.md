@@ -1,22 +1,48 @@
-# Operations: backup and restore
+# Backup and restore
 
-> **Status: partly implemented.** `install.sh upgrade` makes a local copy of the database before
-> every upgrade (`/var/lib/vpn-pulse/backups/`, 0600, last seven kept). The encrypted off-host
-> `vpn-pulse backup` / `restore` commands below are planned.
+VPN Pulse creates complete backups on demand. It does not schedule them or send them elsewhere.
 
-## What is backed up
+```bash
+sudo vpn-pulse backup
+sudo vpn-pulse backup --to /var/lib/vpn-pulse/backups --keep 5
+```
 
-The SQLite database (evidence, aggregates, events, analytics, audit), `config.yaml`, and the
-secret files — encrypted before leaving the host. VPN keys are not part of VPN Pulse and are
-never included.
+The `0600` tar archive contains a consistent SQLite online backup, `config.yaml`, the complete
+`secrets/` directory, `run.env` when present, and `MANIFEST.json`. The manifest records the app and
+database schema versions plus the size and SHA-256 digest of every payload file. The command keeps
+the newest five archives by default and prints an `scp <host>:… .` command for manual retrieval.
 
-## Backup
+These archives contain credentials. Keep them private. At present they remain unencrypted on the
+application host with mode `0600`; copying them to protected off-host storage is the operator's
+manual choice.
 
-`vpn-pulse backup` writes an encrypted archive to the configured destination and verifies it
-can be opened. A scheduled backup runs daily; the watchdog reports a missing backup.
+## Rehearse a restore
 
-## Restore
+Restore into an empty directory without touching the installation:
 
-`vpn-pulse restore <archive>` stops the services, restores files, runs forward migrations if the
-archive is older than the installed version, starts the services and runs `doctor`. A clean
-restore drill is part of the release gates.
+```bash
+sudo vpn-pulse restore /var/lib/vpn-pulse/backups/vpn-pulse-backup-YYYYMMDDTHHMMSSZ.tar \
+  --into /tmp/vpn-pulse-restore-test
+```
+
+The command verifies every digest, rejects archives from a newer schema version, restores secure
+file permissions, and runs SQLite `PRAGMA integrity_check`. Use `--dry-run` to verify and describe an
+archive without creating the target directory.
+
+## Restore the installation
+
+Stop the writers, restore with explicit confirmation, then start them again:
+
+```bash
+sudo systemctl stop vpn-pulse-run vpn-pulse-api vpn-pulse-bot
+sudo vpn-pulse restore /path/to/vpn-pulse-backup-YYYYMMDDTHHMMSSZ.tar --yes
+sudo systemctl start vpn-pulse-run vpn-pulse-api vpn-pulse-bot
+sudo vpn-pulse doctor
+```
+
+Before replacement, the command copies every existing destination beside itself with a
+`.bak-<UTC timestamp>` suffix. It does not manage systemd itself. An archive with a bad checksum,
+an unsafe path, an invalid database, or a schema newer than the installed application is refused.
+
+`install.sh upgrade` is separate: it keeps seven database-only snapshots before migrations. Those
+snapshots do not contain configuration or secrets and do not replace `vpn-pulse backup`.

@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Independent VPN Pulse readiness watchdog. Python standard library only."""
+from __future__ import annotations
+
+import json
+import os
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+
+DEFAULT_CONFIG = "/etc/vpn-pulse-watchdog/config"
+SIX_HOURS = 6 * 3600
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def read_config(path: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for raw in Path(path).read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ValueError("invalid config line")
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip()
+    for required in ("URL", "ADMIN_CHAT_ID"):
+        if not values.get(required):
+            raise ValueError(f"{required} is required")
+    values.setdefault("TOKEN_FILE", "/etc/vpn-pulse-watchdog/bot.token")
+    values.setdefault("LANG", "ru")
+    values.setdefault("STATE_DIR", "/var/lib/vpn-pulse-watchdog")
+    if values["LANG"] not in ("ru", "en"):
+        raise ValueError("LANG must be ru or en")
+    return values
+
+
+def initial_state() -> dict:
+    return {"consecutive_failures": 0, "failing_since": None, "alerted": False, "last_alert_at": None}
+
+
+def load_state(path: Path) -> dict:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+        return {**initial_state(), **value} if isinstance(value, dict) else initial_state()
+    except (OSError, json.JSONDecodeError):
+        return initial_state()
+
+
+def save_state(path: Path, state: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.with_suffix(".tmp")
+    temp.write_text(json.dumps(state, separators=(",", ":")) + "\n", encoding="utf-8")
+    os.chmod(temp, 0o600)
+    os.replace(temp, path)
+
+
+def check_ready(url: str, opener=None) -> tuple[bool, str]:
+    opener = opener or urllib.request.build_opener(NoRedirect())
+    request = urllib.request.Request(url.rstrip("/") + "/api/v1/health/ready", headers={"User-Agent": "vpn-pulse-watchdog/0.1"})
+    try:
+        with opener.open(request, timeout=10) as response:
+            if response.status != 200:
+                return False, f"http_{response.status}"
+            payload = json.loads(response.read(65537))
+            return (payload.get("ready") is True, "not_ready" if payload.get("ready") is not True else "ok")
+    except urllib.error.HTTPError as error:
+        return False, f"http_{error.code}"
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False, "network"
+    except (json.JSONDecodeError, AttributeError, ValueError):
+        return False, "invalid_response"
+
+
+def send_message(token: str, chat_id: str, text: str, opener=None) -> bool:
+    opener = opener or urllib.request.build_opener(NoRedirect())
+    data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode()
+    request = urllib.request.Request(f"https://api.telegram.org/bot{token}/sendMessage", data=data, method="POST")
+    try:
+        with opener.open(request, timeout=10) as response:
+            payload = json.loads(response.read(65537))
+            return response.status == 200 and payload.get("ok") is True
+    except (urllib.error.URLError, TimeoutError, OSError, json.JSONDecodeError, AttributeError):
+        return False
+
+
+def messages(language: str, minutes: int) -> tuple[str, str]:
+    if language == "en":
+        return (f"⚠️ The status app has not responded for {minutes} min (checked from another server)", "✅ The status app is responding again")
+    return (f"⚠️ Приложение статуса не отвечает уже {minutes} мин (проверка с другого сервера)", "✅ Приложение статуса снова отвечает")
+
+
+def tick(config: dict[str, str], *, now: float | None = None, opener=None) -> str:
+    now = time.time() if now is None else now
+    state_path = Path(config["STATE_DIR"]) / "state.json"
+    state = load_state(state_path)
+    ok, reason = check_ready(config["URL"], opener)
+    token = Path(config["TOKEN_FILE"]).read_text(encoding="utf-8").strip()
+    if ok:
+        if state["failing_since"] is not None and state["alerted"]:
+            _, recovered = messages(config["LANG"], 0)
+            if not send_message(token, config["ADMIN_CHAT_ID"], recovered, opener):
+                save_state(state_path, state)
+                return "fail telegram"
+            result = "recovered"
+        else:
+            result = "ok"
+        save_state(state_path, initial_state())
+        return result
+    state["consecutive_failures"] = int(state.get("consecutive_failures") or 0) + 1
+    if state["failing_since"] is None:
+        state["failing_since"] = now
+    elapsed = max(0, now - float(state["failing_since"]))
+    due = state["consecutive_failures"] >= 3 or elapsed >= 300
+    repeat_due = state["last_alert_at"] is None or now - float(state["last_alert_at"]) >= SIX_HOURS
+    if due and (not state["alerted"] or repeat_due):
+        alert, _ = messages(config["LANG"], max(1, int(elapsed // 60)))
+        if send_message(token, config["ADMIN_CHAT_ID"], alert, opener):
+            state["alerted"] = True
+            state["last_alert_at"] = now
+            save_state(state_path, state)
+            return "alert"
+        save_state(state_path, state)
+        return "fail telegram"
+    save_state(state_path, state)
+    return f"fail {reason}"
+
+
+def main() -> int:
+    try:
+        config = read_config(os.environ.get("VPN_PULSE_WATCHDOG_CONFIG", DEFAULT_CONFIG))
+        print(tick(config))
+        return 0
+    except Exception as error:
+        print(f"fail {type(error).__name__}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

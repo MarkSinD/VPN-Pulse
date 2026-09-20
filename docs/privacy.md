@@ -51,6 +51,9 @@ API responses or the static web bundle. Logs are structured JSON with redaction;
 process nor the reverse proxy keeps an access log by default (`vpn-pulse serve --access-log`
 turns one on for a troubleshooting session).
 
+An on-demand backup contains the configuration, database and secret files. It stays on the
+application host as an unencrypted `0600` archive until the operator retrieves or removes it.
+
 ## Retention
 
 Raw evidence 7 days, aggregates 90 days, events 180 days, raw analytics 30 days, audit 365 days

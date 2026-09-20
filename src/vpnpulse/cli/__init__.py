@@ -10,6 +10,8 @@
     vpn-pulse collector keygen|pin|test|list   server helpers (the server side of connect-server)
     vpn-pulse note set|clear|show         the administrator's note
     vpn-pulse demo seed|clear             fictional data for a first look
+    vpn-pulse backup                      complete on-demand backup archive
+    vpn-pulse restore                     verify and restore an archive
 
 `--config` (or `VPN_PULSE_CONFIG`), `--db` and `--lang` may go before or after the command.
 Everything printed passes through a redactor; secrets are written with 0600 and never echoed.
@@ -19,7 +21,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from vpnpulse.cli import bot, collector, demo, doctor, init, note, probe, run, serve, server
+from vpnpulse.cli import backup, bot, collector, demo, doctor, init, note, probe, run, serve, server
 from vpnpulse.cli.common import CliError, Output
 
 
@@ -46,6 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     collector.add_parser(commands, parents)
     note.add_parser(commands, parents)
     demo.add_parser(commands, parents)
+    backup.add_parsers(commands, parents)
     return parser
 
 

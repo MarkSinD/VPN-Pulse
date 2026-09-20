@@ -8,6 +8,10 @@ release is cut.
 
 ### Added
 
+- `vpn-pulse backup` creates a complete integrity-manifested archive using SQLite online backup;
+  `vpn-pulse restore` verifies and restores it in place or into an isolated rehearsal directory.
+- `deploy/watchdog/`: a hardened, independent systemd timer that checks readiness from another host
+  and sends one administrator alert and one recovery message per incident.
 - The mark: the pulse line in operational green (`web/brand/logo.svg`) — the page's favicon, the header of
   the Mini App (in the theme's green) and the README.
 - `vpn-pulse bot` (unit `vpn-pulse-bot`): the bot's listener — answers `/start` and `/help` in private

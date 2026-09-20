@@ -1,0 +1,11 @@
+[Unit]
+Description=Check VPN Pulse readiness every minute
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=60s
+AccuracySec=5s
+Unit=vpn-pulse-watchdog.service
+
+[Install]
+WantedBy=timers.target

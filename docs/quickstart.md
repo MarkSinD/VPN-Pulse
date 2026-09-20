@@ -103,6 +103,10 @@
 
 ## Installing on a server (Ubuntu 24.04)
 
+After installation, create and rehearse an on-demand [backup](operations/backup-restore.md). To
+detect failure of the monitoring application itself, install the [independent watchdog](operations/watchdog.md)
+on another host.
+
 ```bash
 ./install.sh preflight                 # read-only checks: python 3.12 + venv, disk, systemd, caddy
 ./install.sh demo                      # no root: Mini App + API on fictional data, http://127.0.0.1:8765/app/mvp.html

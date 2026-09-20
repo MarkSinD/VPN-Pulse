@@ -1,0 +1,21 @@
+[Unit]
+Description=VPN Pulse independent readiness watchdog
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=vpn-pulse-watchdog
+Group=vpn-pulse-watchdog
+ExecStart=/usr/local/bin/vpn-pulse-watchdog
+StateDirectory=vpn-pulse-watchdog
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+MemoryMax=64M
+RestrictSUIDSGID=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+

@@ -1,0 +1,5 @@
+URL=https://monitor.example.org
+ADMIN_CHAT_ID=123456789
+TOKEN_FILE=/etc/vpn-pulse-watchdog/bot.token
+LANG=ru
+STATE_DIR=/var/lib/vpn-pulse-watchdog
