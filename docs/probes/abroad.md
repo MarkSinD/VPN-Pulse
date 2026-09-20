@@ -24,10 +24,20 @@ reply), `CHECK_TIMEOUT`.
 
 ## Setting it up
 
-Needs on the probe host: the AmneziaWG kernel module (`ip link add … type amneziawg`), `awg` and
-`awg-quick` from amneziawg-tools, `python3` (3.8+, standard library only), systemd. The unit runs as
-root because creating and moving interfaces between namespaces needs it; the unit confines the
-filesystem (`ProtectSystem=strict`, two writable directories) and caps memory at 64 MiB.
+Needs on the probe host: an AmneziaWG engine (see below), `awg` and `awg-quick` from
+amneziawg-tools, `python3` (3.8+, standard library only), systemd. The unit runs as root because
+creating and moving interfaces between namespaces needs it; the unit confines the filesystem
+(`ProtectSystem=strict`, two writable directories) and caps memory at 64 MiB.
+
+**Which engine.** `ENGINE=kernel` uses the AmneziaWG kernel module (`ip link add … type amneziawg`).
+`ENGINE=userspace` runs `amneziawg-go`, which creates the interface itself. AmneziaWG options such
+as random trailers, cookies and header protection must match on both ends, and a module of one
+release cannot talk to a server of the next — when the probe sees `HANDSHAKE_FAILED` against a
+server that members reach fine, or `awg setconf` rejects a line of the profile, take `amneziawg-go`
+and `awg` from the **same release the servers run** (the Amnezia Docker image ships both as static
+or musl binaries; a musl `awg` runs on a glibc host through `AWG_LOADER=/lib/ld-musl-x86_64.so.1`
+from the `musl` package) and point `AWG_GO`, `AWG` at them. The userspace engine talks to older
+servers too, so one engine can serve every target.
 
 1. **Install** from `deploy/probe-abroad/`: `sudo sh install-probe-abroad.sh` creates the namespace
    `vpprobe`, `/etc/vpn-pulse-probe/{peers,keys}` (0700), `/var/lib/vpn-pulse-probe`, the unit and

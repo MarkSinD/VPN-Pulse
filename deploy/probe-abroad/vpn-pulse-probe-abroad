@@ -10,6 +10,12 @@ The interface is created in the main namespace — its UDP socket keeps the host
 endpoint — and then moved into the namespace, where the only route is the /32 to the target. A torn
 tunnel therefore cannot pass by reaching the target directly: that is what `route_verified` claims.
 Private keys live only in the peer profiles (0600) on this host; the log names servers by id only.
+
+Two engines: `ENGINE=kernel` (the AmneziaWG kernel module, `ip link add … type amneziawg`) or
+`ENGINE=userspace` (`amneziawg-go`, which creates the interface itself). The userspace engine is the
+way to match a target that runs a newer AmneziaWG than the host's module — AmneziaWG options such
+as random trailers must match on both ends, and the module of one release cannot talk to a server
+of the next; taking `amneziawg-go` and `awg` from the same release as the servers side-steps that.
 """
 from __future__ import annotations
 
@@ -31,11 +37,13 @@ QUEUE_MAX_AGE = 24 * 3600
 QUEUE_MAX_ENTRIES = 1500
 STEP_TIMEOUT = 5  # seconds per ip/awg command
 PING_TIMEOUT = 10
+SOCKET_WAIT = 3  # seconds for amneziawg-go to open its control socket
 
 
 # ---------- configuration ----------
 def read_config(path: str) -> dict:
-    values = {"NETNS": "vpprobe", "IFACE": "vpprobe0", "PEERS_DIR": "/etc/vpn-pulse-probe/peers", "STATE_DIR": "/var/lib/vpn-pulse-probe"}
+    values = {"NETNS": "vpprobe", "IFACE": "vpprobe0", "PEERS_DIR": "/etc/vpn-pulse-probe/peers", "STATE_DIR": "/var/lib/vpn-pulse-probe",
+              "ENGINE": "kernel", "AWG": "awg", "AWG_QUICK": "awg-quick", "AWG_GO": "amneziawg-go", "AWG_LOADER": "", "SOCKET_DIR": "/var/run/amneziawg"}
     for raw in Path(path).read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
@@ -47,7 +55,14 @@ def read_config(path: str) -> dict:
     for required in ("API_URL", "TOKEN_FILE", "TARGETS"):
         if not values.get(required):
             raise ValueError(f"{required} is required")
+    if values["ENGINE"] not in ("kernel", "userspace"):
+        raise ValueError("ENGINE must be kernel or userspace")
     return values
+
+
+def awg_command(config: dict) -> list:
+    """`awg`, optionally run through a loader (a musl build of the tools on a glibc host: AWG_LOADER=/lib/ld-musl-x86_64.so.1)."""
+    return ([config["AWG_LOADER"]] if config["AWG_LOADER"] else []) + [config["AWG"]]
 
 
 def parse_targets(value: str) -> dict:
@@ -71,7 +86,7 @@ def local_address(profile: str) -> str:
 # ---------- one check ----------
 def check_target(config: dict, target: str, address: str, runner=subprocess.run, clock=time.time) -> dict:
     """Bring the tunnel up, ping through it, read the handshake, tear it down. Returns one ProbeReport result."""
-    netns, iface = config["NETNS"], config["IFACE"]
+    netns, iface, awg = config["NETNS"], config["IFACE"], awg_command(config)
     inside = ["ip", "netns", "exec", netns]
     started = time.monotonic()
     error = "TUNNEL_SETUP_FAILED"
@@ -81,33 +96,44 @@ def check_target(config: dict, target: str, address: str, runner=subprocess.run,
         return runner(command, capture_output=True, text=True, timeout=kwargs.pop("timeout", STEP_TIMEOUT), check=False, **kwargs)
 
     def teardown():
+        # one of the two fails harmlessly: the interface is in one namespace only; amneziawg-go exits with its interface
         for command in (inside + ["ip", "link", "delete", iface], ["ip", "link", "delete", iface]):
             try:
-                run(command)  # one of the two fails harmlessly: the interface is in one namespace only
+                run(command)
             except (OSError, subprocess.TimeoutExpired):
                 pass
+
+    def create() -> bool:
+        if config["ENGINE"] == "kernel":
+            return run(["ip", "link", "add", iface, "type", "amneziawg"]).returncode == 0
+        if run([config["AWG_GO"], iface]).returncode != 0:  # daemonizes, then opens /var/run/amneziawg/<iface>.sock
+            return False
+        socket = Path(config["SOCKET_DIR"]) / f"{iface}.sock"
+        deadline = time.monotonic() + SOCKET_WAIT
+        while not socket.exists() and time.monotonic() < deadline:
+            time.sleep(0.1)
+        return socket.exists()
 
     try:
         profile_path = Path(config["PEERS_DIR"]) / f"{target}.conf"
         local = local_address(profile_path.read_text(encoding="utf-8"))
         teardown()  # a crashed previous run may have left the interface behind
-        stripped = run(["awg-quick", "strip", str(profile_path)])  # the peer section and the AWG parameters, without Address
+        stripped = run([config["AWG_QUICK"], "strip", str(profile_path)])  # the peer section and the AWG parameters, without Address
+        ok = stripped.returncode == 0 and bool(local) and create()
         steps = [
-            (["ip", "link", "add", iface, "type", "amneziawg"], {}),
-            (["awg", "setconf", iface, "/dev/stdin"], {"input": stripped.stdout}),
+            (awg + ["setconf", iface, "/dev/stdin"], {"input": stripped.stdout}),
             (["ip", "link", "set", iface, "netns", netns], {}),
             (inside + ["ip", "address", "add", local, "dev", iface], {}),
             (inside + ["ip", "link", "set", "up", "dev", iface], {}),
             (inside + ["ip", "route", "add", address + "/32", "dev", iface], {}),
         ]
-        ok = stripped.returncode == 0 and bool(local)
         for command, extra in steps:
             if not ok:
                 break
             ok = run(command, **extra).returncode == 0
         if ok:
             ping = run(inside + ["ping", "-c", "2", "-W", "3", address], timeout=PING_TIMEOUT)
-            shown = run(inside + ["awg", "show", iface, "latest-handshakes"])
+            shown = run(inside + awg + ["show", iface, "latest-handshakes"])
             now = clock()
             epochs = [int(line.split()[-1]) for line in shown.stdout.splitlines() if line.split() and line.split()[-1].isdigit()]
             fresh = any(epoch > 0 and 0 <= now - epoch <= HANDSHAKE_MAX_AGE for epoch in epochs)

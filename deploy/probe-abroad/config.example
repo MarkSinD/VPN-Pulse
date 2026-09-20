@@ -6,3 +6,9 @@ PEERS_DIR=/etc/vpn-pulse-probe/peers
 STATE_DIR=/var/lib/vpn-pulse-probe
 # server id (from config.yaml) = that server's tunnel address, comma-separated
 TARGETS=primary=192.0.2.1,backup=198.51.100.1
+# kernel: the AmneziaWG kernel module; userspace: amneziawg-go from the same release as the targets
+ENGINE=kernel
+#ENGINE=userspace
+#AWG_GO=/opt/vpn-pulse-probe/awg/amneziawg-go
+#AWG=/opt/vpn-pulse-probe/awg/awg
+#AWG_LOADER=/lib/ld-musl-x86_64.so.1   # only for a musl build of awg on a glibc host
