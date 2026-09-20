@@ -3,8 +3,8 @@
 Everything else — outage and recovery messages — is sent by the monitoring loop through the
 notification queue; this process only listens. It is the single `getUpdates` consumer of the token
 (a second one would steal updates), reads only private-chat messages, replies to `/start` (and
-`/help`) in the sender's language with one Web App button, and ignores every other update. It
-stores nothing: no user ids, no texts, no counters.
+`/help`) in the installation's default language with one Web App button, and ignores every other
+update. It stores nothing: no user ids, no texts, no counters.
 """
 from __future__ import annotations
 
@@ -85,9 +85,7 @@ class TelegramBot:
             command = text.split()[0].split("@")[0].lower()
             if command not in COMMANDS:
                 continue
-            lang = (message.get("from") or {}).get("language_code", "")
-            lang = "en" if str(lang).lower().startswith("en") else ("ru" if str(lang).lower().startswith("ru") else self.default_language)
-            if self.reply(chat["id"], lang):
+            if self.reply(chat["id"], self.default_language):  # the app has the language switch
                 replies += 1
         if replies:
             log.info("bot replied", extra={"event": "bot.reply", "details": {"replies": replies}})  # a count, never who

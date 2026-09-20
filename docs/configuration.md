@@ -21,7 +21,7 @@ an invalid file. Changing the file requires a restart of the API and the collect
 
 | Field | Type | Default | Notes |
 |---|---|---|---|
-| `default_language` | `ru` \| `en` | — | language used before the user's Telegram language is known |
+| `default_language` | `ru` \| `en` | — | the language the Mini App opens in, the bot answers in and the notifications use; a visitor's own choice (the switch in the header) is remembered on their device. The phone's or Telegram's language setting is not consulted |
 | `languages` | list of `ru` \| `en` | — | enabled languages; the UI switch shows only these |
 | `timezone` | IANA name | `UTC` | used for event grouping and note expiry display |
 | `admin_contact_url` | `https://t.me/…` | — | target of the "Contact administrator" button; omit to hide the button |

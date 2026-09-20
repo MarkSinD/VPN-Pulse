@@ -1,4 +1,4 @@
-"""The bot listener: /start → one Web App button, everything else ignored, offset advances, failures back off."""
+"""The bot listener: /start → one Web App button in the installation's language, everything else ignored, offset advances, failures back off."""
 import io
 import json
 import urllib.error
@@ -41,7 +41,7 @@ def update(uid, text, chat_type="private", lang="ru", chat_id=555):
     return {"update_id": uid, "message": {"chat": {"id": chat_id, "type": chat_type}, "from": {"id": chat_id, "language_code": lang}, "text": text}}
 
 
-def test_start_gets_one_button_in_the_senders_language_and_nothing_else_is_answered():
+def test_start_gets_one_button_in_the_installations_language_and_nothing_else_is_answered():
     api = FakeBotApi([
         update(1, "/start"),
         update(2, "/start@connection_bot", lang="en", chat_id=777),
@@ -54,14 +54,20 @@ def test_start_gets_one_button_in_the_senders_language_and_nothing_else_is_answe
     sent = [b for m, b in api.calls if m == "sendMessage"]
     assert [s["chat_id"] for s in sent] == [555, 777, 555]
     assert all(s["reply_markup"]["inline_keyboard"][0][0]["web_app"]["url"] == APP for s in sent)
-    assert "Нажмите кнопку" in sent[0]["text"] and sent[0]["reply_markup"]["inline_keyboard"][0][0]["text"] == "Открыть статус"
-    assert "Tap the button" in sent[1]["text"] and sent[1]["reply_markup"]["inline_keyboard"][0][0]["text"] == "Open the status"
-    assert "Нажмите кнопку" in sent[2]["text"]  # an unknown language falls back to the default
+    # the phone's language does not matter: the community has one default, the app has the switch
+    assert all("Нажмите кнопку" in s["text"] and s["reply_markup"]["inline_keyboard"][0][0]["text"] == "Открыть статус" for s in sent)
     assert all(s["disable_notification"] for s in sent)
     assert bot.offset == 6
     # the next poll asks from the offset and finds nothing new
     assert bot.poll_once() == 0
     assert api.calls[-1] == ("getUpdates", {"timeout": 1, "allowed_updates": ["message"], "offset": 6})
+
+
+def test_an_english_installation_answers_in_english():
+    api = FakeBotApi([update(1, "/start", lang="ru")])
+    assert TelegramBot(TOKEN, APP, default_language="en", opener=api, timeout=1).poll_once() == 1
+    sent = [b for m, b in api.calls if m == "sendMessage"][0]
+    assert "Tap the button" in sent["text"] and sent["reply_markup"]["inline_keyboard"][0][0]["text"] == "Open the status"
 
 
 def test_failures_back_off_and_stop_is_honoured():

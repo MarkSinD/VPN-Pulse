@@ -17,7 +17,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
+from vpnpulse.api.static import AppFiles
 
 from vpnpulse.api import create_app
 from vpnpulse.auth import Identity
@@ -141,7 +141,7 @@ def create_dev_app(
 
     static_dir = app_dir or (root / "docs" / "prototypes")
     if static_dir.exists():
-        app.mount("/app", StaticFiles(directory=str(static_dir), html=True), name="app")
+        app.mount("/app", AppFiles(directory=str(static_dir), html=True, default_language=(config.get("app") or {}).get("default_language", "ru")), name="app")
 
         @app.get("/", include_in_schema=False)
         def index():

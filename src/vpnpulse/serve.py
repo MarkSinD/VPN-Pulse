@@ -14,9 +14,8 @@ from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
-from fastapi.staticfiles import StaticFiles
-
 from vpnpulse.api import create_app
+from vpnpulse.api.static import AppFiles
 from vpnpulse.cli.common import CliError, contracts_dir, load_public_config, open_database, repo_root, resolve_db
 from vpnpulse.storage import SqliteReadModel, SqliteStore
 from vpnpulse.telegram import NoMembership, TelegramMembership
@@ -26,20 +25,6 @@ DEMO_MARKER = "demo-data"
 
 def demo_marker(db_path: Path) -> Path:
     return db_path.parent / DEMO_MARKER
-
-
-class AppFiles(StaticFiles):
-    """The Mini App's files, revalidated on every open.
-
-    Without a Cache-Control header a WebView keeps a page by heuristics — a tenth of the file's age,
-    hours for a release installed in the morning — so a phone went on showing a release that had
-    already been replaced. `no-cache` means "ask first"; with the ETag that is a 304, not a download.
-    """
-
-    def file_response(self, *args, **kwargs):
-        response = super().file_response(*args, **kwargs)
-        response.headers["Cache-Control"] = "no-cache"
-        return response
 
 
 def build_app(config_path: Path, *, now=None, opener=None) -> FastAPI:
@@ -78,7 +63,7 @@ def build_app(config_path: Path, *, now=None, opener=None) -> FastAPI:
     )
     static_dir = repo_root() / "docs" / "prototypes"
     if static_dir.exists():
-        app.mount("/app", AppFiles(directory=str(static_dir), html=True), name="app")
+        app.mount("/app", AppFiles(directory=str(static_dir), html=True, default_language=app_cfg.get("default_language", "ru")), name="app")
 
         @app.get("/", include_in_schema=False)
         def index():

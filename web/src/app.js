@@ -21,7 +21,9 @@
     scenario: q.get('scenario') || 'operational',
     role: q.get('role') || 'member',
     theme: q.get('theme') || 'auto',
-    lang: q.get('lang') || store.get('lang', (tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.language_code || navigator.language || 'ru').slice(0, 2) === 'en' ? 'en' : 'ru'),
+    // the installation's default language (the served page carries it in <html lang>), then the visitor's own
+    // choice from the switch in the header — never the phone's or Telegram's setting
+    lang: q.get('lang') || store.get('lang', document.documentElement.lang === 'en' ? 'en' : 'ru'),
     tab: 'status', server: null,
     filter: 'all', range: '24h', open: 'checks',
     hintDismissed: store.get('hint', '') === '1',

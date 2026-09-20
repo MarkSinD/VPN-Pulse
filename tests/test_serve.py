@@ -76,7 +76,7 @@ def test_serve_builds_the_api_and_the_mini_app_from_config(tmp_path, monkeypatch
     now = datetime.now(UTC)
     assert client.get("/api/v1/health/live").status_code == 200
     page = client.get("/app/mvp.html").text
-    assert client.get("/").status_code == 200 and "<html" in page.lower()
+    assert client.get("/").status_code == 200 and '<html lang="en">' in page  # `init --language en`: the page opens in English
     # Telegram's bridge comes from our own origin, in <head>, before any script of the page: without it a
     # real client has no initData and every visitor sees "members only"
     head = page.split("</head>")[0]
@@ -88,6 +88,7 @@ def test_serve_builds_the_api_and_the_mini_app_from_config(tmp_path, monkeypatch
     assert first.headers["cache-control"] == "no-cache" and bridge.headers["cache-control"] == "no-cache"
     again = client.get("/app/mvp.html", headers={"If-None-Match": first.headers["etag"]})
     assert again.status_code == 304 and again.headers["cache-control"] == "no-cache"
+    assert client.head("/app/mvp.html").status_code == 200 and client.get("/app/nothing.html").status_code == 404
     assert client.get("/api/v1/dev/scenarios").status_code == 404  # no dev routes in production
     # membership: the configured administrator gets in without Telegram; an unknown user does not
     assert client.post("/api/v1/sessions", json={"init_data": init_data(99, at=now, token=TOKEN)}).status_code == 204
