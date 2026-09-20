@@ -39,6 +39,11 @@ or musl binaries; a musl `awg` runs on a glibc host through `AWG_LOADER=/lib/ld-
 from the `musl` package) and point `AWG_GO`, `AWG` at them. The userspace engine talks to older
 servers too, so one engine can serve every target.
 
+For a full mesh, install one probe on every server and enroll each with its own `--via` id. The
+production VPN engine and the probe engine may coexist because the probe uses a separate namespace,
+interface and userspace control socket. Copy client parameters from a known working profile when
+they differ from the server interface section; some releases require client-only `S3`/`S4` values.
+
 1. **Install** from `deploy/probe-abroad/`: `sudo sh install-probe-abroad.sh` creates the namespace
    `vpprobe`, `/etc/vpn-pulse-probe/{peers,keys}` (0700), `/var/lib/vpn-pulse-probe`, the unit and
    the timer (enabled, not started). Copy `config.example` to `/etc/vpn-pulse-probe/config`:

@@ -16,7 +16,8 @@ release is cut.
 
 - Cross-server probe (`deploy/probe-abroad/`): isolated AmneziaWG handshake checks, disk queue,
   systemd timer, `probe enroll abroad --via`, source-server attribution, and exclusion of marked
-  test peers from member activity and connection totals.
+  test peers from member activity and connection totals; probes may be installed on every server
+  for a full cross-check mesh without sharing an interface with the production VPN.
 
 - `vpn-pulse backup` creates a complete integrity-manifested archive using SQLite online backup;
   `vpn-pulse restore` verifies and restores it in place or into an isolated rehearsal directory.
