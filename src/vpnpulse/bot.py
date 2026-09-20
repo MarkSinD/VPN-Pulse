@@ -89,6 +89,8 @@ class TelegramBot:
             lang = "en" if str(lang).lower().startswith("en") else ("ru" if str(lang).lower().startswith("ru") else self.default_language)
             if self.reply(chat["id"], lang):
                 replies += 1
+        if replies:
+            log.info("bot replied", extra={"event": "bot.reply", "details": {"replies": replies}})  # a count, never who
         return replies
 
     def reply(self, chat_id: int, lang: str) -> bool:
