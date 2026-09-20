@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 User=root
 # the namespace does not survive a reboot: recreate it when it is missing
-ExecStartPre=/bin/sh -c 'ip netns list | grep -q "^vpprobe" || ip netns add vpprobe'
+ExecStartPre=/bin/sh -c 'test -e /run/netns/vpprobe || ip netns add vpprobe'
 ExecStart=/usr/local/bin/vpn-pulse-probe-abroad
 Environment=VPN_PULSE_PROBE_CONFIG=/etc/vpn-pulse-probe/config
 PrivateTmp=true
