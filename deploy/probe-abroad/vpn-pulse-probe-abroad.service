@@ -1,6 +1,8 @@
 [Unit]
 Description=VPN Pulse cross-server probe
 After=network-online.target
+Wants=network-online.target
+
 [Service]
 Type=oneshot
 User=root
@@ -10,4 +12,7 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 ReadWritePaths=/var/lib/vpn-pulse-probe /etc/vpn-pulse-probe
+# amneziawg-go (ENGINE=userspace) keeps its control socket in /run/amneziawg
+RuntimeDirectory=amneziawg
+RuntimeDirectoryPreserve=yes
 MemoryMax=64M
