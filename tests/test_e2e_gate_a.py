@@ -20,6 +20,7 @@ import threading
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from urllib.parse import quote
 
 import pytest
 import yaml
@@ -48,15 +49,11 @@ CATALOG = ScenarioCatalog.load()
 START = (datetime.now(UTC) - timedelta(minutes=23)).replace(second=0, microsecond=0)
 STATE_RU = {"operational": "Работает", "degraded": "Есть проблемы", "unavailable": "Не проходит проверка", "unknown": "Нет свежих данных"}
 
-# what Telegram puts on `window` before the page runs: the signed `initData` plus the WebApp
-# surface the page touches (kept in step with `grep -o "tg\.[A-Za-z.]*" web/src/app.js`)
-TELEGRAM_STUB = """
-window.Telegram = { WebApp: {
-  initData: %s, initDataUnsafe: { user: { id: %d, language_code: 'ru' } }, colorScheme: 'light',
-  ready() {}, expand() {}, openTelegramLink() {}, setHeaderColor() {}, setBackgroundColor() {},
-  BackButton: { onClick() {}, show() {}, hide() {} }
-} };
-"""
+# how a Telegram client opens a Mini App: the signed initData (and the client's version and platform) in
+# the location hash; telegram-web-app.js — vendored, served next to the page — turns it into
+# window.Telegram.WebApp. No stub: the real bridge is part of what the gate checks.
+def telegram_url(base: str, init: str) -> str:
+    return f"{base}#tgWebAppData={quote(init, safe='')}&tgWebAppVersion=8.0&tgWebAppPlatform=android"
 
 
 def free_port() -> int:
@@ -136,7 +133,7 @@ def test_gate_a_vertical_slice(tmp_path):
     app = build_app(cfg, now=clock, opener=telegram)
     assert app.state.mode == "live"
     api = TestClient(app, base_url="https://testserver")
-    member_init = init_data(MEMBER, at=clock(), token=TOKEN)
+    member_init = init_data(MEMBER, at=clock(), token=TOKEN, language="ru")
     assert api.post("/api/v1/sessions", json={"init_data": member_init}).status_code == 204
     assert api.get("/api/v1/sessions/current").json()["role"] == "member"
     status = api.get("/api/v1/status").json()
@@ -173,10 +170,11 @@ def test_gate_a_vertical_slice(tmp_path):
                     raise
                 pytest.skip(f"Chromium for Playwright is not installed ({type(error).__name__}); run: playwright install chromium")
             page = browser.new_page(viewport={"width": 390, "height": 844})
-            page.add_init_script(TELEGRAM_STUB % (json.dumps(member_init), MEMBER))
-            page.goto(f"http://127.0.0.1:{port}/app/mvp.html")
+            page.goto(telegram_url(f"http://127.0.0.1:{port}/app/mvp.html", member_init))
             page.wait_for_selector('body[data-load="ready"]', timeout=15000)
             assert page.get_attribute("body", "data-source") == "api"
+            assert page.get_attribute("body", "data-showcase") == "hidden"  # the prototype's bar is not part of the product
+            assert page.evaluate("window.Telegram.WebApp.initDataUnsafe.user.id") == MEMBER  # the bridge parsed the hash
 
             # the status screen shows what the loop wrote, under the public names, in the member's role
             rows = page.locator(".srow[data-server]")

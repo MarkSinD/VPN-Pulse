@@ -31,11 +31,12 @@ class Membership:
         return {1: "member", 2: "admin"}.get(user_id)
 
 
-def init_data(user_id: int, at: datetime = NOW, token: str = BOT_TOKEN) -> str:
+def init_data(user_id: int, at: datetime = NOW, token: str = BOT_TOKEN, language: str | None = None) -> str:
+    user = {"id": user_id, **({"language_code": language} if language else {})}
     values = {
         "auth_date": str(int(at.timestamp())),
         "query_id": "test-query",
-        "user": json.dumps({"id": user_id}, separators=(",", ":")),
+        "user": json.dumps(user, separators=(",", ":")),
     }
     check = "\n".join(f"{key}={values[key]}" for key in sorted(values))
     secret = hmac.new(b"WebAppData", token.encode(), hashlib.sha256).digest()

@@ -11,6 +11,7 @@ def add_parser(commands, parents) -> None:
     p.add_argument("--host", default="127.0.0.1", help="bind address (default 127.0.0.1 — put Caddy in front)")
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--log-level", default="info")
+    p.add_argument("--access-log", action="store_true", help="also log every request with the client address (off by default — docs/privacy.md)")
     p.set_defaults(handler=command_serve)
 
 
@@ -26,5 +27,5 @@ def command_serve(args: argparse.Namespace, out: Output) -> int:
         raise CliError("vpn-pulse serve: --config PATH is required (or VPN_PULSE_CONFIG)")
     app = build_app(config_path)
     out.error(f"vpn-pulse serve ({app.state.mode}): http://{args.host}:{args.port}/app/mvp.html")
-    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level)
+    uvicorn.run(app, host=args.host, port=args.port, log_level=args.log_level, access_log=bool(args.access_log))
     return 0

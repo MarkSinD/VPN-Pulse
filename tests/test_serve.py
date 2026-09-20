@@ -75,7 +75,14 @@ def test_serve_builds_the_api_and_the_mini_app_from_config(tmp_path, monkeypatch
     client = TestClient(app, base_url="https://testserver")
     now = datetime.now(UTC)
     assert client.get("/api/v1/health/live").status_code == 200
-    assert client.get("/").status_code == 200 and "<html" in client.get("/app/mvp.html").text.lower()
+    page = client.get("/app/mvp.html").text
+    assert client.get("/").status_code == 200 and "<html" in page.lower()
+    # Telegram's bridge comes from our own origin, in <head>, before any script of the page: without it a
+    # real client has no initData and every visitor sees "members only"
+    head = page.split("</head>")[0]
+    assert '<script src="telegram-web-app.js"></script>' in head and head.index("<script") == head.index('<script src="telegram-web-app.js">')
+    bridge = client.get("/app/telegram-web-app.js")
+    assert bridge.status_code == 200 and "javascript" in bridge.headers["content-type"] and "WebApp" in bridge.text
     assert client.get("/api/v1/dev/scenarios").status_code == 404  # no dev routes in production
     # membership: the configured administrator gets in without Telegram; an unknown user does not
     assert client.post("/api/v1/sessions", json={"init_data": init_data(99, at=now, token=TOKEN)}).status_code == 204

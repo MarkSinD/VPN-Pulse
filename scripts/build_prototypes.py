@@ -2,7 +2,8 @@
 
 Inlines the shared tokens, the RU/EN dictionaries (i18n/*.json — the single source of UI
 strings) and the demo scenarios (fixtures/ui/scenarios.json — shared with the dev server) into
-three standalone HTML files. No secrets, no network.
+three standalone HTML files, and copies the vendored Telegram Web App script next to them (the
+Mini App loads it from its own origin — see web/vendor/README.md). No secrets, no network.
 
 Run: python scripts/build_prototypes.py
 """
@@ -16,6 +17,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "web" / "src"
+VENDOR = ROOT / "web" / "vendor"
+TELEGRAM_JS = "telegram-web-app.js"
 OUT = ROOT / "docs" / "prototypes"
 I18N = ROOT / "i18n"
 
@@ -54,11 +57,14 @@ def main() -> int:
         '<meta name="color-scheme" content="light dark">\n'
     )
     (OUT / "ui-tokens.css").write_text(parts["TOKENS"], encoding="utf-8")
+    (OUT / TELEGRAM_JS).write_bytes((VENDOR / TELEGRAM_JS).read_bytes())
     for name in ("mvp", "android", "onboarding"):
         body = fill(read(SRC / f"{name}.src.html"), parts)
         title = re.search(r"<title>(.*?)</title>", body, re.S)
         fragment = body.replace(title.group(0), "", 1) if title else body
-        doc = head + (title.group(0) if title else "<title>VPN Pulse</title>") + "\n</head>\n<body>\n" + fragment + "\n</body>\n</html>\n"
+        # the Mini App needs Telegram's bridge before any of its own scripts; the prototypes do not
+        bridge = f'<script src="{TELEGRAM_JS}"></script>\n' if name == "mvp" else ""
+        doc = head + (title.group(0) if title else "<title>VPN Pulse</title>") + "\n" + bridge + "</head>\n<body>\n" + fragment + "\n</body>\n</html>\n"
         (OUT / f"{name}.html").write_text(doc, encoding="utf-8")
         print(f"built docs/prototypes/{name}.html ({len(doc) // 1024} KiB)")
         if name == "mvp" and len(sys.argv) > 2 and sys.argv[1] == "--artifact":

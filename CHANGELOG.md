@@ -137,6 +137,13 @@ release is cut.
 
 ### Fixed
 
+- Mini App inside Telegram: the page never loaded Telegram's `telegram-web-app.js`, so a real client
+  had no `initData` and saw "Members of the group only" (`TELEGRAM_REQUIRED`). The script is now
+  vendored (`web/vendor/`) and served from the app's own origin (no third-party host to reach), and
+  `window.Telegram` counts only when it carries `initData`. The showcase bar is hidden next to the
+  API (production, dev server) unless `?showcase=visible`.
+- `vpn-pulse serve` no longer writes an access log (client addresses in the journal); `--access-log`
+  turns it on for a session.
 - Mini App analytics: a failed batch backs off (2 s … 60 s) instead of re-arming the flush at once;
   401/403 stop the flushes until the next refresh signs in again; only a 400 drops the batch.
 - Gate A in CI: `VPNPULSE_REQUIRE_BROWSER=1` in the browser job fails on a missing Playwright or

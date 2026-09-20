@@ -47,7 +47,9 @@ never blocking); the queue lives in the page's memory, so closing the app drops 
 
 The Telegram bot token, collector keys and probe tokens are files with `0600` permissions (installed under `/etc/vpn-pulse/secrets/`, owner `vpn-pulse`) on
 the monitoring host. They are never written to the repository, the configuration file, logs,
-API responses or the static web bundle. Logs are structured JSON with redaction.
+API responses or the static web bundle. Logs are structured JSON with redaction; neither the API
+process nor the reverse proxy keeps an access log by default (`vpn-pulse serve --access-log`
+turns one on for a troubleshooting session).
 
 ## Retention
 

@@ -6,7 +6,9 @@
   'use strict';
   const I18N = window.__I18N, FX = window.__FIXTURES, Model = window.VPNPulseModel;
   const q = new URLSearchParams(location.search);
-  const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+  // telegram-web-app.js (vendored, loaded from the page's own origin) defines window.Telegram.WebApp
+  // everywhere; only a non-empty initData means the page really runs inside Telegram
+  const tg = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
   // data source: the API when served next to it (/app/) or inside Telegram, demo scenarios otherwise
   const MODE = q.get('data') || ((tg && tg.initData) || location.pathname.indexOf('/app/') !== -1 ? 'api' : 'fixtures');
 
@@ -30,7 +32,9 @@
   if (!I18N[S.lang]) S.lang = 'ru';
   const screenParam = q.get('screen');
   if (screenParam) { const m = screenParam.match(/^server:(\w+)$/); if (m) { S.tab = 'status'; S.server = m[1]; } else if (['status', 'events', 'keys', 'help', 'admin'].includes(screenParam)) S.tab = screenParam; }
-  if (q.get('showcase') === 'hidden') document.body.setAttribute('data-showcase', 'hidden');
+  // the showcase bar belongs to the prototype opened as a file; next to the API (dev server, production,
+  // Telegram) it stays hidden unless asked for with ?showcase=visible
+  if (q.get('showcase') === 'hidden' || (MODE === 'api' && q.get('showcase') !== 'visible')) document.body.setAttribute('data-showcase', 'hidden');
   // the dev server accepts ?scenario= — only ever sent when a scenario was asked for or the showcase is visible
   const devScenarios = q.has('scenario') || document.body.getAttribute('data-showcase') !== 'hidden';
   const api = MODE === 'api' ? window.VPNPulseApi({ base: q.get('api') || '/api/v1', lang: () => S.lang, scenario: () => (devScenarios ? S.scenario : null) }) : null;

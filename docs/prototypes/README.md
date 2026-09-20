@@ -70,5 +70,7 @@ python scripts/ui_parity_check.py           # API render == scenario render, eve
 the dev server (`python -m vpnpulse.dev`, then <http://127.0.0.1:8765/app/mvp.html>) or inside
 Telegram it reads the API through `web/src/api.js` — the same screens, the same DOM (checked by
 `scripts/ui_parity_check.py`). `?data=fixtures` / `?data=api` forces a source; in API mode the
-showcase bar switches scenarios by asking the dev server (`?scenario=`), and the 7-day range shows
-real 7-day metrics.
+showcase bar is hidden unless the page is opened with `?showcase=visible` — then it switches
+scenarios by asking the dev server (`?scenario=`) — and the 7-day range shows real 7-day metrics.
+Inside Telegram the page loads `telegram-web-app.js` from its own origin (a vendored copy of
+Telegram's script, `web/vendor/`): that is what hands the page the signed `initData`.
