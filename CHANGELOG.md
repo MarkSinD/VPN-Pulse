@@ -141,7 +141,8 @@ release is cut.
   had no `initData` and saw "Members of the group only" (`TELEGRAM_REQUIRED`). The script is now
   vendored (`web/vendor/`) and served from the app's own origin (no third-party host to reach), and
   `window.Telegram` counts only when it carries `initData`. The showcase bar is hidden next to the
-  API (production, dev server) unless `?showcase=visible`.
+  API (production, dev server) unless `?showcase=visible`. The files under `/app/` are served with
+  `Cache-Control: no-cache` (ETag → 304), so a client never keeps a replaced release by heuristics.
 - `vpn-pulse serve` no longer writes an access log (client addresses in the journal); `--access-log`
   turns it on for a session.
 - Mini App analytics: a failed batch backs off (2 s … 60 s) instead of re-arming the flush at once;

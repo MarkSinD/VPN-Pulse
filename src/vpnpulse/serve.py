@@ -28,6 +28,20 @@ def demo_marker(db_path: Path) -> Path:
     return db_path.parent / DEMO_MARKER
 
 
+class AppFiles(StaticFiles):
+    """The Mini App's files, revalidated on every open.
+
+    Without a Cache-Control header a WebView keeps a page by heuristics — a tenth of the file's age,
+    hours for a release installed in the morning — so a phone went on showing a release that had
+    already been replaced. `no-cache` means "ask first"; with the ETag that is a 304, not a download.
+    """
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def build_app(config_path: Path, *, now=None, opener=None) -> FastAPI:
     """`opener` replaces urllib for the Telegram membership check (tests)."""
     now = now or (lambda: datetime.now(UTC))
@@ -64,7 +78,7 @@ def build_app(config_path: Path, *, now=None, opener=None) -> FastAPI:
     )
     static_dir = repo_root() / "docs" / "prototypes"
     if static_dir.exists():
-        app.mount("/app", StaticFiles(directory=str(static_dir), html=True), name="app")
+        app.mount("/app", AppFiles(directory=str(static_dir), html=True), name="app")
 
         @app.get("/", include_in_schema=False)
         def index():

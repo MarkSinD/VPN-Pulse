@@ -83,6 +83,11 @@ def test_serve_builds_the_api_and_the_mini_app_from_config(tmp_path, monkeypatch
     assert '<script src="telegram-web-app.js"></script>' in head and head.index("<script") == head.index('<script src="telegram-web-app.js">')
     bridge = client.get("/app/telegram-web-app.js")
     assert bridge.status_code == 200 and "javascript" in bridge.headers["content-type"] and "WebApp" in bridge.text
+    # every open asks the server again (a WebView would otherwise keep a page for hours); unchanged → 304
+    first = client.get("/app/mvp.html")
+    assert first.headers["cache-control"] == "no-cache" and bridge.headers["cache-control"] == "no-cache"
+    again = client.get("/app/mvp.html", headers={"If-None-Match": first.headers["etag"]})
+    assert again.status_code == 304 and again.headers["cache-control"] == "no-cache"
     assert client.get("/api/v1/dev/scenarios").status_code == 404  # no dev routes in production
     # membership: the configured administrator gets in without Telegram; an unknown user does not
     assert client.post("/api/v1/sessions", json={"init_data": init_data(99, at=now, token=TOKEN)}).status_code == 204
