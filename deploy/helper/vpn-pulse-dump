@@ -17,6 +17,7 @@ CONF="${VPN_PULSE_HELPER_CONF:-/etc/vpn-pulse-helper/config}"
 . "$CONF"
 : "${KIND:?KIND missing in $CONF}"
 IFACE="${IFACE:-awg0}"
+PROBE_PEERS="${PROBE_PEERS:-}"
 
 case "$KIND" in
   awg-host)
@@ -33,9 +34,10 @@ case "$KIND" in
 esac
 
 # line 1: private-key public-key listen-port fwmark; peers: pub psk endpoint allowed-ips handshake rx tx keepalive
-printf '%s\n' "$dump" | awk '
+printf '%s\n' "$dump" | awk -v probes="$PROBE_PEERS" '
+  BEGIN { split(probes, p, " "); for (i in p) probe[p[i]] = 1 }
   NR == 1 { if (NF < 3 || $3 !~ /^[0-9]+$/) { bad = 1; exit } port = $3; next }
-  NF >= 7 && $5 ~ /^[0-9]+$/ && $6 ~ /^[0-9]+$/ && $7 ~ /^[0-9]+$/ { out[++n] = "peer " $5 " " $6 " " $7; next }
+  NF >= 7 && $5 ~ /^[0-9]+$/ && $6 ~ /^[0-9]+$/ && $7 ~ /^[0-9]+$/ { out[++n] = "peer " $5 " " $6 " " $7 " " (($1 in probe) ? "probe" : "member"); next }
   { bad = 1; exit }
   END {
     if (bad || port == "") exit 3

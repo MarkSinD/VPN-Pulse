@@ -18,7 +18,7 @@ set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 USER_NAME=vpnpulse
 HOME_DIR=/var/lib/vpn-pulse-helper
-KIND=""; IFACE=awg0; CONTAINER=""; DOMAIN=""; PUBKEY=""; REMOVE=0; DRY=0
+KIND=""; IFACE=awg0; CONTAINER=""; DOMAIN=""; PROBE_PEERS=""; PUBKEY=""; REMOVE=0; DRY=0
 
 usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
 while [ $# -gt 0 ]; do
@@ -27,6 +27,7 @@ while [ $# -gt 0 ]; do
     --iface) IFACE=$2; shift 2 ;;
     --container) CONTAINER=$2; shift 2 ;;
     --domain) DOMAIN=$2; shift 2 ;;
+    --probe-peers) PROBE_PEERS=$2; shift 2 ;;
     --pubkey) PUBKEY=$2; shift 2 ;;
     --pubkey-file) PUBKEY=$(cat "$2"); shift 2 ;;
     --remove) REMOVE=1; shift ;;
@@ -67,6 +68,7 @@ case "$PUBKEY" in *"
 case "$IFACE" in ''|*[!a-zA-Z0-9_.-]*) echo "invalid interface" >&2; exit 2 ;; esac
 case "$CONTAINER" in *[!a-zA-Z0-9_.-]*) echo "invalid container" >&2; exit 2 ;; esac
 case "$DOMAIN" in *[!a-zA-Z0-9.-]*) echo "invalid domain" >&2; exit 2 ;; esac
+case "$PROBE_PEERS" in *[!a-zA-Z0-9+/=_\ -]*) echo "invalid probe peer list" >&2; exit 2 ;; esac
 for f in vpn-pulse-helper vpn-pulse-dump; do [ -f "$HERE/$f" ] || { echo "missing $HERE/$f" >&2; exit 2; }; done
 
 echo "plan:"
@@ -101,6 +103,7 @@ install -d -m 0755 /etc/vpn-pulse-helper
   echo "KIND=$KIND"; echo "IFACE=$IFACE"
   [ -n "$CONTAINER" ] && echo "CONTAINER=$CONTAINER"
   [ -n "$DOMAIN" ] && echo "DOMAIN=$DOMAIN"
+  [ -n "$PROBE_PEERS" ] && printf "PROBE_PEERS='%s'\n" "$PROBE_PEERS"
   :
 } > /etc/vpn-pulse-helper/config
 chmod 0644 /etc/vpn-pulse-helper/config

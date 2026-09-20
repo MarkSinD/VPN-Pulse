@@ -124,7 +124,7 @@ def test_init_creates_the_layout_and_never_prints_the_token(tmp_path, monkeypatc
         assert stat.S_IMODE(token_file.parent.stat().st_mode) == 0o700
     db = Path(config["storage"]["database"])
     assert db.exists()
-    assert connect(db).execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 1
+    assert connect(db).execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 2
     # a second init refuses to clobber the file unless told to
     code, sink = run_cli("init", "--dir", tmp_path / "inst")
     assert code == 2 and "--force" in sink.text
@@ -283,7 +283,7 @@ def test_doctor_exit_codes_sections_and_local_checks(tmp_path, monkeypatch):
     detail = json.loads(sink.text)
     assert code == 0 and detail["items"] == [] and "token file" in detail["details"][0] and TOKEN not in sink.text
     code, sink = run_cli("doctor", "storage")
-    assert code == 0 and any("schema version: 1" in line for line in sink.lines)
+    assert code == 0 and any("schema version: 2" in line for line in sink.lines)
     # the token file disappears: a failure with the same words as the Admin screen would use
     config = yaml.safe_load(cfg.read_text(encoding="utf-8"))
     Path(config["telegram"]["bot_token_file"]).unlink()

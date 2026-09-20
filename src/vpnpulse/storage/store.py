@@ -140,20 +140,20 @@ class SqliteStore:
             self.db.execute("UPDATE web_sessions SET revoked_at = ? WHERE id_hash = ? AND revoked_at IS NULL", (_iso(now or self.now()), _sha(token)))
 
     # ---------- enrollment codes ----------
-    def create_enrollment(self, kind: str, capabilities: list[str], created_by: str, now: datetime | None = None) -> tuple[str, datetime]:
+    def create_enrollment(self, kind: str, capabilities: list[str], created_by: str, now: datetime | None = None, via_server_id: str | None = None) -> tuple[str, datetime]:
         now = now or self.now()
         code = secrets.token_urlsafe(24)
         expires = now + self.enrollment_ttl
         with self.db:
             self.db.execute(
-                "INSERT INTO probe_enrollments VALUES (?, ?, ?, ?, NULL, ?, ?)",
-                (_sha(code), kind, json.dumps(capabilities), _iso(expires), _sha(f"{self.pepper}:{created_by}"), _iso(now)),
+                "INSERT INTO probe_enrollments(code_hash, kind, capabilities_json, expires_at, used_at, created_by_hash, created_at, via_server_id) VALUES (?, ?, ?, ?, NULL, ?, ?, ?)",
+                (_sha(code), kind, json.dumps(capabilities), _iso(expires), _sha(f"{self.pepper}:{created_by}"), _iso(now), via_server_id),
             )
         return code, expires
 
     def consume_enrollment(self, code: str, now: datetime | None = None) -> dict | None:
         now = now or self.now()
-        row = self.db.execute("SELECT kind, capabilities_json, expires_at, used_at FROM probe_enrollments WHERE code_hash = ?", (_sha(code),)).fetchone()
+        row = self.db.execute("SELECT kind, capabilities_json, expires_at, used_at, via_server_id FROM probe_enrollments WHERE code_hash = ?", (_sha(code),)).fetchone()
         if row is None or row[3] is not None:
             return None
         expires = _dt(row[2])
@@ -161,17 +161,20 @@ class SqliteStore:
             return None
         with self.db:
             self.db.execute("UPDATE probe_enrollments SET used_at = ? WHERE code_hash = ?", (_iso(now), _sha(code)))
-        return {"kind": row[0], "capabilities": json.loads(row[1])}
+        enrollment = {"kind": row[0], "capabilities": json.loads(row[1])}
+        if row[4] is not None:
+            enrollment["via_server_id"] = row[4]
+        return enrollment
 
     # ---------- probes ----------
-    def register_probe(self, kind: str, capabilities: list[str], agent_version: str, now: datetime | None = None) -> tuple[str, dict]:
+    def register_probe(self, kind: str, capabilities: list[str], agent_version: str, now: datetime | None = None, via_server_id: str | None = None) -> tuple[str, dict]:
         now = now or self.now()
         token = secrets.token_urlsafe(32)
         public_id = f"{kind}-{uuid.uuid4().hex[:12]}"
         with self.db:
             self.db.execute(
-                "INSERT INTO probes VALUES (?, ?, ?, 'active', ?, ?, ?, 1, ?, ?, NULL, NULL)",
-                (public_id, public_id, kind, json.dumps(capabilities), _sha(token), token[:6], agent_version, _iso(now)),
+                "INSERT INTO probes(id, public_id, kind, status, capabilities_json, token_hash, token_prefix, schema_major, agent_version, enrolled_at, last_seen_at, revoked_at, via_server_id) VALUES (?, ?, ?, 'active', ?, ?, ?, 1, ?, ?, NULL, NULL, ?)",
+                (public_id, public_id, kind, json.dumps(capabilities), _sha(token), token[:6], agent_version, _iso(now), via_server_id),
             )
         return token, self.probe_summary(public_id)
 
@@ -183,7 +186,7 @@ class SqliteStore:
 
     def probe_summary(self, public_id: str) -> dict | None:
         row = self.db.execute(
-            "SELECT id, public_id, kind, status, capabilities_json, agent_version, last_seen_at FROM probes WHERE public_id = ?", (public_id,)
+            "SELECT id, public_id, kind, status, capabilities_json, agent_version, last_seen_at, via_server_id FROM probes WHERE public_id = ?", (public_id,)
         ).fetchone()
         if row is None:
             return None
@@ -194,7 +197,7 @@ class SqliteStore:
             "id": row[1], "kind": row[2], "status": row[3], "last_seen_at": _iso(_dt(row[6])),
             "capabilities": json.loads(row[4] or "[]"), "agent_version": row[5],
             "route_verified": bool(report[0]) if report else None, "queued_reports": None,
-            "network_type": report[1] if report else None, "_internal_id": row[0],
+            "network_type": report[1] if report else None, "via_server_id": row[7], "_internal_id": row[0],
         }
 
     def list_probes(self) -> list[dict]:
@@ -213,9 +216,9 @@ class SqliteStore:
             )
         return cursor.rowcount > 0
 
-    def probe_config(self, kind: str) -> dict:
+    def probe_config(self, kind: str, via_server_id: str | None = None) -> dict:
         monitoring = self.config.get("monitoring") or {}
-        targets = [{"id": s["id"], "checks": PROBE_CHECKS.get(kind, [])} for s in self.config.get("servers", []) if s.get("enabled", True)]
+        targets = [{"id": s["id"], "checks": PROBE_CHECKS.get(kind, [])} for s in self.config.get("servers", []) if s.get("enabled", True) and s["id"] != via_server_id]
         return {"schema_version": 1, "interval_seconds": int(monitoring.get("pc_target_interval_seconds", 60)), "targets": targets}
 
     # ---------- reports → observations ----------
@@ -260,6 +263,8 @@ class SqliteStore:
                     "route_verified": bool(network["route_verified"]),
                     "network_type": network["type"],
                 }
+                if probe["kind"] == "abroad":
+                    metrics["via_server_id"] = probe.get("via_server_id")
                 error = next((item.get("error_code") or item.get("not_run_reason") for item in items if item["result"] != "success" and (item.get("error_code") or item.get("not_run_reason"))), None)
                 self.db.execute(
                     "INSERT INTO observations VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",

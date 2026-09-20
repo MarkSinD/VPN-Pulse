@@ -1,0 +1,13 @@
+[Unit]
+Description=VPN Pulse cross-server probe
+After=network-online.target
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/vpn-pulse-probe-abroad
+Environment=VPN_PULSE_PROBE_CONFIG=/etc/vpn-pulse-probe/config
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/vpn-pulse-probe /etc/vpn-pulse-probe
+MemoryMax=64M

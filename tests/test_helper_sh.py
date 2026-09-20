@@ -95,10 +95,25 @@ def test_dump_prints_ages_and_counters_but_never_keys_endpoints_or_ports(tmp_pat
     lines = result.stdout.strip().splitlines()
     assert lines[0] == "listening 1"
     assert [line.split()[0] for line in lines[1:]] == ["peer", "peer", "peer"]
-    assert all(len(line.split()) == 4 for line in lines[1:])
+    assert all(len(line.split()) == 5 and line.endswith(" member") for line in lines[1:])
     for secret in (PRIVATE_KEY, PEER_KEY, PSK, "203.0.113.7", "10.8.1.2", "51820", "SERVERPUBKEY"):
         assert secret not in result.stdout, secret
-    assert lines[2] == "peer 0 0 0"  # never handshaked
+    assert lines[2] == "peer 0 0 0 member"  # never handshaked
+
+
+def test_configured_probe_is_marked_without_exposing_key(tmp_path):
+    bin_dir, env = fake_tools(tmp_path, dump=dump_now())
+    Path(env["VPN_PULSE_HELPER_CONF"]).write_text(f"KIND=awg-host\nIFACE=awg0\nPROBE_PEERS='{PEER_KEY}'\n", encoding="utf-8")
+    result = run_script("vpn-pulse-dump", bin_dir, env)
+    assert result.returncode == 0 and result.stdout.splitlines()[1].endswith(" probe")
+    assert PEER_KEY not in result.stdout
+
+
+def test_helper_excludes_probe_from_member_aggregates(tmp_path):
+    bin_dir, env = fake_tools(tmp_path, dump=dump_now())
+    Path(env["VPN_PULSE_HELPER_CONF"]).write_text(f"KIND=awg-host\nIFACE=awg0\nPROBE_PEERS='{PEER_KEY}'\n", encoding="utf-8")
+    payload = json.loads(run_script("vpn-pulse-helper", bin_dir, env).stdout)
+    assert payload["peers"]["count"] == 2 and len(payload["peers"]["handshake_ages"]) == 2
 
 
 def test_dump_refuses_a_shape_it_does_not_understand(tmp_path):

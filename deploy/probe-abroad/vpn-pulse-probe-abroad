@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""vpn-pulse-probe-abroad — the cross-server ("abroad") probe. Python standard library only.
+
+One run is one round: fetch the target list from the API, and for every target bring up a dedicated
+AmneziaWG interface inside a network namespace that has no default route, ping the target's tunnel
+address, read the handshake age, tear the interface down. Then one ProbeReport goes to the API; when
+the API is unreachable the report waits in a 0600 queue on disk (24 hours, 1500 entries at most).
+
+The interface is created in the main namespace — its UDP socket keeps the host's route to the
+endpoint — and then moved into the namespace, where the only route is the /32 to the target. A torn
+tunnel therefore cannot pass by reaching the target directly: that is what `route_verified` claims.
+Private keys live only in the peer profiles (0600) on this host; the log names servers by id only.
+"""
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.request
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+VERSION = "0.2.0"
+DEFAULT_CONFIG = "/etc/vpn-pulse-probe/config"
+HANDSHAKE_MAX_AGE = 30  # seconds: the handshake must be from this very check
+QUEUE_MAX_AGE = 24 * 3600
+QUEUE_MAX_ENTRIES = 1500
+STEP_TIMEOUT = 5  # seconds per ip/awg command
+PING_TIMEOUT = 10
+
+
+# ---------- configuration ----------
+def read_config(path: str) -> dict:
+    values = {"NETNS": "vpprobe", "IFACE": "vpprobe0", "PEERS_DIR": "/etc/vpn-pulse-probe/peers", "STATE_DIR": "/var/lib/vpn-pulse-probe"}
+    for raw in Path(path).read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise ValueError("invalid config line")
+        key, value = line.split("=", 1)
+        values[key.strip()] = value.strip()
+    for required in ("API_URL", "TOKEN_FILE", "TARGETS"):
+        if not values.get(required):
+            raise ValueError(f"{required} is required")
+    return values
+
+
+def parse_targets(value: str) -> dict:
+    """`id=tunnel-address,id=tunnel-address` → {id: address}."""
+    targets = {}
+    for item in value.split(","):
+        if item.strip():
+            name, address = item.split("=", 1)
+            targets[name.strip()] = address.strip()
+    return targets
+
+
+def local_address(profile: str) -> str:
+    for line in profile.splitlines():
+        key, _, value = line.partition("=")
+        if key.strip().lower() == "address":
+            return value.strip().split(",")[0]
+    return ""
+
+
+# ---------- one check ----------
+def check_target(config: dict, target: str, address: str, runner=subprocess.run, clock=time.time) -> dict:
+    """Bring the tunnel up, ping through it, read the handshake, tear it down. Returns one ProbeReport result."""
+    netns, iface = config["NETNS"], config["IFACE"]
+    inside = ["ip", "netns", "exec", netns]
+    started = time.monotonic()
+    error = "TUNNEL_SETUP_FAILED"
+    success = False
+
+    def run(command, **kwargs):
+        return runner(command, capture_output=True, text=True, timeout=kwargs.pop("timeout", STEP_TIMEOUT), check=False, **kwargs)
+
+    def teardown():
+        for command in (inside + ["ip", "link", "delete", iface], ["ip", "link", "delete", iface]):
+            try:
+                run(command)  # one of the two fails harmlessly: the interface is in one namespace only
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+
+    try:
+        profile_path = Path(config["PEERS_DIR"]) / f"{target}.conf"
+        local = local_address(profile_path.read_text(encoding="utf-8"))
+        teardown()  # a crashed previous run may have left the interface behind
+        stripped = run(["awg-quick", "strip", str(profile_path)])  # the peer section and the AWG parameters, without Address
+        steps = [
+            (["ip", "link", "add", iface, "type", "amneziawg"], {}),
+            (["awg", "setconf", iface, "/dev/stdin"], {"input": stripped.stdout}),
+            (["ip", "link", "set", iface, "netns", netns], {}),
+            (inside + ["ip", "address", "add", local, "dev", iface], {}),
+            (inside + ["ip", "link", "set", "up", "dev", iface], {}),
+            (inside + ["ip", "route", "add", address + "/32", "dev", iface], {}),
+        ]
+        ok = stripped.returncode == 0 and bool(local)
+        for command, extra in steps:
+            if not ok:
+                break
+            ok = run(command, **extra).returncode == 0
+        if ok:
+            ping = run(inside + ["ping", "-c", "2", "-W", "3", address], timeout=PING_TIMEOUT)
+            shown = run(inside + ["awg", "show", iface, "latest-handshakes"])
+            now = clock()
+            epochs = [int(line.split()[-1]) for line in shown.stdout.splitlines() if line.split() and line.split()[-1].isdigit()]
+            fresh = any(epoch > 0 and 0 <= now - epoch <= HANDSHAKE_MAX_AGE for epoch in epochs)
+            if not fresh:
+                error = "HANDSHAKE_FAILED"
+            elif ping.returncode != 0:
+                error = "PING_FAILED"
+            else:
+                success = True
+    except (OSError, subprocess.TimeoutExpired):
+        error = "CHECK_TIMEOUT"
+    finally:
+        teardown()
+    result = {"target_id": target, "check": "handshake", "result": "success" if success else "failure", "duration_ms": int((time.monotonic() - started) * 1000)}
+    if not success:
+        result["error_code"] = error
+    return result
+
+
+# ---------- the API ----------
+def request_json(url: str, *, token: str | None = None, payload: dict | None = None, timeout: int = 15) -> dict:
+    data = None if payload is None else json.dumps(payload, separators=(",", ":")).encode()
+    headers = {"Accept": "application/json", "User-Agent": f"vpn-pulse-probe-abroad/{VERSION}"}
+    if data is not None:
+        headers["Content-Type"] = "application/json"
+    if token:
+        headers["Authorization"] = "Bearer " + token
+    with urllib.request.urlopen(urllib.request.Request(url, data=data, headers=headers), timeout=timeout) as response:
+        return json.loads(response.read().decode())
+
+
+def queue_path(config: dict) -> Path:
+    return Path(config["STATE_DIR"]) / "queue.jsonl"
+
+
+def load_queue(config: dict, clock=time.time) -> list:
+    path = queue_path(config)
+    if not path.exists():
+        return []
+    cutoff = clock() - QUEUE_MAX_AGE
+    rows = []
+    for line in path.read_text(encoding="utf-8").splitlines()[-QUEUE_MAX_ENTRIES:]:
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(row, dict) and row.get("queued_at", 0) >= cutoff:
+            rows.append(row)
+    return rows
+
+
+def save_queue(config: dict, rows: list) -> None:
+    path = queue_path(config)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("".join(json.dumps(row, separators=(",", ":")) + "\n" for row in rows[-QUEUE_MAX_ENTRIES:]), encoding="utf-8")
+    os.chmod(path, 0o600)
+
+
+def tick(config: dict, runner=subprocess.run, clock=time.time) -> int:
+    token = Path(config["TOKEN_FILE"]).read_text(encoding="utf-8").strip()
+    base = config["API_URL"].rstrip("/")
+    allowed = {item["id"] for item in request_json(base + "/api/v1/probe/config", token=token)["targets"]}
+    results = [check_target(config, target, address, runner, clock) for target, address in parse_targets(config["TARGETS"]).items() if target in allowed]
+    if not results:
+        print("no targets", file=sys.stderr)
+        return 1
+    report = {
+        "report_id": str(uuid.uuid4()), "schema_version": 1, "agent_version": VERSION,
+        "observed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "network": {"type": "abroad", "ip_family": "ipv4", "route_verified": True}, "results": results,
+    }
+    # oldest first; whatever cannot be sent now stays queued (sent rows are dropped, so nothing is repeated)
+    pending = load_queue(config, clock) + [{"queued_at": clock(), "report": report}]
+    while pending:
+        try:
+            request_json(base + "/api/v1/probe/reports", token=token, payload=pending[0]["report"])
+        except (OSError, ValueError, KeyError):
+            save_queue(config, pending)
+            print(" ".join(f"{r['target_id']}={r['result']}" for r in results) + f" (queued {len(pending)})")
+            return 1
+        pending.pop(0)
+    save_queue(config, [])
+    print(" ".join(f"{r['target_id']}={r['result']}" for r in results))
+    return 0
+
+
+def enroll(config: dict, code: str) -> None:
+    answer = request_json(config["API_URL"].rstrip("/") + "/api/v1/probe/enroll", payload={"code": code, "agent_version": VERSION, "schema_version": 1})
+    path = Path(config["TOKEN_FILE"])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(answer["token"] + "\n", encoding="utf-8")
+    os.chmod(path, 0o600)
+    print("enrolled")
+
+
+def main() -> int:
+    try:
+        config = read_config(os.environ.get("VPN_PULSE_PROBE_CONFIG", DEFAULT_CONFIG))
+        if len(sys.argv) == 3 and sys.argv[1] == "enroll":
+            enroll(config, sys.argv[2])
+            return 0
+        if len(sys.argv) != 1:
+            raise ValueError("usage: vpn-pulse-probe-abroad [enroll CODE]")
+        return tick(config)
+    except Exception as error:  # noqa: BLE001 - the type is the whole diagnosis; nothing secret is printed
+        print("probe failed: " + type(error).__name__, file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

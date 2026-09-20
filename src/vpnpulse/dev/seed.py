@@ -194,7 +194,7 @@ def seed_scenario(connection: sqlite3.Connection, catalog: ScenarioCatalog, scen
                 continue
             last_seen = now - timedelta(minutes=p["lastMin"]) if p.get("lastMin") is not None else None
             status = "stopped" if p.get("session") == "stopped" else "active"
-            connection.execute("INSERT INTO probes VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, NULL)",
+            connection.execute("INSERT INTO probes(id, public_id, kind, status, capabilities_json, token_hash, token_prefix, schema_major, agent_version, enrolled_at, last_seen_at, revoked_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, NULL)",
                                (f"probe-{kind}", f"probe-{kind}", kind, status, json.dumps({"pc": ["control_internet", "handshake", "https"], "android": ["dns", "tcp"], "abroad": ["handshake"]}.get(kind, [])), b"seed", "seed", p.get("version") or "0.1", _iso(now - timedelta(days=7)), _iso(last_seen) if last_seen else None))
             if last_seen is not None:
                 connection.execute("INSERT INTO probe_reports VALUES (?, ?, 1, ?, ?, ?, ?, 'ipv4', ?, ?, 'ok', NULL)",

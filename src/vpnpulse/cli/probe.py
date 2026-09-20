@@ -12,7 +12,7 @@ from vpnpulse.cli.common import CliError, Output, config_path_of, confirm, load_
 
 KINDS = ("pc", "android", "abroad", "watchdog")
 CAPABILITY = {"pc": ["report_pc"], "android": ["report_mobile"], "abroad": ["report_abroad"], "watchdog": ["read_watchdog"]}
-GUIDE = {"pc": "docs/probes/pc.md", "android": "docs/probes/android.md", "abroad": "docs/connect-server.md", "watchdog": "docs/operations/doctor.md"}
+GUIDE = {"pc": "docs/probes/pc.md", "android": "docs/probes/android.md", "abroad": "docs/probes/abroad.md", "watchdog": "docs/operations/doctor.md"}
 
 
 def add_parser(commands, parents) -> None:
@@ -20,6 +20,7 @@ def add_parser(commands, parents) -> None:
     sub = probe.add_subparsers(dest="action", required=True)
     enroll = sub.add_parser("enroll", parents=parents, help="print a single-use enrollment code")
     enroll.add_argument("kind", choices=KINDS)
+    enroll.add_argument("--via", metavar="SERVER_ID", help="server that hosts an abroad probe")
     enroll.add_argument("--minutes", type=int, default=10, help="how long the code stays valid (default 10)")
     enroll.set_defaults(handler=command_enroll)
     ls = sub.add_parser("list", parents=parents, help="enrolled probes and their last reports")
@@ -41,8 +42,14 @@ def command_enroll(args: argparse.Namespace, out: Output) -> int:
     if args.minutes < 1 or args.minutes > 60:
         raise CliError("--minutes must be between 1 and 60")
     config, connection = _open(args)
+    if args.via and args.kind != "abroad":
+        raise CliError("--via is only valid for an abroad probe")
+    if args.kind == "abroad" and not args.via:
+        raise CliError("an abroad probe requires --via SERVER_ID")
+    if args.via and args.via not in {s["id"] for s in config.get("servers", []) if s.get("enabled", True)}:
+        raise CliError(f"server {args.via} not found")
     store = make_store(connection, config, enrollment_minutes=args.minutes)
-    code, expires = store.create_enrollment(args.kind, CAPABILITY[args.kind], "cli")
+    code, expires = store.create_enrollment(args.kind, CAPABILITY[args.kind], "cli", via_server_id=args.via)
     store.audit(actor="cli", role="admin", action="probe.enroll_code", target_type="probe", target_id=args.kind, details={"minutes": args.minutes})
     out.line(f"Enrollment code for the {args.kind} probe (single use, valid until {expires.strftime('%H:%M UTC')}):")
     out.line("")

@@ -13,7 +13,7 @@ set -u
 CONF="${VPN_PULSE_HELPER_CONF:-/etc/vpn-pulse-helper/config}"
 DUMP="${VPN_PULSE_DUMP:-/usr/local/bin/vpn-pulse-dump}"
 PROC="${VPN_PULSE_PROC:-/proc}"
-KIND=""; IFACE="awg0"; CONTAINER=""; DOMAIN=""
+KIND=""; IFACE="awg0"; CONTAINER=""; DOMAIN=""; PROBE_PEERS=""
 # shellcheck disable=SC1090
 [ -r "$CONF" ] && . "$CONF"
 errors=""
@@ -26,10 +26,11 @@ now=$(date +%s)
 listening=""; ages=""; peers=0; rx=0; tx=0; engine_ok=false
 if [ -n "$KIND" ] && dump=$(sudo -n "$DUMP" 2>/dev/null); then
   engine_ok=true
-  while read -r kind a b c; do
+  while read -r kind a b c role; do
     case "$kind" in
       listening) listening="$a" ;;
       peer)
+        [ "${role:-member}" = "probe" ] && continue
         peers=$((peers + 1)); rx=$((rx + b)); tx=$((tx + c))
         if [ "$a" -gt 0 ] 2>/dev/null; then age=$((now - a)); [ "$age" -lt 0 ] && age=0; else age=-1; fi
         ages="$ages${ages:+,}$age" ;;

@@ -51,6 +51,47 @@ def process(path: Path, clock: Clock) -> TestClient:
     return TestClient(app, base_url="https://testserver")
 
 
+def test_abroad_enrollment_keeps_via_and_excludes_self(tmp_path):
+    connection = new_database(tmp_path / "db.sqlite3")
+    store = SqliteStore(connection, analytics_schema=ANALYTICS_SCHEMA, config=CONFIG, now=lambda: NOW)
+    code, _ = store.create_enrollment("abroad", ["report_abroad"], "cli", via_server_id="s1")
+    enrollment = store.consume_enrollment(code)
+    token, summary = store.register_probe(enrollment["kind"], enrollment["capabilities"], "0.1", via_server_id=enrollment["via_server_id"])
+    assert token and summary["via_server_id"] == "s1" and store.probe_config("abroad", "s1")["targets"] == []
+
+
+def test_abroad_observation_exposes_via_server(tmp_path):
+    connection = new_database(tmp_path / "db.sqlite3")
+    store = SqliteStore(connection, analytics_schema=ANALYTICS_SCHEMA, config=CONFIG, now=lambda: NOW)
+    _, probe = store.register_probe("abroad", ["report_abroad"], "0.1", via_server_id="remote")
+    report = {"report_id":str(uuid4()),"schema_version":1,"agent_version":"0.1","observed_at":NOW.isoformat(),"network":{"type":"abroad","ip_family":"ipv4","route_verified":True},"results":[{"target_id":"s1","check":"handshake","result":"success","duration_ms":12}]}
+    assert store.accept_report(probe, report) == (False, 1)
+    checks = SqliteReadModel(connection, CONFIG, now=lambda: NOW).server("s1", "member")["checks"]
+    assert next(x for x in checks if x["source"] == "abroad")["via_server_id"] == "remote"
+
+
+def test_non_abroad_probe_has_no_via(tmp_path):
+    connection = new_database(tmp_path / "db.sqlite3")
+    store = SqliteStore(connection, analytics_schema=ANALYTICS_SCHEMA, config=CONFIG)
+    _, probe = store.register_probe("pc", ["report_pc"], "0.1")
+    assert probe["via_server_id"] is None and len(store.probe_config("pc")["targets"]) == 1
+
+
+def test_enrollment_via_survives_reopen(tmp_path):
+    path = tmp_path / "db.sqlite3"; connection = new_database(path)
+    store = SqliteStore(connection, analytics_schema=ANALYTICS_SCHEMA, config=CONFIG)
+    code, _ = store.create_enrollment("abroad", ["report_abroad"], "cli", via_server_id="s1")
+    connection.close(); reopened = connect(path)
+    assert SqliteStore(reopened, analytics_schema=ANALYTICS_SCHEMA, config=CONFIG).consume_enrollment(code)["via_server_id"] == "s1"
+
+
+def test_probe_config_excludes_only_via_server(tmp_path):
+    config = {**CONFIG, "servers": [*CONFIG["servers"], {**CONFIG["servers"][0], "id":"s2"}]}
+    connection = connect(tmp_path / "db.sqlite3"); apply_migrations(connection, ROOT / "migrations")
+    store = SqliteStore(connection, analytics_schema=ANALYTICS_SCHEMA, config=config)
+    assert [x["id"] for x in store.probe_config("abroad", "s1")["targets"]] == ["s2"]
+
+
 def login(client: TestClient, user_id: int, at: datetime) -> str:
     response = client.post("/api/v1/sessions", json={"init_data": init_data(user_id, at=at)})
     assert response.status_code == 204, response.text
@@ -159,7 +200,7 @@ def test_revoked_probe_loses_access_everywhere(tmp_path):
     clock = Clock(NOW)
     admin = process(tmp_path / "db.sqlite3", clock)
     login(admin, 2, NOW)
-    code = admin.post("/api/v1/admin/probe-enrollments", json={"kind": "abroad", "capabilities": ["report_abroad"]}).json()["code"]
+    code = admin.post("/api/v1/admin/probe-enrollments", json={"kind": "pc", "capabilities": ["report_pc"]}).json()["code"]
     joined = admin.post("/api/v1/probe/enroll", json={"code": code, "agent_version": "0.1.0", "schema_version": 1}).json()
     headers = {"Authorization": f"Bearer {joined['token']}"}
     assert admin.get("/api/v1/probe/config", headers=headers).status_code == 200

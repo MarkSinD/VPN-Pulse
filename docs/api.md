@@ -1,7 +1,7 @@
 # API
 
 The contract is [`contracts/openapi.yaml`](../contracts/openapi.yaml) (OpenAPI 3.1, version
-1.4.1). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
+1.5.0). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
 Problem Details with a stable `code` and a `trace_id`.
 
 ## Authentication

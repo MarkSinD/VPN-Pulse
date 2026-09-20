@@ -8,6 +8,10 @@ release is cut.
 
 ### Added
 
+- Cross-server probe (`deploy/probe-abroad/`): isolated AmneziaWG handshake checks, disk queue,
+  systemd timer, `probe enroll abroad --via`, source-server attribution, and exclusion of marked
+  test peers from member activity and connection totals.
+
 - `vpn-pulse backup` creates a complete integrity-manifested archive using SQLite online backup;
   `vpn-pulse restore` verifies and restores it in place or into an isolated rehearsal directory.
 - `deploy/watchdog/`: a hardened, independent systemd timer that checks readiness from another host
@@ -136,6 +140,10 @@ release is cut.
 
 ### Changed
 
+- Contract 1.5.0: the probe summary (`/admin/probes`) carries `via_server_id` — the server that hosts an
+  `abroad` probe; `vpn-pulse probe enroll abroad` requires `--via SERVER_ID`, and such a probe never
+  receives its own server as a target. The collector helper reports peers listed in `PROBE_PEERS` as
+  `probe`, and they count nowhere.
 - Language: the Mini App opens in the installation's `app.default_language` (the served page carries
   it in `<html lang>`) and the bot answers `/start` in it; the phone's or Telegram's language setting
   is no longer consulted. The switch in the header still remembers a visitor's own choice on the device.

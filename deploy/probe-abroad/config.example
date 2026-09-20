@@ -1,0 +1,8 @@
+API_URL=https://monitor.example.org
+TOKEN_FILE=/etc/vpn-pulse-probe/token
+NETNS=vpprobe
+IFACE=vpprobe0
+PEERS_DIR=/etc/vpn-pulse-probe/peers
+STATE_DIR=/var/lib/vpn-pulse-probe
+# server id (from config.yaml) = that server's tunnel address, comma-separated
+TARGETS=primary=192.0.2.1,backup=198.51.100.1

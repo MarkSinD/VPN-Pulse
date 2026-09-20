@@ -294,13 +294,15 @@ def create_app(
         enrollment = store.consume_enrollment(payload.code, now())
         if enrollment is None:
             raise HTTPException(status_code=401, detail={"code": "ENROLLMENT_INVALID"})
-        token, probe = store.register_probe(enrollment["kind"], enrollment["capabilities"], payload.agent_version, now())
-        return {"token": token, "probe": public_probe(probe), "config": store.probe_config(probe["kind"])}
+        if enrollment["kind"] == "abroad" and not enrollment.get("via_server_id"):
+            raise HTTPException(status_code=400, detail={"code": "ABROAD_VIA_REQUIRED"})
+        token, probe = store.register_probe(enrollment["kind"], enrollment["capabilities"], payload.agent_version, now(), enrollment.get("via_server_id"))
+        return {"token": token, "probe": public_probe(probe), "config": store.probe_config(probe["kind"], probe.get("via_server_id"))}
 
     @app.get("/api/v1/probe/config", response_model=schemas.ProbeConfig)
     def probe_config(authorization: str | None = Header(default=None)):
         probe = require_probe(authorization)
-        return store.probe_config(probe["kind"])
+        return store.probe_config(probe["kind"], probe.get("via_server_id"))
 
     @app.post("/api/v1/probe/reports", status_code=202)
     def probe_report(payload: ProbeReportInput, authorization: str | None = Header(default=None)):

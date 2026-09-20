@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.4.1
+  version: 1.5.0
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -685,6 +685,9 @@ components:
         route_verified: { type: [boolean, "null"], description: last report confirmed the intended network path }
         queued_reports: { type: [integer, "null"], minimum: 0 }
         network_type: { type: [string, "null"], enum: [home, cellular, abroad, unknown, null] }
+        via_server_id:
+          description: server that hosts an abroad probe
+          anyOf: [{ $ref: "#/components/schemas/PublicId" }, { type: "null" }]
     EnrollmentRequest:
       type: object
       additionalProperties: false

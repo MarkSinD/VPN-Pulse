@@ -9,6 +9,7 @@ seconds, backed by evidence rather than by the servers' own opinion:
 - 💻 **Computer probe** — a real VPN handshake plus HTTPS through the tunnel, from inside the
   country where your users are.
 - 📶 **Mobile probe** — DNS and reachability from a phone on the mobile network, outside the VPN.
+- 🌍 **Cross-server probe** — a real AmneziaWG handshake from another server in an isolated network namespace.
 - 🌍 **Cross-check from abroad** — your servers check each other, so "blocked in the country"
   and "the server is down" stop looking the same.
 
@@ -34,7 +35,7 @@ green 100%. Members never see IPs, domains, ports or the hosting provider.
 | Installer: `./install.sh demo` (fictional data, no root, no Telegram), `sudo ./install.sh install` (system user, per-release venv, config + secrets, systemd units, Caddy snippet, doctor), `upgrade` with backup and auto-rollback, `rollback`, `uninstall` keeping data; checked end to end on a clean Ubuntu 24.04 (`scripts/install_check.sh`) | working |
 | Gate A — the whole local chain in one test: scripted world → loop → SQLite → API → Mini App in a browser → Telegram Bot API on a fake transport (`tests/test_e2e_gate_a.py`); the Mini App sends its allowlisted analytics | green |
 | Real servers: `vpn-pulse collector keygen | pin | test` + `deploy/helper/` — a `vpnpulse` user with one forced command, key-free aggregate output (handshake ages, counters, system facts), pinned host keys, `SshCollector` in the loop; `awg-host` and `awg-docker` | working (`hiddify` planned) |
-| Telegram bot in a real group, PC / Android / cross-server probes | **planned** |
+| Telegram bot and independent cross-server probe | working; PC / Android probes are planned |
 
 You can install it on a server today and watch fictional data move (`--demo-data`), or connect
 your AmneziaWG servers through the read-only helper ([docs/connect-server.md](docs/connect-server.md));
@@ -81,7 +82,7 @@ install, …), role, theme and language. The same scenarios are served by the AP
 - [Quick start](docs/quickstart.md) · [Быстрый старт](docs/quickstart.ru.md)
 - [Concepts](docs/concepts.md) — states, freshness, sources, recommendation
 - [Configuration](docs/configuration.md) · [Конфигурация](docs/configuration.ru.md)
-- [Connect a server](docs/connect-server.md) · [PC probe](docs/probes/pc.md) · [Android probe](docs/probes/android.md)
+- [Connect a server](docs/connect-server.md) · [PC probe](docs/probes/pc.md) · [Android probe](docs/probes/android.md) · [cross-server probe](docs/probes/abroad.md)
 - [User guide](docs/user-guide/status-and-recommendations.md) · [Admin actions](docs/user-guide/admin-actions.md)
 - [Architecture](docs/architecture.md) · [API](docs/api.md) · [Privacy](docs/privacy.md) · [Compatibility](docs/compatibility.md)
 - [Operations](docs/operations/doctor.md) · [Backup and restore](docs/operations/backup-restore.md) · [Independent watchdog](docs/operations/watchdog.md) · [Troubleshooting](docs/troubleshooting.md)
