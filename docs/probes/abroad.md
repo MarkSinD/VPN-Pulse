@@ -58,8 +58,8 @@ servers too, so one engine can serve every target.
    `sudo vpn-pulse-probe-abroad enroll <code>` stores the token (0600). The `--via` server is the one
    the app shows as "checked from"; the probe never receives itself as a target.
 4. `sudo systemctl start vpn-pulse-probe-abroad.timer`; `journalctl -u vpn-pulse-probe-abroad -n 5`
-   prints one line per round, e.g. `backup=success primary=success`. The namespace is recreated by the
-   unit when it is missing (it does not survive a reboot).
+   prints one line per round, e.g. `backup=success primary=success`. The namespace is owned by
+   `vpn-pulse-probe-netns.service` (unsandboxed, pulled in by the probe), which recreates it after a reboot.
 
 Reports wait in a 0600 JSONL queue (`/var/lib/vpn-pulse-probe/queue.jsonl`, 24 hours, 1500 entries)
 while the API is unreachable and go out oldest first.

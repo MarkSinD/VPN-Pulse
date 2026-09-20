@@ -1,0 +1,9 @@
+[Unit]
+Description=Network namespace for the VPN Pulse cross-server probe
+# The namespace does not survive a reboot, and a sandboxed unit cannot create one (/run is read-only
+# there and the mount would die with the process), so this unsandboxed oneshot owns it.
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'ip netns exec vpprobe true 2>/dev/null || { ip netns delete vpprobe 2>/dev/null; ip netns add vpprobe; }'

@@ -1,13 +1,12 @@
 [Unit]
 Description=VPN Pulse cross-server probe
-After=network-online.target
+After=network-online.target vpn-pulse-probe-netns.service
 Wants=network-online.target
+Requires=vpn-pulse-probe-netns.service
 
 [Service]
 Type=oneshot
 User=root
-# the namespace does not survive a reboot: recreate it when it is missing ('+': outside the sandbox, /run is read-only inside)
-ExecStartPre=+/bin/sh -c 'test -e /run/netns/vpprobe || ip netns add vpprobe'
 ExecStart=/usr/local/bin/vpn-pulse-probe-abroad
 Environment=VPN_PULSE_PROBE_CONFIG=/etc/vpn-pulse-probe/config
 PrivateTmp=true
