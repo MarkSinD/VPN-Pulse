@@ -1,0 +1,14 @@
+#cloud-config
+users:
+  - name: probe
+    groups: [adm, sudo]
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-ed25519 REPLACE_WITH_PUBLIC_KEY vpn-pulse-probe
+package_update: true
+packages: [bash, curl, iproute2, iputils-ping, musl, openssh-server]
+ssh_pwauth: false
+disable_root: true
+# REPLACE_WITH_NETWORK_SETUP
