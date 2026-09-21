@@ -128,7 +128,8 @@ def create_app(
         sync_servers(store.db, config, now())  # rows that notes, reports and observations reference
     app = FastAPI(title="VPN Pulse API", version="1.5.1")
     limiter = RateLimiter(now)
-    limited = {"/api/v1/sessions": 20, "/api/v1/probe/enroll": 20,
+    # sessions: members behind one carrier NAT open the app together during an outage — 60, not 20
+    limited = {"/api/v1/sessions": 60, "/api/v1/probe/enroll": 20,
                "/api/v1/probe/reports": 120, "/api/v1/analytics/events:batch": 60}
 
     def raw_problem(request: Request, status: int, code: str, headers: dict | None = None):

@@ -86,7 +86,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Lock file is current
-        run: pip install uv && uv pip compile pyproject.toml --generate-hashes --no-emit-index-url --output-file /tmp/requirements.lock && sed -i 's#/tmp/requirements.lock#requirements.lock#' /tmp/requirements.lock && diff -u requirements.lock /tmp/requirements.lock
+        # the lock is a constraint of itself: the check fails when pyproject.toml changed, not when PyPI has newer releases
+        run: pip install uv && uv pip compile pyproject.toml --constraint requirements.lock --generate-hashes --no-emit-index-url --output-file /tmp/requirements.lock && diff -u <(grep -v '^ *#' requirements.lock) <(grep -v '^ *#' /tmp/requirements.lock)
+        shell: bash
       - name: Audit locked runtime dependencies
         run: pip install pip-audit && pip-audit -r requirements.lock
       - name: Generate CycloneDX SBOM

@@ -284,7 +284,7 @@ def test_same_site_origin_reaches_handler():
 
 def test_session_rate_limit_returns_retry_after():
     api = client()
-    for _ in range(20):
+    for _ in range(60):  # a carrier NAT address may stand for many members
         assert api.post("/api/v1/sessions", json={"init_data": "bad"}).status_code == 401
     limited = api.post("/api/v1/sessions", json={"init_data": "bad"})
     assert limited.status_code == 429
@@ -296,7 +296,7 @@ def test_rate_limit_refills_after_window():
     app = create_app(bot_token=BOT_TOKEN, membership=Membership(), status_provider=status_fixture,
                      analytics_schema=ANALYTICS_SCHEMA, now=lambda: moment[0])
     api = TestClient(app, base_url="https://testserver")
-    for _ in range(21):
+    for _ in range(61):
         response = api.post("/api/v1/sessions", json={"init_data": "bad"})
     assert response.status_code == 429
     moment[0] += timedelta(seconds=61)
