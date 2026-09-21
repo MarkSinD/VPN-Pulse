@@ -3,6 +3,25 @@
 > **Status: planned.** Design complete; the agent is not implemented yet. The enrollment side
 > exists: `vpn-pulse probe enroll pc` and `POST /api/v1/probe/enroll`.
 
+## Reference setup: Hyper-V VM
+
+The experimental `deploy/pc-probe/new-probe-vm.ps1` provisions an Ubuntu 24.04 Generation 2 VM from Canonical's Azure
+VHD on an **existing** Hyper-V switch. It uses 1 GiB RAM, one vCPU, an SSH-key-only `probe` account,
+a NoCloud seed disk, automatic start and saved-state shutdown. An optional existing management
+switch adds a second adapter for SSH with a higher DHCP route metric than the external adapter. The script deliberately does not
+create or replace a virtual switch because external-switch creation can briefly disconnect Windows.
+
+With an external switch, verify the guest receives a DHCP address from the LAN and its public exit
+remains the home exit while the Windows host VPN is connected. Some Wi-Fi drivers cannot bridge a
+guest correctly. In that case use wired Ethernet, or explicitly test a NAT switch: NAT is acceptable
+only when its traffic is excluded from the host VPN and the route check proves the home exit.
+
+`deploy/pc-probe/pc-check.sh` is the manual spike check. It creates a fresh namespace for one target,
+starts a matching userspace AmneziaWG engine, installs a tunnel-only default route, checks control
+Internet outside the namespace, then verifies a recent handshake, HTTPS 204 and the expected exit
+inside it. It tears the namespace down after every run. Private profiles, keys, endpoints and expected
+addresses never belong in the public repository.
+
 The PC probe is the only source that proves a **full VPN connection** works from inside the
 users' country: a real handshake to each server plus a small HTTPS request through the tunnel,
 once a minute per target.

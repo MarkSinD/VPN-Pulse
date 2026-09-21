@@ -14,6 +14,8 @@ release is cut.
 
 ### Added
 
+- Hyper-V PC-probe reference provisioning and a manual isolated-route checker for the Windows spike.
+
 - Cross-server probe (`deploy/probe-abroad/`): isolated AmneziaWG handshake checks, disk queue,
   systemd timer, `probe enroll abroad --via`, source-server attribution, and exclusion of marked
   test peers from member activity and connection totals; probes may be installed on every server
