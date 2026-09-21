@@ -12,6 +12,8 @@ import yaml
 
 from vpnpulse.cli import main
 from vpnpulse.cli.common import Output
+from vpnpulse.cli.doctor import https_check
+from vpnpulse.i18n import Translator
 from vpnpulse.config import load_config
 from vpnpulse.dev.scenarios import FixtureReadModel, ScenarioCatalog
 from vpnpulse.dev.seed import config_for, seed_scenario
@@ -302,3 +304,48 @@ def test_doctor_reports_an_invalid_config_without_a_traceback(tmp_path):
     assert code == 2 and "config invalid" in sink.text and "Traceback" not in sink.text
     code, sink = run_cli("doctor", "--config", tmp_path / "missing.yaml")
     assert code == 2 and "not found" in sink.text
+
+
+def test_doctor_https_requires_an_https_public_url():
+    item, details = https_check({"app": {"public_url": "http://monitor.example"}}, Translator(), "en")
+    assert item["state"] == "fail" and item["check"] == "https"
+    assert "https URL" in details[0]
+
+
+def test_doctor_https_reports_dns_failure(monkeypatch):
+    def failed(*args, **kwargs): raise OSError("not resolved")
+    monkeypatch.setattr("vpnpulse.cli.doctor.socket.getaddrinfo", failed)
+    item, details = https_check({"app": {"public_url": "https://monitor.example/app/"}}, Translator(), "en")
+    assert item["state"] == "fail" and "does not resolve" in details[0]
+
+
+def test_doctor_https_validates_hostname_and_certificate_expiry(monkeypatch):
+    class Context:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+    class TLS(Context):
+        def getpeercert(self): return {"notAfter": "Dec 31 23:59:59 2099 GMT"}
+    class SSLContext:
+        def wrap_socket(self, raw, server_hostname):
+            assert server_hostname == "monitor.example"; return TLS()
+    monkeypatch.setattr("vpnpulse.cli.doctor.socket.getaddrinfo", lambda *a, **k: [(2, 1, 6, "", ("192.0.2.1", 443))])
+    monkeypatch.setattr("vpnpulse.cli.doctor.socket.create_connection", lambda *a, **k: Context())
+    monkeypatch.setattr("vpnpulse.cli.doctor.ssl.create_default_context", lambda: SSLContext())
+    item, details = https_check({"app": {"public_url": "https://monitor.example/app/"}}, Translator(), "en")
+    assert item is None and details[0].startswith("DNS:") and "hostname valid" in details[1]
+
+
+def test_doctor_https_warns_before_certificate_expiry(monkeypatch):
+    class Context:
+        def __enter__(self): return self
+        def __exit__(self, *args): pass
+    class TLS(Context):
+        def getpeercert(self): return {"notAfter": "Oct 01 00:00:00 2026 GMT"}
+    class SSLContext:
+        def wrap_socket(self, raw, server_hostname): return TLS()
+    monkeypatch.setattr("vpnpulse.cli.doctor.socket.getaddrinfo", lambda *a, **k: [(2, 1, 6, "", ("192.0.2.1", 443))])
+    monkeypatch.setattr("vpnpulse.cli.doctor.socket.create_connection", lambda *a, **k: Context())
+    monkeypatch.setattr("vpnpulse.cli.doctor.ssl.create_default_context", lambda: SSLContext())
+    item, _ = https_check({"app": {"public_url": "https://monitor.example/"}}, Translator(), "en",
+                          datetime(2026, 9, 21, tzinfo=UTC))
+    assert item["state"] == "warn" and "10 days" in item["next"]

@@ -9,11 +9,14 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, UTC
 from pathlib import Path
+import socket
+import ssl
+from urllib.parse import urlparse
 
 from vpnpulse.cli.common import CliError, Output, config_path_of, lang_of, load_public_config, make_read_model, open_database, resolve_db, secret_file_status
 from vpnpulse.i18n import Translator
 
-SECTIONS = ("servers", "probes", "collector", "queue", "storage", "telegram", "collectors")
+SECTIONS = ("servers", "probes", "collector", "queue", "storage", "telegram", "https", "collectors")
 EXIT = {"ok": 0, "warn": 1, "fail": 2}
 
 
@@ -74,6 +77,39 @@ def collectors_checks(config: dict, config_path: Path | None, i18n: Translator, 
     return items
 
 
+def https_check(config: dict, i18n: Translator, lang: str, now: datetime | None = None) -> tuple[dict | None, list[str]]:
+    """Resolve and validate the configured HTTPS endpoint without sending application data."""
+    public_url = (config.get("app") or {}).get("public_url")
+    if not public_url:
+        return None, [i18n.t(lang, "doctor.https.missing")]
+    parsed = urlparse(public_url)
+    if parsed.scheme != "https" or not parsed.hostname:
+        return ({"check": "https", "state": "fail", "next": i18n.t(lang, "doctor.https.invalid"),
+                 "command": "vpn-pulse doctor https"}, ["app.public_url must be an https URL"])
+    host = parsed.hostname
+    try:
+        addresses = sorted({item[4][0] for item in socket.getaddrinfo(host, 443, type=socket.SOCK_STREAM)})
+    except OSError:
+        return ({"check": "https", "state": "fail", "next": i18n.t(lang, "doctor.https.dns"),
+                 "command": "vpn-pulse doctor https"}, [f"DNS: {host} does not resolve"])
+    try:
+        context = ssl.create_default_context()
+        with socket.create_connection((host, 443), timeout=5) as raw:
+            with context.wrap_socket(raw, server_hostname=host) as tls:
+                certificate = tls.getpeercert()
+    except (OSError, ssl.SSLError):
+        return ({"check": "https", "state": "fail", "next": i18n.t(lang, "doctor.https.tls"),
+                 "command": "vpn-pulse doctor https"}, [f"DNS: {host} resolves ({len(addresses)} address(es))", "TLS certificate validation failed"])
+    expiry = datetime.fromtimestamp(ssl.cert_time_to_seconds(certificate["notAfter"]), UTC)
+    days = int((expiry - (now or datetime.now(UTC))).total_seconds() // 86400)
+    details = [f"DNS: {host} resolves ({len(addresses)} address(es))", f"TLS: hostname valid; certificate expires in {days} days"]
+    if days < 0:
+        return ({"check": "https", "state": "fail", "next": i18n.t(lang, "doctor.https.expired"), "command": "vpn-pulse doctor https"}, details)
+    if days < 14:
+        return ({"check": "https", "state": "warn", "next": i18n.t(lang, "doctor.https.expiring", days=days), "command": "vpn-pulse doctor https"}, details)
+    return None, details
+
+
 def local_checks(config: dict, db_path: Path, i18n: Translator, lang: str, config_path: Path | None = None) -> tuple[list[dict], object]:
     """storage, telegram and collectors items; returns (items, connection or None)."""
     items: list[dict] = []
@@ -97,6 +133,9 @@ def local_checks(config: dict, db_path: Path, i18n: Translator, lang: str, confi
             items.append({"check": "telegram", "state": "fail", "next": i18n.t(lang, "doctor.telegram.tokenMissing"), "command": "vpn-pulse doctor telegram"})
         elif status == "permissions":
             items.append({"check": "telegram", "state": "warn", "next": i18n.t(lang, "doctor.telegram.permissions"), "command": f"chmod 600 {telegram['bot_token_file']}"})
+    https_item, _ = https_check(config, i18n, lang)
+    if https_item:
+        items.append(https_item)
     items.extend(collectors_checks(config, config_path, i18n, lang))
     return items, connection
 
@@ -125,7 +164,7 @@ def command_doctor(args: argparse.Namespace, out: Output) -> int:
         summary["result"] = "fail" if any(i["state"] == "fail" for i in summary["items"]) else "warn" if any(i["state"] == "warn" for i in summary["items"]) else "ok"
         findings = [i for i in summary["items"] if i["state"] != "ok"]
         summary["next_command"] = findings[0]["command"] if findings else None
-        summary["details"] = section_details(args.section, config, db_path, connection, config_path)
+        summary["details"] = section_details(args.section, config, db_path, connection, config_path, lang)
     if args.json:
         out.json(summary)
         return EXIT[summary["result"]]
@@ -176,7 +215,7 @@ def collectors_details(config: dict, config_path: Path | None, connection) -> li
     return lines or ["the map has no entries"]
 
 
-def section_details(section: str, config: dict, db_path: Path, connection, config_path: Path | None = None) -> list[str]:
+def section_details(section: str, config: dict, db_path: Path, connection, config_path: Path | None = None, lang: str = "en") -> list[str]:
     now = datetime.now(UTC)
     if section == "collectors":
         return collectors_details(config, config_path, connection)
@@ -197,6 +236,8 @@ def section_details(section: str, config: dict, db_path: Path, connection, confi
             f"token file: {telegram['bot_token_file']} — {secret_file_status(Path(telegram['bot_token_file']))}",
             f"group chat: {telegram['group_chat_id']}; admin chat: {telegram.get('admin_chat_id', 'same as the group')}",
         ]
+    if section == "https":
+        return https_check(config, Translator(), lang, now)[1]
     if connection is None:
         return ["database unavailable"]
     if section == "servers":

@@ -2,8 +2,8 @@
 
 > **Status: `vpn-pulse doctor` and `install.sh` work.** The installer is checked end to end on a
 > clean Ubuntu 24.04 by `scripts/install_check.sh` (fresh install → doctor OK → repeated install
-> unchanged → upgrade → rollback → uninstall keeping data). HTTPS and backup checks of the doctor
-> are still planned.
+> unchanged → upgrade → rollback → uninstall keeping data). The doctor also validates the configured
+> HTTPS domain and certificate; backup age and support bundles remain planned.
 
 ## Two entry points
 
@@ -45,8 +45,9 @@ No system changes were made in this step.
 ```
 
 Success is never signalled by colour alone; every failure carries a safe re-check command. The
-HTTPS step (records and certificate of the Mini App domain, `vpn-pulse doctor https`) is planned
-with the real domain; today the installer writes the Caddy snippet and leaves DNS to you.
+installer writes the Caddy snippet and leaves DNS to you. `vpn-pulse doctor https` resolves the
+hostname from `app.public_url`, performs normal CA and hostname validation, and reports certificate
+expiry. It warns within 14 days and fails for DNS, TLS, hostname or expired-certificate errors.
 
 ## `vpn-pulse doctor`
 
@@ -71,16 +72,16 @@ hints (default: `app.default_language`).
 | `queue` | `notification_queue` | messages pending for more than ten minutes → check the bot |
 | `storage` | the database file | missing → `vpn-pulse init`; cannot be opened → path and permissions |
 | `telegram` | `telegram` block and the token file | not configured (information: messages go to the console — a demo or a fresh installation stays green); token file missing or empty (failure); readable by others (`chmod 600`) |
+| `https` | `app.public_url`, system DNS and TLS trust store | domain resolution; CA and hostname validation; expiry (warning below 14 days) |
 | `collectors` | the collectors map and its files | no map yet (information: probes are the evidence); a server without an entry (warning: `collector keygen`); a key missing or readable by others (failure); host key not pinned (warning: `collector pin`) |
 
 `servers`, `probes`, `collector` and `queue` are computed by the same code that serves
-`GET /admin/overview`, so the terminal and the Mini App never disagree; `storage` and `telegram`
+`GET /admin/overview`, so the terminal and the Mini App never disagree; `storage`, `telegram` and `https`
 look at files the Mini App cannot see. `vpn-pulse doctor <check>` limits the output to one check
 and adds details (per-probe last report, last collection run, queue counts, database size and
 schema version, token-file status — never its contents).
 
-Planned additions: `https` (records and certificate of the Mini App domain, with the installer),
-`backup` (age of the last archive) and `--support-bundle`, a local redacted archive that lists
+Planned additions: `backup` (age of the last archive) and `--support-bundle`, a local redacted archive that lists
 its contents first; nothing is ever uploaded automatically.
 
 In the Mini App the administrator sees the compact doctor summary from `/admin/overview` plus
