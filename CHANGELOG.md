@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1 — 2026-09-21
+
+- Added bounded in-memory rate limits, a 64 KiB write-body cap, same-origin write checks, and report replay conflict detection.
+- Added the T01–T18 security evidence matrix, hashed dependency lock, audit/SBOM CI, and reproducible performance budgets.
+- Fixed the Mini App opening-role analytic and background analytics delivery with `keepalive`.
+
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer once the first
 release is cut.

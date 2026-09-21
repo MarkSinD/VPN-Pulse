@@ -793,12 +793,12 @@ window.VPNPulseApi = function (opts) {
     const qs = p.toString();
     return base + path + (qs ? (path.indexOf('?') === -1 ? '?' : '&') + qs : '');
   }
-  async function call(method, path, params, body) {
+  async function call(method, path, params, body, options) {
     const headers = { 'Accept': 'application/json', 'Accept-Language': opts.lang() };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     let res;
     try {
-      res = await fetch(url(path, params), { method, headers, credentials: 'same-origin', body: body === undefined ? undefined : JSON.stringify(body) });
+      res = await fetch(url(path, params), { method, headers, credentials: 'same-origin', keepalive: !!(options && options.keepalive), body: body === undefined ? undefined : JSON.stringify(body) });
     } catch (e) { throw new ApiError(0, 'NETWORK', String(e && e.message || e)); }
     if (res.status === 204) return null;
     let data = null;
@@ -830,7 +830,7 @@ window.VPNPulseApi = function (opts) {
     putNote: (text, expiresAt) => call('PUT', '/admin/note', null, { text, expires_at: expiresAt || null }),
     deleteNote: () => call('DELETE', '/admin/note'),
     // analytics
-    analytics: events => call('POST', '/analytics/events:batch', null, { events })
+    analytics: (events, keepalive) => call('POST', '/analytics/events:batch', null, { events }, { keepalive })
   };
 };
 
@@ -910,12 +910,12 @@ window.VPNPulseApi = function (opts) {
     if (analytics.timer) clearTimeout(analytics.timer);
     analytics.timer = setTimeout(() => { analytics.timer = null; flushAnalytics(); }, delay);
   }
-  async function flushAnalytics() {
+  async function flushAnalytics(keepalive) {
     if (!api || !S.sessionRole || analytics.inflight || !analytics.queue.length) return;
     const batch = analytics.queue.slice(0, 50);
     analytics.inflight = true;
     let ok = false;
-    try { await api.analytics(batch); analytics.queue.splice(0, batch.length); analytics.sent += batch.length; ok = true; }
+    try { await api.analytics(batch, keepalive); analytics.queue.splice(0, batch.length); analytics.sent += batch.length; ok = true; }
     catch (e) {
       if (e && e.status === 400) { analytics.queue.splice(0, batch.length); ok = true; }   // the batch itself is wrong: drop it
       else if (e && (e.status === 401 || e.status === 403)) { S.sessionRole = null; }        // the session is gone: the next refresh signs in again
@@ -926,7 +926,7 @@ window.VPNPulseApi = function (opts) {
     // drain a long queue right away after a success; after a failure wait 2 s, 4 s, … 60 s at most
     scheduleFlush(ok ? 0 : Math.min(60000, 1000 * Math.pow(2, analytics.failures)));
   }
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAnalytics(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushAnalytics(true); });
 
   // ---------- i18n ----------
   function t(key, params) {
@@ -962,7 +962,7 @@ window.VPNPulseApi = function (opts) {
   }
   async function ensureSession() {
     if (S.sessionRole) return;
-    if (tg && tg.initData) { await api.session(tg.initData); const me = await api.me(); S.role = me.role; }
+    if (tg && tg.initData) { await api.session(tg.initData); const me = await api.me(); S.role = me.role; S.sessionRole = S.role; }
     else {
       // no Telegram around us: the dev server hands out a session; production has no such route (404),
       // which means "open this from Telegram" rather than "the service is down"
@@ -1446,7 +1446,7 @@ window.VPNPulseApi = function (opts) {
   if (S.server) history.pushState({ tab: 'status', server: S.server }, '');
   render(); syncShowcase();
   if (MODE !== 'api') document.body.setAttribute('data-load', 'ready');
-  track('app_opened', { role: S.role, language: S.lang, theme: S.theme, viewport_bucket: window.innerWidth < 480 ? 'phone' : window.innerWidth < 1024 ? 'tablet' : 'desktop' });
+  ensureSession().catch(() => {}).finally(() => track('app_opened', { role: S.role, language: S.lang, theme: S.theme, viewport_bucket: window.innerWidth < 480 ? 'phone' : window.innerWidth < 1024 ? 'tablet' : 'desktop' }));
   if (MODE === 'api') { load().then(() => { if (!SC.loading && SC.api !== 'auth') track('status_ready', { overall_state: SC.overall, freshness_bucket: SC.freshnessMin === null ? 'none' : SC.freshnessMin <= 3 ? 'fresh' : 'stale', load_ms: 0, coverage: SC.coverageMissing ? 'partial' : 'full' }); }); scheduleRefresh(); }
   else if (!SC.loading && SC.api !== 'auth') track('status_ready', { overall_state: SC.overall, freshness_bucket: SC.freshnessMin === null ? 'none' : SC.freshnessMin <= 3 ? 'fresh' : 'stale', load_ms: 0, coverage: SC.coverageMissing ? 'partial' : 'full' });
 })();

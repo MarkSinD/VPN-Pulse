@@ -14,12 +14,12 @@ window.VPNPulseApi = function (opts) {
     const qs = p.toString();
     return base + path + (qs ? (path.indexOf('?') === -1 ? '?' : '&') + qs : '');
   }
-  async function call(method, path, params, body) {
+  async function call(method, path, params, body, options) {
     const headers = { 'Accept': 'application/json', 'Accept-Language': opts.lang() };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     let res;
     try {
-      res = await fetch(url(path, params), { method, headers, credentials: 'same-origin', body: body === undefined ? undefined : JSON.stringify(body) });
+      res = await fetch(url(path, params), { method, headers, credentials: 'same-origin', keepalive: !!(options && options.keepalive), body: body === undefined ? undefined : JSON.stringify(body) });
     } catch (e) { throw new ApiError(0, 'NETWORK', String(e && e.message || e)); }
     if (res.status === 204) return null;
     let data = null;
@@ -51,6 +51,6 @@ window.VPNPulseApi = function (opts) {
     putNote: (text, expiresAt) => call('PUT', '/admin/note', null, { text, expires_at: expiresAt || null }),
     deleteNote: () => call('DELETE', '/admin/note'),
     // analytics
-    analytics: events => call('POST', '/analytics/events:batch', null, { events })
+    analytics: (events, keepalive) => call('POST', '/analytics/events:batch', null, { events }, { keepalive })
   };
 };

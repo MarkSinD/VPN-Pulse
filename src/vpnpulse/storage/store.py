@@ -17,6 +17,7 @@ Secrets never touch the database in clear text; tokens are returned once to the 
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import secrets
 import sqlite3
@@ -237,6 +238,9 @@ class SqliteStore:
                  next((r.get("not_run_reason") for r in results if r.get("not_run_reason")), None)),
             )
             if cursor.rowcount == 0:
+                existing = self.db.execute("SELECT payload_hash FROM probe_reports WHERE report_id = ?", (payload["report_id"],)).fetchone()
+                if existing is not None and not hmac.compare_digest(existing[0], hashlib.sha256(body).digest()):
+                    raise ValueError("report_id already exists with a different payload")
                 return True, 0
             known = {row[0] for row in self.db.execute("SELECT id FROM servers").fetchall()}
             observed_at = _dt(payload["observed_at"]) or now

@@ -76,3 +76,34 @@ jobs:
       - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  supply-chain:
+    name: locked dependencies, audit and SBOM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Lock file is current
+        run: pip install uv && uv pip compile pyproject.toml --generate-hashes --no-emit-index-url --output-file /tmp/requirements.lock && sed -i 's#/tmp/requirements.lock#requirements.lock#' /tmp/requirements.lock && diff -u requirements.lock /tmp/requirements.lock
+      - name: Audit locked runtime dependencies
+        run: pip install pip-audit && pip-audit -r requirements.lock
+      - name: Generate CycloneDX SBOM
+        run: pip install cyclonedx-bom && cyclonedx-py requirements requirements.lock --output-file sbom.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vpn-pulse-sbom
+          path: sbom.json
+
+  perf:
+    name: local performance budgets
+    runs-on: ubuntu-latest
+    continue-on-error: true # Make blocking after 2026-09-28, following one week of baseline data.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: python scripts/perf_check.py

@@ -15,10 +15,11 @@ from uuid import uuid4
 import jsonschema
 from fastapi import Cookie, FastAPI, Header, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from vpnpulse.api import schemas
 from vpnpulse.api.read_model import ReadModel, ReadModelUnavailable, StatusOnlyReadModel, pick_language
+from vpnpulse.api.security import RateLimiter, client_address
 from vpnpulse.auth import AuthenticationError, MembershipChecker, validate_telegram_init_data
 from vpnpulse.storage.database import apply_migrations, connect
 from vpnpulse.storage.store import SqliteStore, sync_servers
@@ -80,6 +81,13 @@ class AdminNoteInput(BaseModel):
     text: str = Field(min_length=1, max_length=500)
     expires_at: datetime | None = None
 
+    @field_validator("text")
+    @classmethod
+    def safe_text(cls, value: str) -> str:
+        if any(ord(char) < 32 and char not in "\n\t" for char in value):
+            raise ValueError("control characters are not allowed")
+        return value
+
 
 def _migrations_dir() -> Path:
     for parent in Path(__file__).resolve().parents:
@@ -101,6 +109,7 @@ def create_app(
     contact_url: str | None = None,
     default_language: str = "ru",
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
+    limits: bool = True,
 ) -> FastAPI:
     """Build the API. Reads: `read_model` (or the legacy status-only `status_provider`); writes: `store`.
 
@@ -117,7 +126,39 @@ def create_app(
         store = SqliteStore(connection, analytics_schema=analytics_schema, config=config, pepper=bot_token, now=now)
     if config and config.get("servers"):
         sync_servers(store.db, config, now())  # rows that notes, reports and observations reference
-    app = FastAPI(title="VPN Pulse API", version="1.4.1")
+    app = FastAPI(title="VPN Pulse API", version="1.5.1")
+    limiter = RateLimiter(now)
+    limited = {"/api/v1/sessions": 20, "/api/v1/probe/enroll": 20,
+               "/api/v1/probe/reports": 120, "/api/v1/analytics/events:batch": 60}
+
+    def raw_problem(request: Request, status: int, code: str, headers: dict | None = None):
+        return JSONResponse(status_code=status, media_type="application/problem+json", headers=headers,
+                            content={"type": f"/problems/{code.lower()}", "title": code.replace("_", " ").title(),
+                                     "status": status, "code": code,
+                                     "trace_id": request.headers.get("x-request-id") or uuid4().hex})
+
+    @app.middleware("http")
+    async def request_guards(request: Request, call_next):
+        if request.method in {"POST", "PUT", "PATCH"}:
+            origin = request.headers.get("origin")
+            expected = f"{request.url.scheme}://{request.headers.get('host')}"
+            if origin and origin.rstrip("/") != expected.rstrip("/"):
+                return raw_problem(request, 403, "ORIGIN_REJECTED")
+            length = request.headers.get("content-length")
+            if length and length.isdigit() and int(length) > 65_536:
+                return raw_problem(request, 413, "BODY_TOO_LARGE")
+            body = await request.body()
+            if len(body) > 65_536:
+                return raw_problem(request, 413, "BODY_TOO_LARGE")
+            async def receive():
+                return {"type": "http.request", "body": body, "more_body": False}
+            request._receive = receive
+        limit = limited.get(request.url.path) if limits and request.method == "POST" else None
+        if limit:
+            allowed, retry = limiter.allow(request.url.path, client_address(request), limit)
+            if not allowed:
+                return raw_problem(request, 429, "RATE_LIMITED", {"Retry-After": str(retry)})
+        return await call_next(request)
 
     @app.exception_handler(ReadModelUnavailable)
     async def read_model_unavailable(request: Request, error: ReadModelUnavailable):
@@ -307,7 +348,10 @@ def create_app(
     @app.post("/api/v1/probe/reports", status_code=202)
     def probe_report(payload: ProbeReportInput, authorization: str | None = Header(default=None)):
         probe = require_probe(authorization)
-        duplicate, _written = store.accept_report(probe, payload.model_dump(mode="json"), now())
+        try:
+            duplicate, _written = store.accept_report(probe, payload.model_dump(mode="json"), now())
+        except ValueError as error:
+            raise HTTPException(status_code=409, detail={"code": "REPORT_ID_CONFLICT"}) from error
         return {"report_id": payload.report_id, "accepted": True, "duplicate": duplicate}
 
     # ---------- analytics ----------
@@ -322,4 +366,5 @@ def create_app(
 
     app.state.store = store
     app.state.read_model = read_model
+    app.state.rate_limiter = limiter
     return app

@@ -12,7 +12,9 @@ set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [ "${1:-}" = "--docker" ]; then
-  exec docker run --rm -e MSYS_NO_PATHCONV=1 -v "$HERE:/src:ro" ubuntu:24.04 bash -c '
+  # Git Bash rewrites container paths unless conversion is disabled in the host shell.
+  export MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*'
+  exec docker run --rm -v "$HERE:/src:ro" ubuntu:24.04 bash -c '
     set -euo pipefail
     export DEBIAN_FRONTEND=noninteractive
     apt-get update -qq >/dev/null && apt-get install -y -qq python3 python3-venv git >/dev/null

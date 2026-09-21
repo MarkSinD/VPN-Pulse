@@ -1,5 +1,7 @@
 # Privacy
 
+Rate-limit keys are salted hashes of client addresses held only in process memory; neither addresses nor keys are persisted or logged.
+
 VPN Pulse is built for a small trusted circle, but it is designed as if it were public.
 
 ## What members see

@@ -23,7 +23,7 @@ UNIT_DIR="${VPN_PULSE_UNIT_DIR:-/etc/systemd/system}"
 CADDY_DIR="${VPN_PULSE_CADDY_DIR:-/etc/caddy}"
 PORT=8765
 KEEP_RELEASES=3
-RELEASE_PATHS=(src contracts migrations i18n fixtures docs/prototypes deploy pyproject.toml README.md LICENSE install.sh)
+RELEASE_PATHS=(src contracts migrations i18n fixtures docs/prototypes deploy pyproject.toml requirements.lock README.md LICENSE install.sh)
 
 DRY=0; YES=0; NO_SYSTEMD=0; NO_CADDY=0; DEMO_DATA=0; PURGE=0
 LANGUAGE=""; TIMEZONE=""; CONTACT_URL=""; DOMAIN=""; GROUP_ID=""; ADMIN_ID=""; TOKEN_FILE=""; TOKEN_STDIN=0
@@ -117,7 +117,8 @@ demo() {
   mkdir -p "$DEMO_PREFIX"
   if [ ! -x "$DEMO_PREFIX/venv/bin/vpn-pulse" ]; then
     "$PYTHON" -m venv "$DEMO_PREFIX/venv"
-    "$DEMO_PREFIX/venv/bin/pip" install -q --disable-pip-version-check -e "$SRC_DIR" || die "pip install failed"
+    "$DEMO_PREFIX/venv/bin/pip" install -q --disable-pip-version-check --require-hashes -r "$SRC_DIR/requirements.lock" || die "locked dependencies install failed"
+    "$DEMO_PREFIX/venv/bin/pip" install -q --disable-pip-version-check --no-deps -e "$SRC_DIR" || die "pip install failed"
     ok "virtual environment created"
   else
     ok "virtual environment kept"
@@ -215,7 +216,8 @@ install_release() {
   done
   printf 'source=%s\ninstalled=%s\n' "$(source_sha)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >"$NEW_RELEASE/RELEASE"
   "$PYTHON" -m venv "$NEW_RELEASE/venv"
-  "$NEW_RELEASE/venv/bin/pip" install -q --disable-pip-version-check -e "$NEW_RELEASE" || die "pip install failed (network? see $NEW_RELEASE)"
+  "$NEW_RELEASE/venv/bin/pip" install -q --disable-pip-version-check --require-hashes -r "$NEW_RELEASE/requirements.lock" || die "locked dependencies install failed (network? see $NEW_RELEASE)"
+  "$NEW_RELEASE/venv/bin/pip" install -q --disable-pip-version-check --no-deps -e "$NEW_RELEASE" || die "pip install failed"
   chown -R root:root "$NEW_RELEASE"; chmod -R a+rX "$NEW_RELEASE"
   ok "release $(basename "$NEW_RELEASE") installed"
 }

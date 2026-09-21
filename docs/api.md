@@ -1,5 +1,13 @@
 # API
 
+## Limits
+
+Production accepts request bodies up to 64 KiB. Larger writes return `413` as a Problem response.
+Process-local token buckets limit sessions and probe enrollment to 20 requests/minute, probe reports
+to 120/minute, and analytics batches to 60/minute per client key. A limited request returns `429`
+and `Retry-After`. The key is a process-salted hash held only in memory. `X-Forwarded-For` is used
+only when the socket peer is loopback, matching the supported same-host Caddy deployment.
+
 The contract is [`contracts/openapi.yaml`](../contracts/openapi.yaml) (OpenAPI 3.1, version
 1.5.0). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
 Problem Details with a stable `code` and a `trace_id`.

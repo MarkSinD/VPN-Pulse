@@ -87,6 +87,7 @@ def create_dev_app(
         contact_url=contact_url,
         default_language=(config.get("app") or {}).get("default_language", "ru"),
         now=now,
+        limits=False,
     )
     app.title = "VPN Pulse API — dev server"
     state = {"scenario": default_scenario}

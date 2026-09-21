@@ -222,6 +222,9 @@ def test_admin_can_enroll_report_and_revoke_probe():
     headers = {"Authorization": f"Bearer {token}"}
     assert api.post("/api/v1/probe/reports", json=report, headers=headers).json()["duplicate"] is False
     assert api.post("/api/v1/probe/reports", json=report, headers=headers).json()["duplicate"] is True
+    conflicting = {**report, "agent_version": "0.2.0"}
+    conflict = api.post("/api/v1/probe/reports", json=conflicting, headers=headers)
+    assert (conflict.status_code, conflict.json()["code"]) == (409, "REPORT_ID_CONFLICT")
     assert api.post(f"/api/v1/admin/probes/{probe_id}/revoke").status_code == 204
     assert api.get("/api/v1/probe/config", headers=headers).status_code == 401
 
@@ -244,3 +247,94 @@ def test_member_read_responses_match_contract_schemas():
     assert metrics == {"server_id": "server-1", "period": "24h", "coverage": 0, "points": []}
     assert_schema("EventPage", api.get("/api/v1/events").json())
     assert_schema("Readiness", api.get("/api/v1/health/ready").json())
+
+
+def test_forged_hash_is_rejected():
+    api = client()
+    forged = init_data(1).rsplit("hash=", 1)[0] + "hash=" + "0" * 64
+    assert api.post("/api/v1/sessions", json={"init_data": forged}).status_code == 401
+
+
+def test_changed_signed_user_is_rejected():
+    api = client()
+    signed = init_data(1)
+    changed = signed.replace("%22id%22%3A1", "%22id%22%3A2")
+    assert api.post("/api/v1/sessions", json={"init_data": changed}).status_code == 401
+
+
+def test_post_body_over_64_kib_is_rejected_as_problem():
+    response = client().post("/api/v1/sessions", content=b"x" * 65_537,
+                             headers={"content-type": "application/json"})
+    assert response.status_code == 413
+    assert response.json()["code"] == "BODY_TOO_LARGE"
+
+
+def test_cross_site_origin_is_rejected_for_writes():
+    response = client().post("/api/v1/sessions", json={"init_data": "bad"},
+                             headers={"origin": "https://attacker.invalid"})
+    assert response.status_code == 403
+    assert response.json()["code"] == "ORIGIN_REJECTED"
+
+
+def test_same_site_origin_reaches_handler():
+    response = client().post("/api/v1/sessions", json={"init_data": "bad"},
+                             headers={"origin": "https://testserver"})
+    assert response.status_code == 401
+
+
+def test_session_rate_limit_returns_retry_after():
+    api = client()
+    for _ in range(20):
+        assert api.post("/api/v1/sessions", json={"init_data": "bad"}).status_code == 401
+    limited = api.post("/api/v1/sessions", json={"init_data": "bad"})
+    assert limited.status_code == 429
+    assert int(limited.headers["retry-after"]) >= 1
+
+
+def test_rate_limit_refills_after_window():
+    moment = [NOW]
+    app = create_app(bot_token=BOT_TOKEN, membership=Membership(), status_provider=status_fixture,
+                     analytics_schema=ANALYTICS_SCHEMA, now=lambda: moment[0])
+    api = TestClient(app, base_url="https://testserver")
+    for _ in range(21):
+        response = api.post("/api/v1/sessions", json={"init_data": "bad"})
+    assert response.status_code == 429
+    moment[0] += timedelta(seconds=61)
+    assert api.post("/api/v1/sessions", json={"init_data": "bad"}).status_code == 401
+
+
+def test_rate_limit_table_is_bounded():
+    from vpnpulse.api.security import RateLimiter
+    limiter = RateLimiter(lambda: NOW, max_keys=3)
+    for n in range(5):
+        limiter.allow("sessions", f"192.0.2.{n}", 20)
+    assert len(limiter.buckets) == 3
+
+
+def test_forwarded_address_only_trusted_from_loopback():
+    from types import SimpleNamespace
+    from vpnpulse.api.security import client_address
+    headers = {"x-forwarded-for": "198.51.100.8, 127.0.0.1"}
+    assert client_address(SimpleNamespace(client=SimpleNamespace(host="127.0.0.1"), headers=headers)) == "198.51.100.8"
+    assert client_address(SimpleNamespace(client=SimpleNamespace(host="203.0.113.4"), headers=headers)) == "203.0.113.4"
+
+
+def test_admin_note_rejects_control_characters():
+    api = client(); login(api, 2)
+    response = api.put("/api/v1/admin/note", json={"text": "hello\u0001world"})
+    assert response.status_code == 422
+
+
+def test_note_markup_is_escaped_by_the_dom_renderer():
+    api = client(); login(api, 2)
+    text = "<script>alert(1)</script>"
+    assert api.put("/api/v1/admin/note", json={"text": text}).json()["text"] == text
+    source = (_contracts_dir().parent / "web" / "src" / "app.js").read_text(encoding="utf-8")
+    assert "const esc = s => String(s).replace" in source
+
+
+def test_unknown_probe_ids_have_the_same_response():
+    api = client(); login(api, 2)
+    first = api.post("/api/v1/admin/probes/unknown-a/revoke")
+    second = api.post("/api/v1/admin/probes/unknown-b/revoke")
+    assert (first.status_code, first.json()["code"]) == (second.status_code, second.json()["code"]) == (404, "PROBE_NOT_FOUND")
