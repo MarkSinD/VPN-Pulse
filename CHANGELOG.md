@@ -166,6 +166,9 @@ release is cut.
 
 ### Fixed
 
+- The week-long chart is drawn from the hourly aggregate the loop already keeps (168 rows) instead of a week of
+  raw evidence (tens of thousands), the day-long one reads only the collector's rows, and the Mini App asks for
+  the week only when someone switches the range to it.
 - The Mini App took up to fifteen seconds to leave its skeleton on a database the probes had filled. Every
   screen asks for the newest observation of each kind, and that was a grouping over the server's whole
   retention window — 464 ms per server, fifteen times per load. It is now one index seek per kind

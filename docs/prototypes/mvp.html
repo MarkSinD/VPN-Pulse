@@ -971,12 +971,27 @@ window.VPNPulseApi = function (opts) {
     }
     S.sessionRole = S.role;
   }
+  const BUNDLE = { metrics: {} };  // week-long series already fetched, kept across refreshes
+
+  async function ensureWeek(serverId) {
+    const cached = BUNDLE.metrics[serverId] && BUNDLE.metrics[serverId]['7d'];
+    if (cached || !api) return cached || null;
+    const week = await api.metrics(serverId, '7d');
+    BUNDLE.metrics[serverId] = Object.assign(BUNDLE.metrics[serverId] || {}, { '7d': week });
+    // draw it without another round of the whole bundle: the view model wants the same two arrays
+    const view = byId(serverId);
+    if (view) { view.series7 = week.points.map(p => p.connections); view.segs7 = week.points.map(p => p.state); }
+    return week;
+  }
+
   async function fetchBundle() {
     const status = await api.status();
     const details = {}, metrics = {}, adminDetails = {};
     await Promise.all(status.servers.map(async c => {
-      const [d, m24, m7] = await Promise.all([api.server(c.id), api.metrics(c.id, '24h'), api.metrics(c.id, '7d')]);
-      details[c.id] = d; metrics[c.id] = { '24h': m24, '7d': m7 };
+      // the week-long series is the slowest thing the API has to build and most people never open it,
+      // so it is fetched when the range is switched (see ensureWeek) instead of on every load
+      const [d, m24] = await Promise.all([api.server(c.id), api.metrics(c.id, '24h')]);
+      details[c.id] = d; metrics[c.id] = { '24h': m24, '7d': (BUNDLE.metrics[c.id] || {})['7d'] || null };
       if (S.role === 'admin') adminDetails[c.id] = await api.adminServer(c.id);
     }));
     const [ev, help] = await Promise.all([api.events('all', 100), api.help()]);
@@ -1253,7 +1268,9 @@ window.VPNPulseApi = function (opts) {
   }
   function bindServer() {
     root.querySelectorAll('.acc-btn').forEach(b => b.addEventListener('click', () => toggleAcc(b)));
-    root.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => { S.range = b.getAttribute('data-range'); render(); const nb = root.querySelector('[data-range="' + S.range + '"]'); if (nb) nb.focus({ preventScroll: true }); }));
+    root.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', async () => { S.range = b.getAttribute('data-range');
+      if (S.range === '7d' && S.server && api) { try { await ensureWeek(S.server); } catch (e) { /* the chart falls back to the day */ } }
+      render(); const nb = root.querySelector('[data-range="' + S.range + '"]'); if (nb) nb.focus({ preventScroll: true }); }));
   }
   function toggleAcc(btn) {
     const id = btn.getAttribute('data-acc'), wasOpen = S.open === id;

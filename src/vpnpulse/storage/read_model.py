@@ -242,22 +242,48 @@ class SqliteReadModel:
             step, count = timedelta(hours=1), 168
         start = now - step * count
         buckets: list[dict] = [{"connections": [], "seen": False} for _ in range(count)]
-        for observed_at, source, metrics_json in self.db.execute(
-            "SELECT observed_at, source_kind, metrics_json FROM observations WHERE server_id = ? AND observed_at >= ? ORDER BY observed_at",
-            (server_id, _iso(start)),
-        ).fetchall():
-            index = int((_dt(observed_at) - start) / step)
-            if not 0 <= index < count:
-                continue
-            buckets[index]["seen"] = True
-            if source == "collector":
+
+        def bucket_of(value: str) -> int | None:
+            index = int((_dt(value) - start) / step)
+            return index if 0 <= index < count else None
+
+        if period == "24h":
+            # half-hour buckets are finer than the hourly aggregate, so the raw evidence is read -
+            # but only the collector's rows carry connection counts, and only they need their JSON
+            for observed_at, metrics_json in self.db.execute(
+                "SELECT observed_at, metrics_json FROM observations WHERE server_id = ? AND source_kind = 'collector' AND observed_at >= ? ORDER BY observed_at",
+                (server_id, _iso(start)),
+            ).fetchall():
+                index = bucket_of(observed_at)
+                if index is None:
+                    continue
                 try:
                     conns = (json.loads(metrics_json or "{}").get("connections") or {})
                 except json.JSONDecodeError:
                     conns = {}
-                known = [v for v in conns.values() if v is not None]
+                known = [value for value in conns.values() if value is not None]
                 if known:
                     buckets[index]["connections"].append(sum(known))
+        else:
+            # a week of raw evidence is tens of thousands of rows; the loop already keeps the hourly
+            # aggregate this chart is drawn from, and its buckets are exactly these buckets
+            for bucket_at, average, samples in self.db.execute(
+                "SELECT bucket_at, avg, samples FROM metric_hourly WHERE server_id = ? AND metric = 'connections' AND bucket_at >= ?",
+                (server_id, _iso(start)),
+            ).fetchall():
+                index = bucket_of(bucket_at)
+                if index is None or average is None or not samples:
+                    continue
+                buckets[index]["connections"].append(average)
+
+        # "was anything watching in this bucket" comes from the evidence itself, without its payload
+        for (observed_at,) in self.db.execute(
+            "SELECT observed_at FROM observations WHERE server_id = ? AND observed_at >= ? ORDER BY observed_at",
+            (server_id, _iso(start)),
+        ).fetchall():
+            index = bucket_of(observed_at)
+            if index is not None:
+                buckets[index]["seen"] = True
         timeline = self._timeline(server_id, start, now)
         def state_at(t: datetime) -> str:
             for at, until, state in timeline:
