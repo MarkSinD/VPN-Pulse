@@ -169,7 +169,8 @@ class Pipeline:
                 parsed = ObservationResult(result)
             except ValueError:
                 continue
-            out.append(Observation(source, parsed, _dt(observed_at), _dt(fresh_until), bool(metrics.get("full_vpn_test", False)), metrics.get("control_internet_ok"), error_code))
+            out.append(Observation(source, parsed, _dt(observed_at), _dt(fresh_until), bool(metrics.get("full_vpn_test", False)),
+                                   metrics.get("control_internet_ok"), error_code, metrics.get("route_verified")))
         return out
 
     def _expected_sources(self, server_id: str, now: datetime) -> int:

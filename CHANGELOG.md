@@ -12,6 +12,13 @@ release is cut.
 
 ## [Unreleased]
 
+### Fixed
+
+- A probe report with `route_verified: false` no longer moves the state. `docs/probes/pc.md` always said
+  such reports are excluded from state - the evaluator did not, so a computer whose traffic never reached
+  the tunnel (VPN client holding the default route) painted every server yellow and wrote to the
+  administrator every few minutes.
+
 ### Added
 
 - `telegram.open_url`: every message the bot sends carries a button that opens the status app, so an outage

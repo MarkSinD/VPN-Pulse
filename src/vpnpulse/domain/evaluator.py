@@ -6,9 +6,6 @@ from datetime import datetime
 from .models import Evaluation, Observation, ObservationResult, ServerCandidate, State
 
 
-SUCCESS_SOURCES = {"human_activity", "pc"}
-
-
 def _valid_full_failure(item: Observation) -> bool:
     return (
         item.result is ObservationResult.FAILURE
@@ -34,7 +31,11 @@ def evaluate_scope(
     control Internet. Conflicting success/failure evidence is degraded.
     """
 
-    items = sorted(observations, key=lambda item: item.observed_at)
+    # A probe that could not confirm its traffic went through the tunnel has not tested the server:
+    # its handshake may have failed because the client had no route at all, and its success may have
+    # come from inside somebody else's VPN. Such reports stay in history and in the probe list for the
+    # administrator, and they never move the state (docs/probes/pc.md).
+    items = sorted((item for item in observations if item.route_verified is not False), key=lambda item: item.observed_at)
     fresh = [item for item in items if item.fresh_until >= now]
     coverage = min(1.0, len({item.source for item in fresh}) / max(expected_sources, 1))
     if not fresh:

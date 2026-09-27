@@ -89,3 +89,24 @@ def test_a_cross_server_handshake_is_evidence_that_the_tunnel_answers():
     assert evaluate_scope(outage + [observation("abroad", "success", 20)], now=NOW).state is State.UNAVAILABLE
     # people who are actually connected do contradict it - they sit where the members sit
     assert evaluate_scope(outage + [observation("human_activity", "success", 20)], now=NOW).state is State.DEGRADED
+
+
+def test_a_report_that_could_not_verify_its_route_never_moves_the_state():
+    """docs/probes/pc.md: if the probe's traffic did not take the intended path, it tested nothing."""
+    at = NOW - timedelta(seconds=10)
+
+    def pc(result, route):
+        return Observation(source="pc", result=ObservationResult(result), observed_at=at,
+                           fresh_until=at + timedelta(seconds=180), full_vpn_test=True,
+                           control_internet_ok=True, route_verified=route)
+
+    # a computer whose VPN client kept the default route: two full-test failures in a row, and the
+    # members are connected all the same - yesterday this read as «problems», now it reads as nothing
+    people = [observation("human_activity", "success", 20)]
+    assert evaluate_scope(people + [pc("failure", False), pc("failure", False)], now=NOW).state is State.OPERATIONAL
+    # with the route confirmed the same two failures conflict with the people, as they should
+    assert evaluate_scope(people + [pc("failure", True), pc("failure", True)], now=NOW).state is State.DEGRADED
+    # and alone such a report is not evidence of anything, not even of a problem
+    assert evaluate_scope([pc("failure", False)], now=NOW).state is State.UNKNOWN
+    # the rule cuts both ways: a success reported from inside somebody else's VPN proves nothing
+    assert evaluate_scope([pc("success", False)], now=NOW).state is State.UNKNOWN

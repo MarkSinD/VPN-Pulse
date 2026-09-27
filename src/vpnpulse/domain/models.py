@@ -27,6 +27,9 @@ class Observation:
     full_vpn_test: bool = False
     control_internet_ok: bool | None = None
     reason_code: str | None = None
+    # False means the probe checked and its traffic was NOT taking the intended path; None means
+    # the source has no route to verify (a collector reads the server itself).
+    route_verified: bool | None = None
 
 
 @dataclass(frozen=True, slots=True)
