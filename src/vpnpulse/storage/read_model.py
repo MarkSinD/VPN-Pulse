@@ -179,6 +179,26 @@ class SqliteReadModel:
         return out
 
     # ---------- timeline ----------
+    def _state_times(self, server_id: str, now: datetime) -> tuple[datetime | None, datetime | None]:
+        """When the current state began, and when the last non-operational spell ended."""
+        scope = f"server:{server_id}"
+        row = self.db.execute(
+            "SELECT confirmed_at FROM state_transitions WHERE scope_key = ? ORDER BY confirmed_at DESC, rowid DESC LIMIT 1",
+            (scope,),
+        ).fetchone()
+        since = _dt(row[0]) if row else None
+        row = self.db.execute(
+            """
+            SELECT confirmed_at FROM state_transitions
+            WHERE scope_key = ? AND to_state = 'operational' AND from_state != 'unknown'
+            ORDER BY confirmed_at DESC, rowid DESC LIMIT 1
+            """,
+            (scope,),
+        ).fetchone()
+        # when the newest transition is that recovery, both answers are the same moment: the trouble
+        # ended then and the server has been fine ever since, which is exactly what the row says
+        return since, _dt(row[0]) if row else None
+
     def _timeline(self, server_id: str, start: datetime, end: datetime) -> list[tuple[datetime, datetime, str]]:
         """State intervals covering [start, end) from transitions; unknown before the first observation."""
         rows = self.db.execute(
@@ -310,6 +330,7 @@ class SqliteReadModel:
         stale = fresh_until is None or fresh_until < now
         state = "unknown" if stale else (snapshot[0] if snapshot else "unknown")
         uptime, coverage = self._availability(sid, timedelta(hours=24), now)
+        state_since, last_incident = self._state_times(sid, now)
         return {
             "id": sid,
             "name": self._text(cfg.get("name"), "ru"),
@@ -317,6 +338,8 @@ class SqliteReadModel:
             "state": state,
             "freshness": self._freshness(observed, fresh_until, now),
             "recommended": recommended_id == sid,
+            "state_since": _iso(state_since),
+            "last_incident_at": _iso(last_incident),
             "uptime_24h": uptime,
             "coverage_24h": coverage,
             "sources": self._evidence(sid, now),

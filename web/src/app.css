@@ -208,6 +208,15 @@ p { margin: 0; }
 .src.s-ok { color: var(--color-operational); } .src.s-fail { color: var(--color-unavailable); } .src.s-partial { color: var(--color-degraded); } .src.s-unknown { color: var(--color-unknown); }
 .src .lbl { font-size: var(--text-xs); color: var(--color-muted); }
 @media (max-width: 1023px) { .src .lbl { display: none; } }
+/* The availability bar: the row's main picture. One block per half hour (or hour over a week). */
+.strip { display: block; margin-top: var(--space-2); }
+.bigstrip { display: block; margin: var(--space-2) 0 var(--space-1); }
+.strip .segs, .bigstrip .segs { position: static; height: 10px; gap: 1px; border-radius: 2px; overflow: hidden; }
+.bigstrip .segs { height: 18px; }
+.srow .axis-row { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-muted); margin-top: 2px; }
+.srow .side .since { font-size: var(--text-xs); color: var(--color-muted); text-align: right; }
+.history { margin-bottom: var(--space-4); }
+.history .seg-ctl { margin-bottom: var(--space-1); }
 .chart { position: relative; height: 30px; }
 .chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
 .segs { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; display: grid; grid-template-columns: repeat(48, 1fr); gap: 1px; }

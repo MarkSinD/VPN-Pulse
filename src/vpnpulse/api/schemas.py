@@ -42,6 +42,10 @@ class ServerCard(Strict):
     recommended: bool
     uptime_24h: float | None = Field(ge=0, le=1)
     coverage_24h: float | None = Field(default=None, ge=0, le=1)
+    # when the current state began, and when the last spell of trouble ended: the screens say
+    # "not working for 12 min" and "failed 40 min ago" instead of a ratio nobody can read
+    state_since: datetime | None = None
+    last_incident_at: datetime | None = None
     sources: list[EvidenceSummary]
 
 

@@ -102,10 +102,16 @@ def main() -> int:
                         targets(pg, label, "#app-nav button, #lang-btn", 44)
                         targets(pg, label, ".srow", 56)
                         console_clean(pg, label, errs)
-                        # unknown must not show a current 100%
+                        # a row never states a figure: it says how long the state has lasted, or nothing
+                        side = pg.locator('.srow[data-server="s1"] .side').inner_text().strip()
+                        ok("%" not in side, f"{label}: the row still shows a percentage ({side!r})")
                         if scenario == "unknown":
-                            side = pg.locator('.srow[data-server="s1"] .side .up').inner_text()
-                            ok(side.strip() == "—", f"{label}: unknown row shows {side!r} instead of —")
+                            ok(side != "", f"{label}: a row without fresh data must say for how long")
+                        # and the availability bar is the picture in the row, not a line of connections
+                        ok(pg.locator('.srow[data-server="s1"] .strip .segs i').count() == 48,
+                           f"{label}: the row must draw 48 half-hour blocks of state")
+                        ok(pg.locator('.srow[data-server="s1"] canvas').count() == 0,
+                           f"{label}: the connections chart belongs to the server screen, not the row")
                         ctx.close()
 
         # ---------- interactions at 320x568 (content taller than viewport) ----------

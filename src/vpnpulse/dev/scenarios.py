@@ -229,8 +229,22 @@ class FixtureReadModel:
             out.append({"source": "human_activity", "state": "operational", "freshness": self._freshness(sc.now, s.get("staleMin", 1)), "reason_code": None, "via_server_id": None})
         return out
 
+    def _state_times(self, sc: Scenario, s: dict) -> tuple[str | None, str | None]:
+        """When the current state began and when the last spell of trouble ended, from the buckets."""
+        segs = s["segs"]
+        run_start = 47
+        while run_start > 0 and segs[run_start - 1] == segs[47]:
+            run_start -= 1
+        since = None if s["state"] == segs[47] and run_start == 0 else sc.now - timedelta(minutes=(1 if s["state"] != segs[47] else 30 * (48 - run_start)))
+        incident = None
+        for i in range(1, 48):
+            if segs[i] == "operational" and segs[i - 1] not in ("operational", "unknown"):
+                incident = sc.now - timedelta(minutes=30 * (48 - i))
+        return self._iso(since), self._iso(incident)
+
     def _card(self, sc: Scenario, s: dict, lang: str) -> dict:
         known = [x for x in s["segs"] if x != "unknown"]
+        state_since, last_incident = self._state_times(sc, s)
         return {
             "id": s["id"],
             "name": self._text(s["name"], lang),
@@ -238,6 +252,8 @@ class FixtureReadModel:
             "state": s["state"],
             "freshness": self._freshness(sc.now, s.get("staleMin", 1 if s["state"] != "unknown" else sc.raw.get("freshnessMin"))),
             "recommended": sc.raw.get("recommended") == s["id"],
+            "state_since": state_since,
+            "last_incident_at": last_incident,
             "uptime_24h": _parse_percent(s.get("uptime24")),
             "coverage_24h": None if s["state"] == "unknown" and not known else round(len(known) / 48, 4),
             "sources": self._evidence(sc, s),

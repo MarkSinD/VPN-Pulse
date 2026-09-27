@@ -147,6 +147,13 @@ release is cut.
 
 ### Changed
 
+- The status screen no longer states figures nobody could read. The row's picture is the availability bar
+  (one block per half hour, green/amber/red/hollow) instead of a line of connection counts, and the
+  percentage is gone: the right-hand side now says how long the current state has lasted ("down for 12 min")
+  or when the last failure ended ("failed 40 min ago"), and stays silent for a server that has been fine.
+  The server screen opens with the same bar, a range switch and the day in words ("worked 23 h 20 min,
+  trouble 20 min"); the connections chart moved into the load section under a title of its own. Contract
+  1.6.0 carries `state_since` and `last_incident_at`; `uptime_24h` stays for the administrator's screens.
 - Notifications: the administrator's `degraded` and «no fresh data» notices wait `monitoring.quiet_notice_seconds`
   (10 minutes by default) before they are sent, and a spell that ends inside that window is dropped together with
   its recovery message. Measured spells were three minutes on median — one lost handshake among ten good checks —

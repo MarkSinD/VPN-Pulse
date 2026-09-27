@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.5.1
+  version: 1.6.0
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -471,6 +471,14 @@ components:
         recommended: { type: boolean }
         uptime_24h: { type: [number, "null"], minimum: 0, maximum: 1 }
         coverage_24h: { type: [number, "null"], minimum: 0, maximum: 1 }
+        state_since:
+          description: when the current state began; the screens show its duration instead of a ratio
+          type: [string, "null"]
+          format: date-time
+        last_incident_at:
+          description: when the last non-operational spell ended, null when there was none in the kept history
+          type: [string, "null"]
+          format: date-time
         sources:
           type: array
           items: { $ref: "#/components/schemas/EvidenceSummary" }

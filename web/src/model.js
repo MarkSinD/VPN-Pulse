@@ -129,6 +129,17 @@ window.VPNPulseModel = (function () {
         s.series7 = s.series7.map((v, i) => s.segs7[i] === 'unknown' ? null : roundCount(v));
         s.software = (s.software || []).map(w => ({ name: w.name, noteKey: w.noteKey || null, note: w.note || null }));
         s.uptime24n = parsePct(s.uptime24); s.uptime7n = parsePct(s.uptime7);
+        // The same two numbers the API derives, from the same 48 buckets and by the same rule -
+        // this is what keeps the prototype and the live app saying the same words (ui_parity_check).
+        const last = s.segs[47];
+        let runStart = 47;
+        while (runStart > 0 && s.segs[runStart - 1] === last) runStart--;
+        s.sinceMin = s.state !== last ? 1 : (runStart === 0 ? null : 30 * (48 - runStart));
+        let incident = null;
+        for (let i = 1; i < 48; i++) {
+          if (s.segs[i] === 'operational' && s.segs[i - 1] !== 'operational' && s.segs[i - 1] !== 'unknown') incident = 30 * (48 - i);
+        }
+        s.incidentMin = incident;
         s.diag = !!s.diag;
         const humans = s.confirmedBy === 'humans' || s.confirmedBy === 'both';
         s.confirmedBy = confirmedBy(s.state, s.sources, humans);
@@ -149,6 +160,10 @@ window.VPNPulseModel = (function () {
     const lang = ctx.lang, now = ctx.now, d = detail || {};
     const s = { id: card.id, name: card.name, cc: (card.country_code || '').toLowerCase(), countryFallback: card.country_code, state: card.state };
     s.uptime24n = card.uptime_24h === undefined ? null : card.uptime_24h; s.uptime7n = d.uptime_7d === undefined ? null : d.uptime_7d;
+    // how long the current state has lasted, and how long ago the last spell of trouble ended:
+    // the row says "not working for 12 min" or "failed 40 min ago" instead of a ratio
+    s.sinceMin = minutesSince(card.state_since, now);
+    s.incidentMin = minutesSince(card.last_incident_at, now);
     s.staleMin = card.freshness && card.freshness.is_stale && card.freshness.observed_at ? minutesSince(card.freshness.observed_at, now) : undefined;
     const evidence = (d.checks && d.checks.length ? d.checks : card.sources) || [];
     s.sources = evidenceMap(evidence, now);

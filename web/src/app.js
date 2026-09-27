@@ -268,6 +268,39 @@
     return '<span class="srcs">' + kinds().map(k => { const r = s.sources[k].r; return '<span class="src s-' + r + '"><span class="sr-only">' + esc(t('source.' + k)) + ': ' + esc(t('source.result.' + r)) + '</span>' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span>' + (withLabels ? '<span class="lbl">' + esc(t('source.' + k)) + '</span>' : '') + '</span>'; }).join('') + '</span>';
   }
   function segsHtml(segs, extra) { return '<span class="segs ' + (extra || '') + '" aria-hidden="true"' + (segs.length !== 48 ? ' style="grid-template-columns:repeat(' + segs.length + ',1fr)"' : '') + '>' + segs.map(x => '<i class="' + x + '"></i>').join('') + '</span>'; }
+  // The 24 half-hour (or 168 hourly) blocks of state, as one bar: green worked, yellow trouble,
+  // red did not pass its check, hollow no data. This is what a member came to see, so it is the
+  // element that gets the width; the count of connected members moved to the load section.
+  function strip(s, big) {
+    const week = big && S.range === '7d' && s.segs7;
+    const segs = (week ? s.segs7 : s.segs) || [];
+    const spoken = breakdownText(segs, week ? 60 : 30);
+    return '<span class="' + (big ? 'bigstrip' : 'strip') + '" role="img" aria-label="' + esc(t('server.stripSummary', { range: t(week ? 'server.range7d' : 'server.range24'), breakdown: spoken })) + '">' + segsHtml(segs, 'bar') + '</span>';
+  }
+  // the same three numbers the percentage was built from, in words and without weighting
+  function breakdown(segs, minutesPerSeg) {
+    const total = { operational: 0, degraded: 0, unavailable: 0, unknown: 0 };
+    (segs || []).forEach(state => { total[state in total ? state : 'unknown'] += minutesPerSeg; });
+    return total;
+  }
+  function breakdownText(segs, minutesPerSeg) {
+    const total = breakdown(segs, minutesPerSeg);
+    const parts = [];
+    if (total.operational) parts.push(t('server.day.operational', { duration: dur(total.operational) }));
+    if (total.degraded) parts.push(t('server.day.degraded', { duration: dur(total.degraded) }));
+    if (total.unavailable) parts.push(t('server.day.unavailable', { duration: dur(total.unavailable) }));
+    if (total.unknown) parts.push(t('server.day.unknown', { duration: dur(total.unknown) }));
+    return parts.join(' · ');
+  }
+  // the right-hand side of a row speaks only when it has something to say
+  function sinceText(s) {
+    if (s.state === 'unavailable' && s.sinceMin !== null && s.sinceMin !== undefined) return t('status.since.unavailable', { duration: dur(s.sinceMin) });
+    if (s.state === 'degraded' && s.sinceMin !== null && s.sinceMin !== undefined) return t('status.since.degraded', { duration: dur(s.sinceMin) });
+    if (s.state === 'unknown') return t('status.since.unknown', { duration: dur(s.sinceMin === null || s.sinceMin === undefined ? s.staleMin || 0 : s.sinceMin) });
+    if (s.state === 'operational' && s.incidentMin !== null && s.incidentMin !== undefined && s.incidentMin <= 48 * 60) return t('status.since.incident', { duration: dur(s.incidentMin) });
+    return '';
+  }
+
   function chart(s, big) {
     const week = big && S.range === '7d' && s.series7;
     const series = week ? s.series7 : s.series, segs = week ? s.segs7 : s.segs;
@@ -320,14 +353,13 @@
     return '<section class="note-box" aria-label="' + esc(t('events.note')) + '"><div class="txt ' + (long && !S.noteExpanded ? 'clamp' : '') + '" id="note-txt">' + esc(txt) + '</div><div class="who">' + esc(t('status.noteFrom', { time: fmtTime(SC.note.at) })) + '</div>' + (long ? '<button type="button" class="btn btn-text" id="note-more" aria-expanded="' + S.noteExpanded + '" aria-controls="note-txt">' + esc(t(S.noteExpanded ? 'action.less' : 'action.more')) + '</button>' : '') + '</section>';
   }
   function serverRow(s) {
-    const unk = s.state === 'unknown';
-    const label = unk ? t('status.rowLabelUnknown', { server: sname(s) }) : t('status.rowLabel', { server: sname(s), state: t('status.state.' + s.state), uptime: s.uptime24 });
-    const side = unk || s.uptime24 === '—'
-      ? '<span class="up num muted">—</span><span class="cap">' + esc(t('status.currentUnknown')) + '</span>'
-      : '<span class="up num">' + esc(s.uptime24) + '</span><span class="cap">' + esc(t('status.history24h')) + '</span>';
+    const label = t('status.rowLabel', { server: sname(s), state: t('status.state.' + s.state), since: sinceText(s) || t('status.since.calm') });
+    const since = sinceText(s);
+    const side = since ? '<span class="since">' + esc(since) + '</span>' : '';
     return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
       '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
-      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span></span>' + sources(s, true) + chart(s, false) + '</span>' +
+      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span></span>' + sources(s, true) + strip(s, false) +
+      '<span class="axis2 axis-row"><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></span></span>' +
       '<span class="side">' + side + ico('chevron', 'chev') + '</span></button>';
   }
   function statusScreen() {
@@ -401,6 +433,10 @@
     const stale = s.staleMin ? '<div class="banner banner-info">' + ico('clock') + '<div>' + esc(t('server.stale', { duration: dur(s.staleMin) })) + '</div></div>' : '';
     const conflict = s.conflict ? '<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('server.conflict', { a: t(s.conflict.a), b: t(s.conflict.b) })) + '</div></div>' : '';
     const diag = s.diag && S.role === 'admin' ? '<div class="diag"><b>' + esc(t('admin.diag.blocked')) + '</b><span>' + esc(t('admin.diag.action')) + '</span></div>' : '';
+    const history = '<div class="history">' +
+      '<div class="seg-ctl" role="group" aria-label="' + esc(t('server.range')) + '"><button type="button" data-range="24h" aria-pressed="' + (S.range === '24h') + '">' + esc(t('server.range24')) + '</button><button type="button" data-range="7d" aria-pressed="' + (S.range === '7d') + '">' + esc(t('server.range7d')) + '</button></div>' +
+      strip(s, true) + '<div class="axis2"><span>' + esc(S.range === '7d' ? t('server.axisStart7d') : t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div>' +
+      '<p class="small">' + esc(t('server.dayBreakdown', { range: t(S.range === '7d' ? 'server.range7d' : 'server.range24'), breakdown: breakdownText(S.range === '7d' && s.segs7 ? s.segs7 : s.segs, S.range === '7d' ? 60 : 30) })) + '</p></div>';
     const ks = kinds();
     const checks = (ks.length ? '<div class="kv">' + ks.map(k => srcRow(s, k)).join('') + '</div>' : '<p class="small muted">' + esc(t('server.checksNone')) + '</p>') + '<p class="small muted">' + esc(by) + '</p>';
     const ld = s.load, xr = s.protocols.includes('xray');
@@ -409,9 +445,8 @@
       '<div class="metric"><div class="k">' + esc(t('server.cpu')) + '</div><div class="v num">' + num(ld.cpu) + '<small>%</small></div></div>' +
       '<div class="metric"><div class="k">' + esc(t('server.memory')) + '</div><div class="v num">' + num(ld.ram) + '<small>%</small></div><div class="s">' + esc(t('server.swap')) + ' ' + num(ld.swap) + '%</div></div></div>' +
       (xr && !ld.xrayKnown ? '<p class="small muted">' + esc(t('server.xrayUnknown')) + '</p>' : '') +
-      '<div class="seg-ctl" role="group"><button type="button" data-range="24h" aria-pressed="' + (S.range === '24h') + '">' + esc(t('server.range24')) + '</button><button type="button" data-range="7d" aria-pressed="' + (S.range === '7d') + '">' + esc(t('server.range7d')) + '</button></div>' +
-      chart(s, true) + '<div class="axis2"><span>' + esc(S.range === '7d' ? '−7 d'.replace('d', S.lang === 'ru' ? 'дн' : 'd') : t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div>' +
-      '<div class="kv"><div><span class="k">' + esc(t('server.uptime24')) + '</span><span class="v">' + esc(s.uptime24) + '</span></div><div><span class="k">' + esc(t('server.uptime7')) + '</span><span class="v">' + esc(s.uptime7) + '</span></div><div><span class="k">' + esc(t('server.lastConn')) + '</span><span class="v">' + esc(dur(ld.lastConnMin)) + '</span></div></div>';
+      '<h3 class="sub">' + esc(t('server.connectionsChart')) + '</h3><p class="small muted">' + esc(t('server.connectionsPeak', { n: Math.max(0, ...(s.series || [0]).filter(v => v !== null)) })) + '</p>' +
+      chart(s, true) + '<div class="axis2"><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div>';
     const soft = s.software.length ? '<div class="kv">' + s.software.map(w => '<div><span class="k">' + esc(w.name) + '<small>' + esc(w.noteKey ? t(w.noteKey) : (w.note || '')) + '</small></span><span></span></div>').join('') + '</div>' : '<p class="small muted">—</p>';
     const keys = '<div class="metrics" style="grid-template-columns:repeat(3,1fr)"><div class="metric"><div class="k">' + esc(t('server.keysIssued')) + '</div><div class="v num">' + num(s.keys.issued) + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysEver')) + '</div><div class="v num">' + num(s.keys.ever) + '</div></div><div class="metric"><div class="k">' + esc(t('server.keysActive')) + '</div><div class="v num">' + num(s.keys.active) + '</div></div></div>';
     const yes = '<span class="v ok">' + ico('check') + esc(t('server.yes')) + '</span>';
@@ -425,8 +460,8 @@
     }
     return '<div class="screen">' +
       '<div class="detail-top">' + ring(s, 'sm') + '<div class="h"><h1 id="screen-title" tabindex="-1">' + esc(sname(s)) + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</h1><div class="st"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span><span>· ' + esc(s.protocols.map(p => p === 'awg' ? t('server.awg') : t('server.xray')).join(' + ')) + '</span>' + (SC.freshnessMin !== null && SC.freshnessMin !== undefined ? '<span>· ' + esc(t('status.updatedAgo', { duration: dur(SC.freshnessMin) })) + '</span>' : '') + '</div></div></div>' +
-      stale + conflict + diag +
-      '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))), load) + '</div><div>' + acc('software', 'layers', t('server.software'), String(s.protocols.length), soft) + acc('keys', 'key', t('server.keys'), String(num(s.keys.active)), keys) + acc('system', 'server', t('server.system'), s.state === 'unknown' ? '—' : s.uptime7, sys) + acc('events', 'clock', t('server.events'), String(evs.length), evHtml) + adminHtml + '</div></div></div>';
+      history + stale + conflict + diag +
+      '<div class="detail-cols"><div>' + acc('checks', 'search', t('server.checks'), '', checks) + acc('load', 'chart', t('server.load'), t('server.head.load', { n: (xr && !ld.xrayKnown ? ld.awg + '+' : String(ld.awg + (ld.xray || 0))) }), load) + '</div><div>' + acc('software', 'layers', t('server.software'), (s.software[0] && s.software[0].name) || '', soft) + acc('keys', 'key', t('server.keys'), t('server.head.keys', { n: num(s.keys.issued) }), keys) + acc('system', 'server', t('server.system'), '', sys) + acc('events', 'clock', t('server.events'), t('server.head.events', { n: evs.length }), evHtml) + adminHtml + '</div></div></div>';
   }
   function bindServer() {
     root.querySelectorAll('.acc-btn').forEach(b => b.addEventListener('click', () => toggleAcc(b)));

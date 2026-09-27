@@ -207,3 +207,31 @@ def test_dev_server_can_serve_a_scenario_from_sqlite(tmp_path):
     # a second start reuses the seeded database instead of seeding twice
     again = create_dev_app(catalog=CATALOG, default_scenario="degraded", sqlite_path=tmp_path / "dev.sqlite3", now=lambda: NOW)
     assert TestClient(again).get("/api/v1/health/live").status_code == 200
+
+
+def test_a_card_says_when_the_state_began_and_when_trouble_last_ended(tmp_path):
+    """The screens show durations instead of a ratio, so the card carries the two moments."""
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime(2026, 9, 27, 12, 0, tzinfo=UTC)
+    connection = prepared(tmp_path, now) if "prepared" in globals() else None
+    if connection is None:  # the module's own helper names differ; build the minimum here
+        from vpnpulse.storage import apply_migrations, connect
+        connection = connect(tmp_path / "times.sqlite3")
+        apply_migrations(connection, ROOT / "migrations")
+        connection.execute("INSERT INTO servers VALUES (?, ?, ?, ?, ?, ?, ?)",
+                           ("s1", "server-1", "awg-host", 1, 1, now.isoformat(), now.isoformat()))
+    rows = [
+        ("t1", "server:s1", "operational", "degraded", now - timedelta(hours=3)),
+        ("t2", "server:s1", "degraded", "operational", now - timedelta(hours=2, minutes=50)),
+    ]
+    for tid, scope, before, after, at in rows:
+        connection.execute(
+            "INSERT INTO state_transitions(id, scope_key, from_state, to_state, reason_code, opened_at, confirmed_at, closed_at, dedupe_key, evidence_json)"
+            " VALUES (?, ?, ?, ?, 'TEST', ?, ?, NULL, ?, '{}')",
+            (tid, scope, before, after, at.isoformat(), at.isoformat(), tid))
+    connection.commit()
+    model = SqliteReadModel(connection, {"servers": [{"id": "s1", "name": {"ru": "s", "en": "s"}, "country_code": "LV", "type": "awg-host"}]}, now=lambda: now)
+    since, incident = model._state_times("s1", now)
+    assert since == now - timedelta(hours=2, minutes=50)   # the recovery is the newest transition
+    assert incident == since                               # and it is also when the trouble ended

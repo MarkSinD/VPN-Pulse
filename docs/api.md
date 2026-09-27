@@ -10,7 +10,7 @@ and `Retry-After`. The key is a process-salted hash held only in memory. `X-Forw
 only when the socket peer is loopback, matching the supported same-host Caddy deployment.
 
 The contract is [`contracts/openapi.yaml`](../contracts/openapi.yaml) (OpenAPI 3.1, version
-1.5.0). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
+1.6.0). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
 Problem Details with a stable `code` and a `trace_id`.
 
 ## Authentication
