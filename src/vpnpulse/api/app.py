@@ -24,6 +24,9 @@ from vpnpulse.auth import AuthenticationError, MembershipChecker, validate_teleg
 from vpnpulse.storage.database import apply_migrations, connect
 from vpnpulse.storage.store import SqliteStore, sync_servers
 
+# The version the API reports is the contract it implements; a test keeps the two equal.
+API_VERSION = "1.6.0"
+
 
 class SessionInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -126,7 +129,7 @@ def create_app(
         store = SqliteStore(connection, analytics_schema=analytics_schema, config=config, pepper=bot_token, now=now)
     if config and config.get("servers"):
         sync_servers(store.db, config, now())  # rows that notes, reports and observations reference
-    app = FastAPI(title="VPN Pulse API", version="1.5.1")
+    app = FastAPI(title="VPN Pulse API", version=API_VERSION)
     limiter = RateLimiter(now)
     # sessions: members behind one carrier NAT open the app together during an outage — 60, not 20
     limited = {"/api/v1/sessions": 60, "/api/v1/probe/enroll": 20,
