@@ -39,7 +39,11 @@ QUEUE_MAX_ENTRIES = 1500
 STEP_TIMEOUT = 5  # seconds per ip/awg command
 PING_TIMEOUT = 10
 SOCKET_WAIT = 3  # seconds for amneziawg-go to open its control socket
-HANDSHAKE_WAIT = 20  # seconds to let a fresh handshake complete (PersistentKeepalive drives it)
+# Seconds to let a fresh handshake complete; PersistentKeepalive in the profiles drives it.
+# The R-17 matrix did all three targets in 19 s, so a handshake lands in roughly 2-6 s. Three
+# targets at 12 s worst case stay inside both the 60 s timer interval and oneshot's 90 s
+# TimeoutStartSec, which 20 s did not.
+HANDSHAKE_WAIT = 12
 
 
 # ---------- configuration ----------
