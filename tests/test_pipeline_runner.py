@@ -74,9 +74,11 @@ def test_outage_is_reported_once_and_recovery_once(tmp_path):
 
     # the group: one outage message, one recovery — nothing else, no repeats
     assert group(notifier) == [("bot.unavailable", "s2", "unavailable"), ("bot.recovered", "s2", "operational")]
-    # the administrator: the unconfirmed phases on the way down and up (conflicting fresh evidence)
-    assert admin(notifier) == [("bot.degraded", "s2", "degraded"), ("bot.degraded", "s2", "degraded")]
-    assert connection.execute("SELECT count(*) FROM notification_queue WHERE state != 'sent'").fetchone()[0] == 0
+    # the administrator: nothing. The unconfirmed phases on the way down and up last three minutes each -
+    # shorter than `quiet_notice_seconds` - so their notices were dropped before anyone was woken.
+    assert admin(notifier) == []
+    assert connection.execute("SELECT count(*) FROM notification_queue WHERE state NOT IN ('sent', 'superseded')").fetchone()[0] == 0
+    assert connection.execute("SELECT count(*) FROM notification_queue WHERE state = 'superseded'").fetchone()[0] == 2
 
     states = connection.execute(
         "SELECT from_state, to_state FROM state_transitions WHERE scope_key = 'server:s2' ORDER BY confirmed_at, rowid"
@@ -99,16 +101,18 @@ def test_outage_is_reported_once_and_recovery_once(tmp_path):
 
 
 def test_messenger_failure_retries_with_backoff_without_duplicates(tmp_path):
+    # the group's outage message is the one that goes out immediately, so it is the one that retries
     pipeline, clock, notifier, connection, _ = make(tmp_path, notifier=FakeNotifier(fail_times=2))
-    run_minutes(pipeline, clock, 4)  # minutes 0-3: operational, operational, degraded (attempt 1 fails), retry after 30 s fails too
+    run_minutes(pipeline, clock, 6)  # minutes 0-5: the outage is confirmed at minute 5 and its first send fails
     assert notifier.sent == []
-    row = connection.execute("SELECT state, attempts, last_error_code, next_attempt_at FROM notification_queue").fetchone()
-    assert tuple(row)[:3] == ("pending", 2, "SEND_FAILED")
-    assert row[3] == "2026-09-15T12:04:00+00:00"  # back-off grows with the attempts: 30 s, then 60 s
-    run_minutes(pipeline, clock, 4)  # minute 4: the retry succeeds and the confirmed outage goes out right after it
-    rows = connection.execute("SELECT template_key, destination_kind, state, attempts FROM notification_queue ORDER BY created_at").fetchall()
-    assert [tuple(r) for r in rows] == [("bot.degraded", "admin", "sent", 3), ("bot.unavailable", "group", "sent", 1)]
-    assert [t for t, _, _ in notifier.sent] == ["bot.degraded", "bot.unavailable"]
+    row = connection.execute(
+        "SELECT state, attempts, last_error_code, next_attempt_at FROM notification_queue WHERE destination_kind = 'group'").fetchone()
+    assert tuple(row)[:3] == ("pending", 1, "SEND_FAILED")
+    run_minutes(pipeline, clock, 2)  # the retry after 30 s fails too, the next one succeeds
+    rows = connection.execute(
+        "SELECT template_key, destination_kind, state, attempts FROM notification_queue WHERE destination_kind = 'group'").fetchall()
+    assert [tuple(r) for r in rows] == [("bot.unavailable", "group", "sent", 3)]
+    assert [t for t, _, _ in notifier.sent] == ["bot.unavailable"]
 
 
 def test_restart_over_the_same_database_does_not_resend(tmp_path):

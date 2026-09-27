@@ -120,11 +120,12 @@ def test_gate_a_vertical_slice(tmp_path):
     group = [body for _, body, _ in bot.requests if body["chat_id"] == GROUP]
     admin = [body for _, body, _ in bot.requests if body["chat_id"] == ADMIN]
     assert [b["text"].split(":")[0] for b in group] == [f"🔴 {names['s2']}", f"🟢 {names['s2']}"]  # the group: outage once, recovery once
-    assert [b["text"][0] for b in admin] == ["🟡", "🟡"] and all(b["disable_notification"] for b in admin)  # the way down and up: admin, silent
+    assert admin == []  # the yellow phases on the way down and up are shorter than `quiet_notice_seconds`
     assert all(not b["disable_notification"] for b in group)
     assert all(url == f"https://api.telegram.org/bot{TOKEN}/sendMessage" for url, _, _ in bot.requests)
     assert all("s2" not in b["text"] and "203.0.113" not in b["text"] for b in group + admin)  # public names only
-    assert connection.execute("SELECT count(*) FROM notification_queue WHERE state != 'sent'").fetchone()[0] == 0
+    assert connection.execute("SELECT count(*) FROM notification_queue WHERE state NOT IN ('sent', 'superseded')").fetchone()[0] == 0
+    assert connection.execute("SELECT count(*) FROM notification_queue WHERE state = 'superseded'").fetchone()[0] == 2  # the two short yellow spells
     assert [r[0] for r in connection.execute("SELECT to_state FROM state_transitions WHERE scope_key = 'server:s2' ORDER BY confirmed_at, rowid")] == [
         "operational", "degraded", "unavailable", "degraded", "operational"]
 

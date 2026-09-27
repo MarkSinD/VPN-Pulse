@@ -43,6 +43,7 @@ monitoring:
   pc_target_interval_seconds: 60
   probe_deadline_seconds: 20
   confirmations: 2
+  quiet_notice_seconds: 600   # a degraded spell shorter than this is never sent to the administrator
   freshness_seconds: 180
 
 retention:

@@ -82,9 +82,10 @@ class Pipeline:
         self.freshness = timedelta(seconds=monitoring.get("freshness_seconds", 180))
         self.interval = timedelta(seconds=monitoring.get("collection_interval_seconds", 60))
         self.confirmations = int(monitoring.get("confirmations", 2))
+        # how long an administrator's notice about a short `degraded` / «no fresh data» spell waits
         self.aggregates_days = int((config.get("retention") or {}).get("aggregates_days", 90))
         self.store = store or SqliteStore(connection, analytics_schema=_contracts_dir() / "analytics-events.schema.json", config=config, now=self.now)
-        self.states = StateRepository(connection)
+        self.states = StateRepository(connection, quiet_seconds=int(monitoring.get("quiet_notice_seconds", 600)))
         self.worker = NotificationWorker(connection, notifier, backoff_seconds=backoff_seconds)
         self.maintenance_interval = maintenance_interval
         self.last_maintenance: datetime | None = None

@@ -69,6 +69,7 @@ the collectors map next to the secrets.
 | `collection_interval_seconds` | 30–3600 | `60` | how often the collector asks each server |
 | `pc_target_interval_seconds` | 60–3600 | `60` | how often the PC probe tests each target |
 | `probe_deadline_seconds` | 5–120 | `20` | a full check must finish within this budget |
+| `quiet_notice_seconds` | integer | `600` | how long a `degraded` or «no fresh data» notice waits before it reaches the administrator; a spell that ends first is dropped, and its recovery message with it. Outage messages to the group are never held |
 | `confirmations` | 2–5 | `2` | consecutive results needed to change public state |
 | `freshness_seconds` | 60–3600 | `180` | evidence older than this cannot confirm `operational` |
 

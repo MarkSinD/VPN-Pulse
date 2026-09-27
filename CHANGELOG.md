@@ -147,6 +147,11 @@ release is cut.
 
 ### Changed
 
+- Notifications: the administrator's `degraded` and «no fresh data» notices wait `monitoring.quiet_notice_seconds`
+  (10 minutes by default) before they are sent, and a spell that ends inside that window is dropped together with
+  its recovery message. Measured spells were three minutes on median — one lost handshake among ten good checks —
+  which produced ~130 messages a day about servers that were working. A scope that keeps flapping still speaks up:
+  after six dropped notices within an hour the next one goes out at once. Outage messages to the group are unchanged.
 - Contract 1.5.0: the probe summary (`/admin/probes`) carries `via_server_id` — the server that hosts an
   `abroad` probe; `vpn-pulse probe enroll abroad` requires `--via SERVER_ID`, and such a probe never
   receives its own server as a target. The collector helper reports peers listed in `PROBE_PEERS` as

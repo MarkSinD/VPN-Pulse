@@ -33,11 +33,23 @@ def _dt(value: str | None) -> datetime | None:
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
+# The administrator's notices about `degraded` and «no fresh data» wait this long before they are
+# sent: measured spells are three minutes on median - one lost handshake among ten good checks -
+# and a message about a problem that is already over is pure noise. A spell that outlives the hold
+# is a real one and still arrives. The group's outage messages are never held.
+QUIET_TEMPLATES = ("bot.degraded", "bot.unknown")
+# ... unless the scope keeps flapping: after this many notices dropped inside one hour, the next one
+# goes out at once, because "this server flaps" is itself worth knowing.
+FLAP_NOTICE_AFTER = 6
+
+
 def notification_for(previous: State, current: State, *, group_alerted: bool = False) -> tuple[str, str] | None:
     """(destination, template) for a transition, or None when nobody needs a message.
 
     `group_alerted` says the group was told the scope is unavailable and has not heard about a
     recovery yet; the recovery then goes to the group whatever the intermediate states were.
+    Who hears about a transition is decided here; *when* the administrator hears about a short
+    spell is decided by `StateRepository` (see `QUIET_TEMPLATES`).
     """
     if current is State.UNAVAILABLE:
         return ("admin" if group_alerted else "group"), "bot.unavailable"
@@ -53,8 +65,31 @@ def notification_for(previous: State, current: State, *, group_alerted: bool = F
 
 
 class StateRepository:
-    def __init__(self, connection: sqlite3.Connection) -> None:
+    def __init__(self, connection: sqlite3.Connection, *, quiet_seconds: int = 600) -> None:
         self.connection = connection
+        self.quiet_seconds = quiet_seconds
+
+    def _pending_admin_notices(self, scope_key: str) -> list[tuple[str, str]]:
+        """Admin messages for this scope that are queued and not sent yet."""
+        return self.connection.execute(
+            """
+            SELECT q.id, q.template_key FROM notification_queue q
+            JOIN state_transitions t ON t.id = q.transition_id
+            WHERE t.scope_key = ? AND q.destination_kind = 'admin' AND q.state = 'pending'
+            """,
+            (scope_key,),
+        ).fetchall()
+
+    def _dropped_notices(self, scope_key: str, since: datetime) -> int:
+        row = self.connection.execute(
+            """
+            SELECT count(*) FROM notification_queue q
+            JOIN state_transitions t ON t.id = q.transition_id
+            WHERE t.scope_key = ? AND q.destination_kind = 'admin' AND q.state = 'superseded' AND q.created_at >= ?
+            """,
+            (scope_key, _iso(since)),
+        ).fetchone()
+        return int(row[0]) if row else 0
 
     def group_alerted(self, scope_key: str) -> bool:
         """True while the group's last message about the scope (sent or still pending) says it is unavailable."""
@@ -131,7 +166,21 @@ class StateRepository:
                     "UPDATE state_transitions SET closed_at = ? WHERE scope_key = ? AND closed_at IS NULL AND id != ?",
                     (_iso(evaluated_at), scope_key, transition_id),
                 )
+                # anything still waiting describes the state we have just left, whatever comes next
+                waiting = self._pending_admin_notices(scope_key)
+                for notice_id, _key in waiting:
+                    self.connection.execute("UPDATE notification_queue SET state = 'superseded' WHERE id = ?", (notice_id,))
+
                 target = notification_for(previous_state, evaluation.state, group_alerted=self.group_alerted(scope_key))
+                send_at = evaluated_at
+                if target is not None and target[0] == "admin":
+                    template = target[1]
+                    if template == "bot.recovered" and waiting:
+                        target = None  # the problem was never announced, so neither is its end
+                    elif template in QUIET_TEMPLATES:
+                        flapping = self._dropped_notices(scope_key, evaluated_at - timedelta(hours=1)) >= FLAP_NOTICE_AFTER
+                        if not flapping:
+                            send_at = evaluated_at + timedelta(seconds=self.quiet_seconds)
                 if target is not None:
                     destination, template = target
                     notification_id = str(uuid5(NAMESPACE_URL, "notification:" + dedupe_key))
@@ -145,7 +194,7 @@ class StateRepository:
                         """,
                         (notification_id, transition_id, destination, template,
                          json.dumps({"server_id": server_id, "scope_key": scope_key, "state": evaluation.state.value, "from_state": previous_state.value}),
-                         _iso(evaluated_at), dedupe_key, _iso(evaluated_at)),
+                         _iso(send_at), dedupe_key, _iso(evaluated_at)),
                     )
         return transition_id
 

@@ -217,6 +217,12 @@
           "minimum": 60,
           "maximum": 3600,
           "default": 180
+        },
+        "quiet_notice_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 86400,
+          "description": "how long an administrator's notice about a degraded or unknown spell waits before it is sent; a spell that ends first is never announced"
         }
       }
     },
