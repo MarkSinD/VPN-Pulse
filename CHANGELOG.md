@@ -14,6 +14,9 @@ release is cut.
 
 ### Added
 
+- Experimental `KIND=pc` mode for the isolated Linux probe: control internet, full-tunnel
+  handshake and HTTPS checks, exit-route verification, and `home` reports using the existing queue.
+
 - Cross-server probe (`deploy/probe-abroad/`): isolated AmneziaWG handshake checks, disk queue,
   systemd timer, `probe enroll abroad --via`, source-server attribution, and exclusion of marked
   test peers from member activity and connection totals; probes may be installed on every server

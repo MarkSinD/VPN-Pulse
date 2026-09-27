@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""vpn-pulse-probe-abroad — the cross-server ("abroad") probe. Python standard library only.
+"""vpn-pulse-probe-abroad — isolated `abroad` and `pc` probes. Python standard library only.
 
 One run is one round: fetch the target list from the API, and for every target bring up a dedicated
 AmneziaWG interface inside a network namespace that has no default route, ping the target's tunnel
 address, read the handshake age, tear the interface down. Then one ProbeReport goes to the API; when
 the API is unreachable the report waits in a 0600 queue on disk (24 hours, 1500 entries at most).
 
-The interface is created in the main namespace — its UDP socket keeps the host's route to the
+With `KIND=pc`, the same lifecycle adds control-internet and HTTPS checks, a namespace default
+route through the tunnel, and public-exit comparisons. The interface is created in the main namespace — its UDP socket keeps the host's route to the
 endpoint — and then moved into the namespace, where the only route is the /32 to the target. A torn
 tunnel therefore cannot pass by reaching the target directly: that is what `route_verified` claims.
 Private keys live only in the peer profiles (0600) on this host; the log names servers by id only.
@@ -30,7 +31,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 DEFAULT_CONFIG = "/etc/vpn-pulse-probe/config"
 HANDSHAKE_MAX_AGE = 30  # seconds: the handshake must be from this very check
 QUEUE_MAX_AGE = 24 * 3600
@@ -42,8 +43,10 @@ SOCKET_WAIT = 3  # seconds for amneziawg-go to open its control socket
 
 # ---------- configuration ----------
 def read_config(path: str) -> dict:
-    values = {"NETNS": "vpprobe", "IFACE": "vpprobe0", "PEERS_DIR": "/etc/vpn-pulse-probe/peers", "STATE_DIR": "/var/lib/vpn-pulse-probe",
-              "ENGINE": "kernel", "AWG": "awg", "AWG_QUICK": "awg-quick", "AWG_GO": "amneziawg-go", "AWG_LOADER": "", "SOCKET_DIR": "/var/run/amneziawg"}
+    values = {"KIND": "abroad", "NETNS": "vpprobe", "IFACE": "vpprobe0", "PEERS_DIR": "/etc/vpn-pulse-probe/peers", "STATE_DIR": "/var/lib/vpn-pulse-probe",
+              "ENGINE": "kernel", "AWG": "awg", "AWG_QUICK": "awg-quick", "AWG_GO": "amneziawg-go", "AWG_LOADER": "", "SOCKET_DIR": "/var/run/amneziawg",
+              "CURL": "curl", "CONTROL_URLS": "https://www.gstatic.com/generate_204,https://example.org/", "HTTPS_URL": "https://www.gstatic.com/generate_204",
+              "IP_URL": "https://api.ipify.org", "DNS": "", "NETNS_ETC": "/etc/netns"}
     for raw in Path(path).read_text(encoding="utf-8").splitlines():
         line = raw.strip()
         if not line or line.startswith("#"):
@@ -57,6 +60,10 @@ def read_config(path: str) -> dict:
             raise ValueError(f"{required} is required")
     if values["ENGINE"] not in ("kernel", "userspace"):
         raise ValueError("ENGINE must be kernel or userspace")
+    if values["KIND"] not in ("abroad", "pc"):
+        raise ValueError("KIND must be abroad or pc")
+    if values["KIND"] == "pc" and any(not values.get(key) for key in ("HOME_EXIT", "EXPECTED_EXITS", "DNS")):
+        raise ValueError("HOME_EXIT, EXPECTED_EXITS and DNS are required for KIND=pc")
     return values
 
 
@@ -153,6 +160,94 @@ def check_target(config: dict, target: str, address: str, runner=subprocess.run,
     return result
 
 
+def control_internet(config: dict, runner=subprocess.run) -> tuple[bool, str]:
+    """Check ordinary internet outside every tunnel and return its public address."""
+    ok = 0
+    for url in (item.strip() for item in config["CONTROL_URLS"].split(",") if item.strip()):
+        try:
+            result = runner([config["CURL"], "-fsS", "--max-time", "10", "-o", "/dev/null", url], capture_output=True, text=True, timeout=15, check=False)
+            ok += result.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            pass
+    try:
+        address = runner([config["CURL"], "-fsS", "--max-time", "10", config["IP_URL"]], capture_output=True, text=True, timeout=15, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return False, ""
+    return ok > 0 and address.returncode == 0, address.stdout.strip() if address.returncode == 0 else ""
+
+
+def check_target_pc(config: dict, target: str, expected_exit: str, runner=subprocess.run, clock=time.time) -> tuple[list[dict], bool]:
+    """Run handshake and HTTPS through a full tunnel that has no direct fallback."""
+    netns, iface, awg = config["NETNS"], config["IFACE"], awg_command(config)
+    inside = ["ip", "netns", "exec", netns]
+    started = time.monotonic()
+
+    def run(command, **kwargs):
+        return runner(command, capture_output=True, text=True, timeout=kwargs.pop("timeout", STEP_TIMEOUT), check=False, **kwargs)
+
+    def result(check: str, success: bool, error: str) -> dict:
+        row = {"target_id": target, "check": check, "result": "success" if success else "failure", "duration_ms": int((time.monotonic() - started) * 1000)}
+        if not success:
+            row["error_code"] = error
+        return row
+
+    def teardown():
+        for command in (inside + ["ip", "link", "delete", iface], ["ip", "link", "delete", iface]):
+            try:
+                run(command)
+            except (OSError, subprocess.TimeoutExpired):
+                pass
+
+    handshake_ok = https_ok = route_ok = False
+    handshake_error = "TUNNEL_SETUP_FAILED"
+    https_error = "TUNNEL_SETUP_FAILED"
+    try:
+        resolv = Path(config["NETNS_ETC"]) / netns / "resolv.conf"
+        resolv.parent.mkdir(parents=True, exist_ok=True)
+        resolv.write_text(f"nameserver {config['DNS']}\n", encoding="utf-8")
+        profile_path = Path(config["PEERS_DIR"]) / f"{target}.conf"
+        local = local_address(profile_path.read_text(encoding="utf-8"))
+        teardown()
+        stripped = run([config["AWG_QUICK"], "strip", str(profile_path)])
+        if config["ENGINE"] == "kernel":
+            created = run(["ip", "link", "add", iface, "type", "amneziawg"]).returncode == 0
+        else:
+            created = run([config["AWG_GO"], iface]).returncode == 0
+            socket = Path(config["SOCKET_DIR"]) / f"{iface}.sock"
+            deadline = time.monotonic() + SOCKET_WAIT
+            while created and not socket.exists() and time.monotonic() < deadline:
+                time.sleep(0.1)
+            created = created and socket.exists()
+        ok = stripped.returncode == 0 and bool(local) and created
+        steps = [
+            (awg + ["setconf", iface, "/dev/stdin"], {"input": stripped.stdout}),
+            (["ip", "link", "set", iface, "netns", netns], {}),
+            (inside + ["ip", "address", "add", local, "dev", iface], {}),
+            (inside + ["ip", "link", "set", "up", "dev", iface], {}),
+            (inside + ["ip", "route", "add", "default", "dev", iface], {}),
+        ]
+        for command, extra in steps:
+            if not ok:
+                break
+            ok = run(command, **extra).returncode == 0
+        if ok:
+            shown = run(inside + awg + ["show", iface, "latest-handshakes"])
+            epochs = [int(line.split()[-1]) for line in shown.stdout.splitlines() if line.split() and line.split()[-1].isdigit()]
+            handshake_ok = any(epoch > 0 and 0 <= clock() - epoch <= HANDSHAKE_MAX_AGE for epoch in epochs)
+            handshake_error = "HANDSHAKE_FAILED"
+            if handshake_ok:
+                code = run(inside + [config["CURL"], "-sS", "--max-time", "10", "-o", "/dev/null", "-w", "%{http_code}", config["HTTPS_URL"]], timeout=15)
+                https_ok = code.returncode == 0 and code.stdout.strip() == "204"
+                https_error = "HTTPS_FAILED"
+                exit_result = run(inside + [config["CURL"], "-fsS", "--max-time", "10", config["IP_URL"]], timeout=15)
+                route_ok = exit_result.returncode == 0 and exit_result.stdout.strip() == expected_exit
+    except (OSError, subprocess.TimeoutExpired):
+        handshake_error = https_error = "CHECK_TIMEOUT"
+    finally:
+        teardown()
+    return [result("handshake", handshake_ok, handshake_error), result("https", https_ok, https_error)], route_ok
+
+
 # ---------- the API ----------
 def request_json(url: str, *, token: str | None = None, payload: dict | None = None, timeout: int = 15) -> dict:
     data = None if payload is None else json.dumps(payload, separators=(",", ":")).encode()
@@ -196,14 +291,32 @@ def tick(config: dict, runner=subprocess.run, clock=time.time) -> int:
     token = Path(config["TOKEN_FILE"]).read_text(encoding="utf-8").strip()
     base = config["API_URL"].rstrip("/")
     allowed = {item["id"] for item in request_json(base + "/api/v1/probe/config", token=token)["targets"]}
-    results = [check_target(config, target, address, runner, clock) for target, address in parse_targets(config["TARGETS"]).items() if target in allowed]
+    targets = {target: address for target, address in parse_targets(config["TARGETS"]).items() if target in allowed}
+    route_verified = True
+    network_type = "abroad"
+    if config["KIND"] == "pc":
+        network_type = "home"
+        expected = parse_targets(config["EXPECTED_EXITS"])
+        control_ok, home_exit = control_internet(config, runner)
+        route_verified = control_ok and home_exit == config["HOME_EXIT"]
+        results = []
+        for target in targets:
+            control = {"target_id": target, "check": "control_internet", "result": "success" if control_ok else "failure", "duration_ms": 0}
+            if not control_ok:
+                control["error_code"] = "CONTROL_INTERNET_FAILED"
+            results.append(control)
+            checked, target_route = check_target_pc(config, target, expected.get(target, ""), runner, clock)
+            results.extend(checked)
+            route_verified = route_verified and target_route
+    else:
+        results = [check_target(config, target, address, runner, clock) for target, address in targets.items()]
     if not results:
         print("no targets", file=sys.stderr)
         return 1
     report = {
         "report_id": str(uuid.uuid4()), "schema_version": 1, "agent_version": VERSION,
         "observed_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "network": {"type": "abroad", "ip_family": "ipv4", "route_verified": True}, "results": results,
+        "network": {"type": network_type, "ip_family": "ipv4", "route_verified": route_verified}, "results": results,
     }
     # oldest first; whatever cannot be sent now stays queued (sent rows are dropped, so nothing is repeated)
     pending = load_queue(config, clock) + [{"queued_at": clock(), "report": report}]

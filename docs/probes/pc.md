@@ -1,7 +1,7 @@
 # PC probe
 
-> **Status: planned.** Design complete; the agent is not implemented yet. The enrollment side
-> exists: `vpn-pulse probe enroll pc` and `POST /api/v1/probe/enroll`.
+> **Status: experimental agent available.** The shared Linux agent supports `KIND=pc`; complete
+> the live route matrix on the intended home network before treating its reports as evidence.
 
 The PC probe is the only source that proves a **full VPN connection** works from inside the
 users' country: a real handshake to each server plus a small HTTPS request through the tunnel,
@@ -41,6 +41,32 @@ reports are sent with `route_verified: false` and are **excluded from state**.
 Results are queued locally when the API is unreachable (up to 24 hours) and sent later; late
 reports go to history only.
 
+## Reference agent
+
+The PC mode reuses `deploy/probe-abroad/vpn-pulse-probe-abroad`, its installer, systemd timer and
+0600 queue. Set `KIND=pc` in `/etc/vpn-pulse-probe/config` and use the userspace engine when the
+targets require a newer AmneziaWG protocol than the VM kernel provides.
+
+`TARGETS` maps server ids to their tunnel addresses. `HOME_EXIT` is the public address expected
+outside the test tunnels; `EXPECTED_EXITS` maps each server id to the public address expected
+inside its tunnel. These values belong only in the private host config. At every tick the agent:
+
+1. calls the control URLs and the address service outside the namespaces;
+2. creates one interface at a time outside the namespace, then moves it inside;
+3. installs the namespace's only default route through that interface;
+4. records a fresh handshake, HTTP 204 through the tunnel and its observed exit;
+5. tears the interface down before checking the next target.
+
+The report uses `network.type=home` and contains `control_internet`, `handshake` and `https` for
+every target. `route_verified` is true only when the VM exit equals `HOME_EXIT` and every tunnel
+exit equals its target in `EXPECTED_EXITS`. A mismatch is still reported for diagnosis, but the
+server state logic excludes that report as route evidence.
+
+Install `curl`, `iproute2`, Python 3, `amneziawg-go`, `awg` and `awg-quick`; copy
+`deploy/probe-abroad/config.example`, set the private values, put one 0600 profile per target in
+`/etc/vpn-pulse-probe/peers`, then enroll with the one-use code from `vpn-pulse probe enroll pc`.
+Start `vpn-pulse-probe-abroad.timer` only after a manual ON/OFF route matrix succeeds.
+
 ## Enrollment
 
 `vpn-pulse probe enroll pc` prints a single-use code valid for ten minutes. The agent exchanges
@@ -49,9 +75,9 @@ secrets, no root keys, no bot token on the computer.
 
 ## Test profiles
 
-Each server needs a dedicated AmneziaWG profile for the probe, with `AllowedIPs` narrowed to
-the check targets. The profile is created by the server owner and is flagged as a probe on the
-server so it never counts as a member.
+Each server needs a dedicated AmneziaWG profile for the probe. Inside the isolated PC namespace
+the profile uses `AllowedIPs = 0.0.0.0/0`; this cannot change the VM's main route. The profile is
+flagged as a probe on the server so it never counts as a member.
 
 ## What the administrator sees
 

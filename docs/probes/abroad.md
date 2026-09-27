@@ -69,6 +69,10 @@ they differ from the server interface section; some releases require client-only
 Reports wait in a 0600 JSONL queue (`/var/lib/vpn-pulse-probe/queue.jsonl`, 24 hours, 1500 entries)
 while the API is unreachable and go out oldest first.
 
+The same executable also supports the PC probe with `KIND=pc`. That mode adds control-internet,
+HTTPS and exit-address checks and reports `network.type=home`; see [PC probe](pc.md). Omitting
+`KIND` keeps the existing `abroad` behavior.
+
 ## What the administrator sees
 
 `vpn-pulse probe list` shows the probe with its last report; the server screens show the 🌍 source

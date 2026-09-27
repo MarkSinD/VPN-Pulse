@@ -15,6 +15,7 @@ fi
 backup() { [ ! -e "$1" ] || cp -a "$1" "$1.bak-$(date -u +%Y%m%dT%H%M%SZ)"; }
 for f in /usr/local/bin/vpn-pulse-probe-abroad /etc/systemd/system/vpn-pulse-probe-abroad.service /etc/systemd/system/vpn-pulse-probe-abroad.timer /etc/systemd/system/vpn-pulse-probe-netns.service; do backup "$f"; done
 install -d -m 0700 /etc/vpn-pulse-probe /etc/vpn-pulse-probe/peers /etc/vpn-pulse-probe/keys
+install -d -m 0755 /etc/netns/vpprobe
 install -d -m 0700 /var/lib/vpn-pulse-probe
 install -m 0755 "$HERE/vpn-pulse-probe-abroad" /usr/local/bin/vpn-pulse-probe-abroad
 install -m 0644 "$HERE/vpn-pulse-probe-abroad.service" /etc/systemd/system/

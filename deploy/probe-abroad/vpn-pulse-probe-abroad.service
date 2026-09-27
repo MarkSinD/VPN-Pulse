@@ -12,7 +12,7 @@ Environment=VPN_PULSE_PROBE_CONFIG=/etc/vpn-pulse-probe/config
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/vpn-pulse-probe /etc/vpn-pulse-probe
+ReadWritePaths=/var/lib/vpn-pulse-probe /etc/vpn-pulse-probe /etc/netns
 # amneziawg-go (ENGINE=userspace) keeps its control socket in /run/amneziawg
 RuntimeDirectory=amneziawg
 RuntimeDirectoryPreserve=yes

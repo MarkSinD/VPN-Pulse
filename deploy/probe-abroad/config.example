@@ -1,5 +1,7 @@
 API_URL=https://monitor.example.org
 TOKEN_FILE=/etc/vpn-pulse-probe/token
+# abroad: server-to-server handshake; pc: full-tunnel checks from a home VM
+KIND=abroad
 NETNS=vpprobe
 IFACE=vpprobe0
 PEERS_DIR=/etc/vpn-pulse-probe/peers
@@ -12,3 +14,11 @@ ENGINE=kernel
 #AWG_GO=/opt/vpn-pulse-probe/awg/amneziawg-go
 #AWG=/opt/vpn-pulse-probe/awg/awg
 #AWG_LOADER=/lib/ld-musl-x86_64.so.1   # only for a musl build of awg on a glibc host
+
+# KIND=pc only. Keep real addresses in the private host config, never in this repository.
+#HOME_EXIT=198.51.100.10
+#EXPECTED_EXITS=primary=203.0.113.10,backup=203.0.113.11
+#CONTROL_URLS=https://www.gstatic.com/generate_204,https://example.org/
+#HTTPS_URL=https://www.gstatic.com/generate_204
+#IP_URL=https://api.ipify.org
+#DNS=192.0.2.53
