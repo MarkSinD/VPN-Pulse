@@ -166,6 +166,10 @@ release is cut.
 
 ### Fixed
 
+- A successful cross-server (`abroad`) handshake now counts as evidence that the tunnel answers, the way a
+  person's handshake does. Its failures already counted, so a probe could only ever make a server look worse:
+  a server whose people were idle fell to «no fresh data» while two probes were reaching it every minute.
+  Clearing a confirmed outage still needs a full test (handshake and HTTPS through the tunnel).
 - Mini App inside Telegram: the page never loaded Telegram's `telegram-web-app.js`, so a real client
   had no `initData` and saw "Members of the group only" (`TELEGRAM_REQUIRED`). The script is now
   vendored (`web/vendor/`) and served from the app's own origin (no third-party host to reach), and

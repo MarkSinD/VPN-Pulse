@@ -17,6 +17,9 @@ def _valid_full_failure(item: Observation) -> bool:
     )
 
 
+SUCCESS_SOURCES = ("human_activity", "abroad")
+
+
 def evaluate_scope(
     observations: Iterable[Observation],
     *,
@@ -39,11 +42,17 @@ def evaluate_scope(
 
     latest_at = max(item.observed_at for item in fresh)
     fresh_until = max(item.fresh_until for item in fresh)
+    # What counts as proof that the tunnel works: a full test (handshake and HTTPS through it), a
+    # person whose handshake we saw, or a cross-server probe. The last one only handshakes, so it is
+    # not a full test - but a handshake completed from another server is still evidence from outside
+    # that the endpoint answers, and a server whose only traffic is rare must not fall to "no fresh
+    # data" while two probes are reaching it every minute. Its failures already counted; now both
+    # sides of its evidence do.
     valid_successes = [
         item
         for item in fresh
         if item.result is ObservationResult.SUCCESS
-        and (item.source == "human_activity" or item.full_vpn_test)
+        and (item.source in SUCCESS_SOURCES or item.full_vpn_test)
     ]
     partial_failures = [item for item in fresh if item.result is ObservationResult.FAILURE]
 
@@ -59,7 +68,14 @@ def evaluate_scope(
             confirmed_failure = True
             break
 
-    if valid_successes and partial_failures:
+    # A cross-server handshake succeeds precisely when a server is blocked where the members are and
+    # alive everywhere else, so it must never talk a confirmed outage down to "some problems". Only
+    # people and full tests - evidence from where the members sit - can contradict one.
+    strong_successes = [item for item in valid_successes if item.source != "abroad"]
+
+    if confirmed_failure and not strong_successes:
+        state, reason = State.UNAVAILABLE, "FULL_TEST_FAILURE_CONFIRMED"
+    elif valid_successes and partial_failures:
         state, reason = State.DEGRADED, "CONFLICTING_FRESH_EVIDENCE"
     elif confirmed_failure:
         state, reason = State.UNAVAILABLE, "FULL_TEST_FAILURE_CONFIRMED"

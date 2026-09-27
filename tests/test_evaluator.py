@@ -61,3 +61,31 @@ def test_recommendation_is_stable_within_ten_percent():
     )
     assert result == "server-1"
 
+
+
+def observation(source, result, age, *, full=False, control=None):
+    at = NOW - timedelta(seconds=age)
+    return Observation(source=source, result=ObservationResult(result), observed_at=at,
+                       fresh_until=at + timedelta(seconds=180), full_vpn_test=full, control_internet_ok=control)
+
+
+def test_a_cross_server_handshake_is_evidence_that_the_tunnel_answers():
+    """A server whose people are idle must not read as «no fresh data» while probes reach it."""
+    # the collector knows the host is alive, but that is not a test of the tunnel
+    collector_only = [observation("collector", "success", 10)]
+    assert evaluate_scope(collector_only, now=NOW).state is State.UNKNOWN
+
+    # add a cross-server handshake: someone outside just came through the tunnel
+    with_abroad = collector_only + [observation("abroad", "success", 30)]
+    assert evaluate_scope(with_abroad, now=NOW).state is State.OPERATIONAL
+
+    # a failing probe still drags the state down, as before — both sides of its evidence count
+    conflicting = with_abroad + [observation("abroad", "failure", 5)]
+    assert evaluate_scope(conflicting, now=NOW).state is State.DEGRADED
+
+    # blocked where the members are, alive from abroad: that is still an outage for the members, and
+    # the succeeding probe must not talk it down to "some problems"
+    outage = [observation("pc", "failure", age, full=True, control=True) for age in (60, 10)]
+    assert evaluate_scope(outage + [observation("abroad", "success", 20)], now=NOW).state is State.UNAVAILABLE
+    # people who are actually connected do contradict it - they sit where the members sit
+    assert evaluate_scope(outage + [observation("human_activity", "success", 20)], now=NOW).state is State.DEGRADED
