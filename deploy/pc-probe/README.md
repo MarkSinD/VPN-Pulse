@@ -32,3 +32,7 @@ profile per target. `pc-check.sh PROFILE TARGET_ID EXPECTED_EXIT_IP [NAMESPACE]`
 with no physical default route, moves one userspace interface into it, adds the tunnel-only default
 route, then checks a fresh handshake, HTTPS 204, and the expected VPN exit. Its JSON output resembles
 one normalized probe result. Profiles and expected addresses are private deployment inputs.
+
+For a test using an already prepared private VHDX on another Windows laptop, see
+[`docs/probes/second-laptop-test.md`](../../docs/probes/second-laptop-test.md). Transfer the VM image
+and its SSH key separately; they never belong in Git or a public release.

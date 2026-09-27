@@ -38,3 +38,20 @@ def test_hyper_v_provisioning_is_key_only_bounded_and_non_destructive():
     assert "-StaticMacAddress" in script
     assert "REPLACE_WITH_NETWORK_SETUP" in script and "bootcmd:" in script and "netplan apply" in script
     assert "lock_passwd: true" in seed and "ssh_pwauth: false" in seed
+
+
+def test_second_laptop_import_is_bounded_and_preserves_source_vhd():
+    script = (DEPLOY / "import-probe-vm.ps1").read_text(encoding="utf-8")
+    assert "IsInRole" in script and "Run PowerShell as Administrator" in script
+    assert "Resolve-Path -LiteralPath $VhdPath" in script
+    assert "New-VM" in script and "-Generation 2" in script
+    assert "Set-VMNetworkAdapter" in script and "-StaticMacAddress" in script
+    assert "Remove-Item" not in script and "Remove-VM" not in script
+
+
+def test_second_laptop_collector_supports_both_matrix_labels():
+    script = (DEPLOY / "collect-probe-results.ps1").read_text(encoding="utf-8")
+    assert "ValidateSet('on', 'off')" in script
+    assert 'matrix-$Label.done' in script
+    assert 'matrix-$Label.*' in script
+    assert "BatchMode=yes" in script
