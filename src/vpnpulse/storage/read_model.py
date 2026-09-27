@@ -31,6 +31,8 @@ from vpnpulse.i18n import Translator
 KINDS = ("pc", "mobile", "abroad")
 PROBE_KIND = {"pc": "pc", "mobile": "android", "abroad": "abroad"}
 SOURCE_OF_PROBE = {"pc": "pc", "android": "mobile", "abroad": "abroad"}
+# every kind of evidence a server can have; the read model looks up the newest of each
+EVIDENCE_SOURCES = ("collector", "human_activity", "pc", "android", "abroad")
 RESULT_STATE = {"success": "operational", "failure": "unavailable", "not_run": "unknown", "degraded": "degraded"}
 PROTOCOL_OF_TYPE = {"awg-host": "amneziawg", "awg-docker": "amneziawg", "hiddify": "xray_reality"}
 PROBE_CAPABILITIES = {"pc": ["control_internet", "handshake", "https"], "android": ["dns", "tcp"], "abroad": ["handshake"], "watchdog": ["heartbeat"]}
@@ -98,17 +100,25 @@ class SqliteReadModel:
         ).fetchone()
 
     def _latest_by_source(self, server_id: str) -> dict[str, sqlite3.Row]:
-        rows = self.db.execute(
-            """
-            SELECT o.source_kind, o.result, o.observed_at, o.fresh_until, o.error_code, o.metrics_json
-            FROM observations o
-            JOIN (SELECT source_kind, MAX(observed_at) AS latest FROM observations WHERE server_id = ? GROUP BY source_kind) m
-              ON m.source_kind = o.source_kind AND m.latest = o.observed_at
-            WHERE o.server_id = ?
-            """,
-            (server_id, server_id),
-        ).fetchall()
-        return {row[0]: row for row in rows}
+        """The newest observation of each kind, as one index seek per kind.
+
+        Asking the database to group a server's whole retention window by source cost 464 ms once
+        the probes had filled it (32k rows per server), and every screen asks for this. The list of
+        kinds is short and known, so each one is a single seek on (server_id, source_kind, time).
+        """
+        rows = {}
+        for source in EVIDENCE_SOURCES:
+            row = self.db.execute(
+                """
+                SELECT source_kind, result, observed_at, fresh_until, error_code, metrics_json
+                FROM observations WHERE server_id = ? AND source_kind = ?
+                ORDER BY observed_at DESC LIMIT 1
+                """,
+                (server_id, source),
+            ).fetchone()
+            if row is not None:
+                rows[source] = row
+        return rows
 
     def _collector_payload(self, server_id: str) -> dict:
         row = self._latest_by_source(server_id).get("collector")

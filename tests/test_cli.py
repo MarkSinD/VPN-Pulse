@@ -126,7 +126,7 @@ def test_init_creates_the_layout_and_never_prints_the_token(tmp_path, monkeypatc
         assert stat.S_IMODE(token_file.parent.stat().st_mode) == 0o700
     db = Path(config["storage"]["database"])
     assert db.exists()
-    assert connect(db).execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == 2
+    assert connect(db).execute("SELECT MAX(version) FROM schema_migrations").fetchone()[0] == latest_migration()
     # a second init refuses to clobber the file unless told to
     code, sink = run_cli("init", "--dir", tmp_path / "inst")
     assert code == 2 and "--force" in sink.text
@@ -269,6 +269,10 @@ def test_doctor_says_what_the_admin_screen_says(tmp_path, scenario, lang):
     assert summary["result"] == expected["result"]
 
 
+def latest_migration() -> int:
+    return max(int(path.name.split("_", 1)[0]) for path in (ROOT / "migrations").glob("[0-9]*.sql"))
+
+
 def test_doctor_exit_codes_sections_and_local_checks(tmp_path, monkeypatch):
     monkeypatch.setattr("sys.stdin", io.StringIO(TOKEN + "\n"))
     cfg = init_install(tmp_path, "--telegram-token-stdin", "--group-chat-id", "-1001234567890")
@@ -285,7 +289,7 @@ def test_doctor_exit_codes_sections_and_local_checks(tmp_path, monkeypatch):
     detail = json.loads(sink.text)
     assert code == 0 and detail["items"] == [] and "token file" in detail["details"][0] and TOKEN not in sink.text
     code, sink = run_cli("doctor", "storage")
-    assert code == 0 and any("schema version: 2" in line for line in sink.lines)
+    assert code == 0 and any(f"schema version: {latest_migration()}" in line for line in sink.lines)
     # the token file disappears: a failure with the same words as the Admin screen would use
     config = yaml.safe_load(cfg.read_text(encoding="utf-8"))
     Path(config["telegram"]["bot_token_file"]).unlink()

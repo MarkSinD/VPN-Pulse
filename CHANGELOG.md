@@ -166,6 +166,10 @@ release is cut.
 
 ### Fixed
 
+- The Mini App took up to fifteen seconds to leave its skeleton on a database the probes had filled. Every
+  screen asks for the newest observation of each kind, and that was a grouping over the server's whole
+  retention window — 464 ms per server, fifteen times per load. It is now one index seek per kind
+  (migration `0003`, index on `server_id, source_kind, observed_at`).
 - A successful cross-server (`abroad`) handshake now counts as evidence that the tunnel answers, the way a
   person's handshake does. Its failures already counted, so a probe could only ever make a server look worse:
   a server whose people were idle fell to «no fresh data» while two probes were reaching it every minute.
