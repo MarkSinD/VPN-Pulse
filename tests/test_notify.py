@@ -103,3 +103,15 @@ def test_token_is_read_at_send_time_and_never_cached(token_file):
     token_file.unlink()
     with pytest.raises(FileNotFoundError):
         notifier("bot.unavailable", params)  # a missing token is a configuration error, not a retry
+
+
+def test_configured_open_url_puts_one_button_under_every_message(token_file):
+    # A message about an outage in a channel is only useful if the app is one tap away; Telegram
+    # allows a Web App button in private chats only, so what travels is a plain link button.
+    api = BotApi()
+    notifier = TelegramNotifier(MessageFormatter(CONFIG), token_file=token_file, group_chat_id="-100777", admin_chat_id=99,
+                                opener=api, open_url="https://t.me/connection_success_bot/status")
+    assert notifier("bot.unavailable", {"server_id": "s2", "state": "unavailable", "destination": "group"}) is True
+    assert notifier("bot.degraded", {"server_id": "s2", "state": "degraded", "destination": "admin"}) is True
+    for _url, body, _timeout in api.requests:
+        assert body["reply_markup"] == {"inline_keyboard": [[{"text": "Открыть статус", "url": "https://t.me/connection_success_bot/status"}]]}

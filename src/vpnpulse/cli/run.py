@@ -50,7 +50,8 @@ def make_notifier(config: dict, out: Output, *, telegram: dict | None = None, op
         status = secret_file_status(token_file)
         if status != "ok":
             raise CliError(f"telegram token file {token_file}: {status} (vpn-pulse doctor telegram)")
-        return TelegramNotifier(formatter, token_file=token_file, group_chat_id=telegram["group_chat_id"], admin_chat_id=telegram.get("admin_chat_id"), opener=opener)
+        return TelegramNotifier(formatter, token_file=token_file, group_chat_id=telegram["group_chat_id"], admin_chat_id=telegram.get("admin_chat_id"),
+                                open_url=telegram.get("open_url"), opener=opener)
     return ConsoleNotifier(formatter, out=out.line)
 
 

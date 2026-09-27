@@ -42,6 +42,7 @@ Without this block `vpn-pulse run` prints the messages it would send instead of 
 |---|---|---|---|
 | `bot_token_file` | path | — | a `0600` file holding the bot token; the token itself is never in `config.yaml` |
 | `group_chat_id` | string or integer | — | the members' chat: confirmed outages and recoveries |
+| `open_url` | `https://t.me/…` | — | the link a button under every bot message opens. Telegram allows a Web App button only in private chats, so a channel needs the app's direct link (`t.me/<bot>/<app>`, created in BotFather); without the field there is no button |
 | `admin_chat_id` | string or integer | the group | unconfirmed problems and data gaps, sent silently |
 
 ## `servers[]`

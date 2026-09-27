@@ -14,6 +14,8 @@ release is cut.
 
 ### Added
 
+- `telegram.open_url`: every message the bot sends carries a button that opens the status app, so an outage
+  message in a channel is one tap away from the screen that says which server to use instead.
 - Cross-server probe (`deploy/probe-abroad/`): isolated AmneziaWG handshake checks, disk queue,
   systemd timer, `probe enroll abroad --via`, source-server attribution, and exclusion of marked
   test peers from member activity and connection totals; probes may be installed on every server

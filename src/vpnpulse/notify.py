@@ -67,13 +67,17 @@ class ConsoleNotifier:
 class TelegramNotifier:
     """Sends queue messages to the group (members) or the administrator chat via the Bot API."""
 
-    def __init__(self, formatter: MessageFormatter, *, token_file: Path, group_chat_id: str | int, admin_chat_id: str | int | None = None, opener: Callable | None = None, timeout: float = 10.0) -> None:
+    def __init__(self, formatter: MessageFormatter, *, token_file: Path, group_chat_id: str | int, admin_chat_id: str | int | None = None, opener: Callable | None = None, timeout: float = 10.0, open_url: str | None = None) -> None:
         self.formatter = formatter
         self.token_file = Path(token_file)
         self.group_chat_id = group_chat_id
         self.admin_chat_id = admin_chat_id or group_chat_id
         self.opener = opener or urllib.request.urlopen
         self.timeout = timeout
+        # A message about an outage is useless without the way to act on it. Telegram allows a
+        # "web app" button only in a private chat, so the button here is an ordinary link: point it
+        # at the app's direct link (t.me/<bot>/<app>) and it opens the app in place, in a channel too.
+        self.open_url = open_url
 
     def _token(self) -> str:
         return self.token_file.read_text(encoding="utf-8").strip()
@@ -81,7 +85,10 @@ class TelegramNotifier:
     def __call__(self, template_key: str, params: dict) -> bool:
         destination = params.get("destination", "group")
         chat_id = self.admin_chat_id if destination == "admin" else self.group_chat_id
-        body = json.dumps({"chat_id": chat_id, "text": self.formatter.text(template_key, params), "disable_notification": destination == "admin"}).encode()
+        message = {"chat_id": chat_id, "text": self.formatter.text(template_key, params), "disable_notification": destination == "admin"}
+        if self.open_url:
+            message["reply_markup"] = {"inline_keyboard": [[{"text": self.formatter.text("bot.open", {}), "url": self.open_url}]]}
+        body = json.dumps(message).encode()
         request = urllib.request.Request(
             f"https://api.telegram.org/bot{self._token()}/sendMessage", data=body, headers={"Content-Type": "application/json"}, method="POST"
         )

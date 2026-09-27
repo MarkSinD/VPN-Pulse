@@ -107,6 +107,11 @@
             "integer"
           ],
           "description": "chat for unconfirmed problems and data gaps; defaults to the group"
+        },
+        "open_url": {
+          "type": "string",
+          "pattern": "^https://t\\.me/",
+          "description": "link the button under every bot message opens; use the app's direct link (t.me/<bot>/<app>) so it opens in place, or the bot's chat"
         }
       },
       "description": "delivery settings for vpn-pulse run; optional — without it messages are printed to the console"
