@@ -214,7 +214,7 @@ p { margin: 0; }
 .strip .segs, .bigstrip .segs { position: static; height: 10px; gap: 1px; border-radius: 2px; overflow: hidden; }
 .bigstrip .segs { height: 18px; }
 .srow .axis-row { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-muted); margin-top: 2px; }
-.srow .side .since { font-size: var(--text-xs); color: var(--color-muted); text-align: right; }
+.srow .stl .since { color: var(--color-muted); }
 .history { margin-bottom: var(--space-4); }
 .history .seg-ctl { margin-bottom: var(--space-1); }
 .chart { position: relative; height: 30px; }

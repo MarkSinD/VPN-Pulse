@@ -355,12 +355,11 @@
   function serverRow(s) {
     const label = t('status.rowLabel', { server: sname(s), state: t('status.state.' + s.state), since: sinceText(s) || t('status.since.calm') });
     const since = sinceText(s);
-    const side = since ? '<span class="since">' + esc(since) + '</span>' : '';
     return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
       '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
-      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span></span>' + sources(s, true) + strip(s, false) +
+      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span>' + (since ? '<span class="since">· ' + esc(since) + '</span>' : '') + '</span>' + sources(s, true) + strip(s, false) +
       '<span class="axis2 axis-row"><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></span></span>' +
-      '<span class="side">' + side + ico('chevron', 'chev') + '</span></button>';
+      '<span class="side">' + ico('chevron', 'chev') + '</span></button>';
   }
   function statusScreen() {
     if (SC.loading) return skeleton();
@@ -379,7 +378,6 @@
     const ks = kinds();
     if (ks.length) parts.push('<div class="legend" role="list" aria-label="' + esc(t('status.legend')) + '">' + ks.map(k => { const on = SC.presence[k] === 'active'; return '<span role="listitem"><span class="src ' + (on ? 's-ok' : 's-unknown') + '">' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span></span><span class="lg-t">' + esc(t('source.' + k)) + '</span><span class="sr-only">' + esc(t(on ? 'status.sourceOn' : 'status.sourceOff')) + '</span></span>'; }).join('') + '</div>');
     parts.push('<div class="servers" id="servers">' + SC.list.map(serverRow).join('') + '</div>');
-    parts.push('<div class="axis" aria-hidden="true"><span></span><div><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></div><span class="spacer"></span></div>');
     const side = window.innerWidth >= 1024 ? '<aside class="ctx">' + (SC.eventsList.length ? '<div class="panel"><h3>' + esc(t('events.title')) + '</h3>' + eventRow(SC.eventsList[0]) + '</div>' : '') + '<div class="panel"><h3>' + esc(t('status.legend')) + '</h3><div class="stack small muted">' + kinds().map(k => '<span>' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k + '.full')) + '</span>').join('') + '</div></div></aside>' : '';
     return '<div class="status-layout"><div class="screen">' + parts.join('') + '</div>' + side + '</div>';
   }
