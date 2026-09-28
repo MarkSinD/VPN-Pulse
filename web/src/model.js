@@ -53,7 +53,13 @@ window.VPNPulseModel = (function () {
     if (sources.abroad && sources.abroad.r === 'ok') return { a: 'server.conflict.pcFail', b: 'server.conflict.abroadOk' };
     return null;
   }
-  const missingKinds = presence => { const m = KINDS.filter(k => presence[k] === 'none'); return m.length ? m : null; };
+  // Which absent sources mean coverage is genuinely incomplete. The banner that used to
+  // say so is gone, but `coverageMissing` still sets the `coverage` dimension on every
+  // status_ready event - and counting a probe the product does not have yet would mark
+  // every session "partial", which is a constant, and a constant measures nothing.
+  // Put 'mobile' back here when that probe ships.
+  const COVERAGE_KINDS = ['pc', 'abroad'];
+  const missingKinds = presence => { const m = COVERAGE_KINDS.filter(k => presence[k] === 'none'); return m.length ? m : null; };
   function finishServer(s, lang) {
     s.country = countryName(s.cc, lang, s.countryFallback);
     s.uptime24 = fmtPct(s.uptime24n, lang); s.uptime7 = fmtPct(s.uptime7n, lang);
