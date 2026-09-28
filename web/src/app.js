@@ -26,7 +26,6 @@
     lang: q.get('lang') || store.get('lang', document.documentElement.lang === 'en' ? 'en' : 'ru'),
     tab: 'status', server: null,
     filter: 'all', range: '24h', open: 'checks',
-    hintDismissed: store.get('hint', '') === '1',
     scrollPos: 0, originRow: null, eventsPage: 1, noteExpanded: false, eventsState: 'ok',
     text200: q.get('text') === '200',
     sessionRole: null, help: null
@@ -357,7 +356,8 @@
     const since = sinceText(s);
     return '<button type="button" class="srow" data-server="' + s.id + '" data-event="server_row_pressed" aria-label="' + esc(label) + '">' + ring(s) +
       '<span class="main"><span class="name"><span class="t">' + esc(sname(s)) + '</span>' + (SC.recommended === s.id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span>' +
-      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span>' + (since ? '<span class="since">· ' + esc(since) + '</span>' : '') + '</span>' + sources(s, true) + strip(s, false) +
+      '<span class="stl"><b>' + esc(t('status.state.' + s.state)) + '</b><span>· ' + esc(s.country) + '</span></span>' +
+      '<span class="srcline">' + sources(s, true) + (since ? '<span class="since">' + esc(since) + '</span>' : '') + '</span>' + strip(s, false) +
       '<span class="axis2 axis-row"><span>' + esc(t('status.axisStart')) + '</span><span>' + esc(t('status.axisEnd')) + '</span></span></span>' +
       '<span class="side">' + ico('chevron', 'chev') + '</span></button>';
   }
@@ -374,7 +374,6 @@
       if (S.role === 'admin' && SC.adminData) parts.push('<section class="admin-block"><span class="admin-tag">' + esc(t('app.nav.admin')) + '</span><h2 class="sub">' + esc(t('admin.serverAdd')) + '</h2><p class="small muted">' + esc(t('admin.serverAddBody')) + '</p>' + copyRow(SC.adminData.nextCommand || 'vpn-pulse server add') + '<a class="btn btn-text" href="#quick-start" data-event="quick_start_opened" style="justify-self:start">' + ico('ext') + esc(t('action.quickStart')) + '</a></section>');
       return '<div class="screen">' + parts.join('') + '</div>';
     }
-    if (!S.hintDismissed) parts.push('<div class="hint" id="hint"><span>' + esc(t('status.hint')) + '</span><button type="button" class="btn btn-text" id="hint-ok">' + esc(t('status.hintDismiss')) + '</button></div>');
     const ks = kinds();
     if (ks.length) parts.push('<div class="legend" role="list" aria-label="' + esc(t('status.legend')) + '">' + ks.map(k => { const on = SC.presence[k] === 'active'; return '<span role="listitem"><span class="src ' + (on ? 's-ok' : 's-unknown') + '">' + ico(srcIcon[k]) + '<span class="d" aria-hidden="true"></span></span><span class="lg-t">' + esc(t('source.' + k)) + '</span><span class="sr-only">' + esc(t(on ? 'status.sourceOn' : 'status.sourceOff')) + '</span></span>'; }).join('') + '</div>');
     parts.push('<div class="servers" id="servers">' + SC.list.map(serverRow).join('') + '</div>');
@@ -392,7 +391,6 @@
   }
   function bindStatus() {
     root.querySelectorAll('.srow[data-server]').forEach(b => b.addEventListener('click', e => openServer(b.getAttribute('data-server'), e.detail === 0 ? 'keyboard' : 'pointer', b)));
-    const hk = $('#hint-ok'); if (hk) hk.addEventListener('click', () => { S.hintDismissed = true; store.set('hint', '1'); $('#hint').remove(); });
     const nm = $('#note-more'); if (nm) nm.addEventListener('click', () => { S.noteExpanded = !S.noteExpanded; render(); });
     root.querySelectorAll('[data-retry]').forEach(b => b.addEventListener('click', () => {
       track('retry_pressed', { surface: b.getAttribute('data-retry'), error_code: 'STATUS_UNAVAILABLE' });
@@ -407,7 +405,6 @@
   function openServer(id, input) {
     const s = byId(id); if (!s) return;
     S.scrollPos = root.scrollTop; S.originRow = id; S.open = 'checks';
-    if (!S.hintDismissed) { S.hintDismissed = true; store.set('hint', '1'); }
     track('server_row_pressed', { server_public_id: id, state: s.state, recommended: SC.recommended === id, input });
     history.pushState({ tab: 'status', server: id }, '');
     S.server = id; render(); root.scrollTop = 0;

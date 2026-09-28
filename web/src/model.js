@@ -53,7 +53,11 @@ window.VPNPulseModel = (function () {
     if (sources.abroad && sources.abroad.r === 'ok') return { a: 'server.conflict.pcFail', b: 'server.conflict.abroadOk' };
     return null;
   }
-  const missingKinds = presence => { const m = KINDS.filter(k => presence[k] === 'none'); return m.length ? m : null; };
+  // Which absent sources are worth warning an admin about. The mobile probe is not
+  // part of the product yet, so its absence is the expected state rather than a gap
+  // in the setup - put 'mobile' back here when it ships.
+  const COVERAGE_KINDS = ['pc', 'abroad'];
+  const missingKinds = presence => { const m = COVERAGE_KINDS.filter(k => presence[k] === 'none'); return m.length ? m : null; };
   function finishServer(s, lang) {
     s.country = countryName(s.cc, lang, s.countryFallback);
     s.uptime24 = fmtPct(s.uptime24n, lang); s.uptime7 = fmtPct(s.uptime7n, lang);
