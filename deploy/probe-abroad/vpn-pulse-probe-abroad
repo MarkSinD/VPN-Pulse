@@ -45,6 +45,7 @@ SOCKET_WAIT = 3  # seconds for amneziawg-go to open its control socket
 # targets at 12 s worst case stay inside both the 60 s timer interval and oneshot's 90 s
 # TimeoutStartSec, which 20 s did not.
 HANDSHAKE_WAIT = 12
+TEARDOWN_WAIT = 6  # seconds for the interface name and its control socket to be free again
 
 
 # ---------- configuration ----------
@@ -235,6 +236,22 @@ def check_target_pc(config: dict, target: str, expected_exit: str, runner=subpro
                 run(command)
             except (OSError, subprocess.TimeoutExpired):
                 pass
+        # Every target reuses the same namespace and the same interface name, so the
+        # next one cannot create its interface until this one has really gone - and
+        # amneziawg-go only exits once the interface does. Without waiting, failures
+        # lined up with position in the target list: the first target passed, the
+        # second sometimes failed, the third mostly timed out. Wait for the name to
+        # be free, and for the control socket to be gone with it.
+        socket = Path(config["SOCKET_DIR"]) / f"{iface}.sock"
+        deadline = time.monotonic() + TEARDOWN_WAIT
+        while time.monotonic() < deadline:
+            try:
+                gone = run(["ip", "link", "show", iface]).returncode != 0
+                if gone and not socket.exists():
+                    return
+            except (OSError, subprocess.TimeoutExpired):
+                return
+            time.sleep(0.2)
 
     handshake_ok = https_ok = route_ok = False
     handshake_error = "TUNNEL_SETUP_FAILED"
