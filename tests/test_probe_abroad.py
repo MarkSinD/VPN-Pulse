@@ -274,3 +274,45 @@ def test_home_exit_accepts_a_pool_but_never_a_foreign_exit():
     assert probe.home_exit_matches("198.51.100.3", " nonsense , 198.51.100.0/24 ")
     assert probe.home_exit_matches("192.0.2.7", "192.0.2.7")
     assert not probe.home_exit_matches("192.0.2.8", "192.0.2.7")
+
+
+class TeardownRunner(Runner):
+    """Reports the interface as present until it is deleted, and only inside the namespace.
+
+    The real interface is moved into the namespace for the check, so a root-namespace
+    `ip link show` answers "gone" from the very first poll. A wait that asks only there
+    is not a wait at all - which is what let the next target start on a name the engine
+    had not released yet.
+    """
+
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.deleted_inside = False
+        self.polls_inside = 0
+
+    def __call__(self, command, **kwargs):
+        self.commands.append(list(command))
+        namespaced = command[:3] == ["ip", "netns", "exec"]
+        tail = command[4:] if namespaced else command
+        if tail[:3] == ["ip", "link", "delete"]:
+            if namespaced:
+                self.deleted_inside = True
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if tail[:3] == ["ip", "link", "show"]:
+            if namespaced:
+                self.polls_inside += 1
+                return subprocess.CompletedProcess(command, 1 if self.deleted_inside else 0, "", "")
+            return subprocess.CompletedProcess(command, 1, "", "")  # never in the root namespace
+        return super().__call__(command, **kwargs)
+
+
+def test_teardown_waits_on_the_namespace_the_interface_actually_lives_in(tmp_path):
+    conf = config(tmp_path, KIND="pc", HOME_EXIT="198.51.100.7", EXPECTED_EXITS=f"backup={TARGET}", DNS="192.0.2.53")
+    runner = TeardownRunner()
+    probe.check_target_pc(conf, "backup", TARGET, runner, clock=lambda: NOW)
+    inside_show = ["ip", "netns", "exec", conf["NETNS"], "ip", "link", "show", conf["IFACE"]]
+    assert inside_show in runner.commands, "teardown never looked inside the namespace"
+    assert runner.polls_inside >= 1
+    # The wait ends only once both namespaces agree the name is free, so those two
+    # questions are the last thing a check does before the next target starts.
+    assert runner.commands[-2:] == [inside_show, ["ip", "link", "show", conf["IFACE"]]]
