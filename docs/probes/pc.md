@@ -66,9 +66,14 @@ The PC mode reuses `deploy/probe-abroad/vpn-pulse-probe-abroad`, its installer, 
 0600 queue. Set `KIND=pc` in `/etc/vpn-pulse-probe/config` and use the userspace engine when the
 targets require a newer AmneziaWG protocol than the VM kernel provides.
 
-`TARGETS` maps server ids to their tunnel addresses. `HOME_EXIT` is the public address expected
-outside the test tunnels; `EXPECTED_EXITS` maps each server id to the public address expected
-inside its tunnel. These values belong only in the private host config. At every tick the agent:
+`TARGETS` maps server ids to their tunnel addresses. `HOME_EXIT` is what the probe's own exit is
+allowed to be outside the test tunnels — addresses and/or CIDR prefixes, comma-separated; prefer
+the prefixes your ISP allocates from, because a residential line rotates and a single address goes
+stale. Keep that list to your own ISP: an exit belonging to another VPN has to fail, or a probe
+measuring from abroad would look healthy, which is the one thing this check exists to prevent.
+`EXPECTED_EXITS` maps each server id to the public address expected inside its tunnel and stays an
+exact match — those are specific servers, not a pool. These values belong only in the private host
+config. At every tick the agent:
 
 1. calls the control URLs and the address service outside the namespaces;
 2. creates one interface at a time outside the namespace, then moves it inside;
@@ -77,9 +82,10 @@ inside its tunnel. These values belong only in the private host config. At every
 5. tears the interface down before checking the next target.
 
 The report uses `network.type=home` and contains `control_internet`, `handshake` and `https` for
-every target. `route_verified` is true only when the VM exit equals `HOME_EXIT` and every tunnel
+every target. `route_verified` is true only when the VM exit is one `HOME_EXIT` allows and every tunnel
 exit equals its target in `EXPECTED_EXITS`. A mismatch is still reported for diagnosis, but the
-server state logic excludes that report as route evidence.
+server state logic excludes that report as route evidence — so a `HOME_EXIT` that no longer covers
+the line does not show up as a problem, it shows up as *no data*.
 
 Install `curl`, `iproute2`, Python 3, `amneziawg-go`, `awg` and `awg-quick`; copy
 `deploy/probe-abroad/config.example`, set the private values, put one 0600 profile per target in

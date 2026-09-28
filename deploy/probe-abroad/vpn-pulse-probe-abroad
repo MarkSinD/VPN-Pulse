@@ -20,6 +20,7 @@ of the next; taking `amneziawg-go` and `awg` from the same release as the server
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import subprocess
@@ -75,6 +76,38 @@ def read_config(path: str) -> dict:
 def awg_command(config: dict) -> list:
     """`awg`, optionally run through a loader (a musl build of the tools on a glibc host: AWG_LOADER=/lib/ld-musl-x86_64.so.1)."""
     return ([config["AWG_LOADER"]] if config["AWG_LOADER"] else []) + [config["AWG"]]
+
+
+def home_exit_matches(observed: str, expected: str) -> bool:
+    """Is `observed` one of the addresses HOME_EXIT allows?
+
+    HOME_EXIT takes a comma-separated list of addresses and/or CIDR prefixes. A single
+    address was the original form, but a residential line rotates: the probe then reported
+    route_verified=false while everything was in fact healthy, and such reports are excluded
+    from state, so the source went silent instead of answering. Prefixes let the ISP's pool
+    through while an exit belonging to some other VPN still fails the check, which is the
+    whole point of comparing at all - a probe measuring from abroad must not look healthy.
+    EXPECTED_EXITS stays an exact match: those are specific servers, not a pool.
+    """
+    if not observed:
+        return False
+    try:
+        address = ipaddress.ip_address(observed.strip())
+    except ValueError:
+        return False
+    for item in expected.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        try:
+            if "/" in item:
+                if address in ipaddress.ip_network(item, strict=False):
+                    return True
+            elif address == ipaddress.ip_address(item):
+                return True
+        except ValueError:
+            continue
+    return False
 
 
 def parse_targets(value: str) -> dict:
@@ -312,7 +345,7 @@ def tick(config: dict, runner=subprocess.run, clock=time.time) -> int:
         network_type = "home"
         expected = parse_targets(config["EXPECTED_EXITS"])
         control_ok, home_exit = control_internet(config, runner)
-        route_verified = control_ok and home_exit == config["HOME_EXIT"]
+        route_verified = control_ok and home_exit_matches(home_exit, config["HOME_EXIT"])
         results = []
         for target in targets:
             control = {"target_id": target, "check": "control_internet", "result": "success" if control_ok else "failure", "duration_ms": 0}

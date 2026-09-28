@@ -16,7 +16,13 @@ ENGINE=kernel
 #AWG_LOADER=/lib/ld-musl-x86_64.so.1   # only for a musl build of awg on a glibc host
 
 # KIND=pc only. Keep real addresses in the private host config, never in this repository.
+# HOME_EXIT takes addresses and/or CIDR prefixes, comma-separated. Prefer the prefixes your
+# ISP allocates from: a single address goes stale when a residential line rotates, and a
+# report with route_verified=false is excluded from state, so the probe would go quiet while
+# it was in fact healthy. Keep the list to your own ISP - an exit belonging to another VPN
+# must still fail the check, or a probe measuring from abroad would look healthy.
 #HOME_EXIT=198.51.100.10
+#HOME_EXIT=198.51.100.0/24,203.0.113.0/24
 #EXPECTED_EXITS=primary=203.0.113.10,backup=203.0.113.11
 #CONTROL_URLS=https://www.gstatic.com/generate_204,https://example.org/
 #HTTPS_URL=https://www.gstatic.com/generate_204

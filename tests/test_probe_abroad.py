@@ -254,3 +254,23 @@ def test_enroll_stores_the_token_for_the_owner_only(tmp_path, monkeypatch):
     assert token.read_text(encoding="utf-8").strip() == "abc"
     if os.name == "posix":
         assert token.stat().st_mode & 0o777 == 0o600
+
+
+def test_home_exit_accepts_a_pool_but_never_a_foreign_exit():
+    """HOME_EXIT takes addresses and CIDR prefixes.
+
+    A single address goes stale whenever the residential line rotates, and a report with
+    route_verified=false is excluded from state - so the source went silent while it was
+    in fact healthy. Prefixes let the ISP's pool through; an exit that belongs to some
+    other VPN must still fail, or a probe measuring from abroad would look healthy.
+    """
+    home = "198.51.100.0/24,203.0.113.0/24"  # documentation ranges stand in for the ISP's pool
+    assert probe.home_exit_matches("198.51.100.9", home)
+    assert probe.home_exit_matches("203.0.113.200", home)
+    assert probe.home_exit_matches("198.51.100.3", "203.0.113.0/24,198.51.100.3")
+    assert not probe.home_exit_matches("192.0.2.50", home)  # another VPN's exit
+    assert not probe.home_exit_matches("", home)
+    assert not probe.home_exit_matches("not-an-ip", home)
+    assert probe.home_exit_matches("198.51.100.3", " nonsense , 198.51.100.0/24 ")
+    assert probe.home_exit_matches("192.0.2.7", "192.0.2.7")
+    assert not probe.home_exit_matches("192.0.2.8", "192.0.2.7")
