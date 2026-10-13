@@ -53,7 +53,10 @@ window.VPNPulseModel = (function () {
     if (sources.abroad && sources.abroad.r === 'ok') return { a: 'server.conflict.pcFail', b: 'server.conflict.abroadOk' };
     return null;
   }
-  const missingKinds = presence => { const m = KINDS.filter(k => presence[k] === 'none'); return m.length ? m : null; };
+  // The phone is an optional source: the Android probe is a separate increment and an installation
+  // without one is complete, so its absence is never reported as missing coverage.
+  const OPTIONAL_KINDS = ['mobile'];
+  const missingKinds = presence => { const m = KINDS.filter(k => presence[k] === 'none' && OPTIONAL_KINDS.indexOf(k) === -1); return m.length ? m : null; };
   function finishServer(s, lang) {
     s.country = countryName(s.cc, lang, s.countryFallback);
     s.uptime24 = fmtPct(s.uptime24n, lang); s.uptime7 = fmtPct(s.uptime7n, lang);
@@ -153,7 +156,9 @@ window.VPNPulseModel = (function () {
   // ---------- producer 2: contract payloads ----------
   function evidenceMap(items, now) {
     const out = {};
-    (items || []).forEach(x => { if (KINDS.indexOf(x.source) === -1) return; out[x.source] = { r: STATE_RESULT[x.state] || 'unknown', age: minutesSince(x.freshness && x.freshness.observed_at, now), detailKey: x.reason_code ? 'source.detail.' + x.reason_code : 'source.detail.notEnrolled', via: x.via_server_id || null }; });
+    // Stale evidence proves nothing — the evaluator ignores it, so the row must not keep painting
+    // yesterday's success green while the legend already says the source went silent.
+    (items || []).forEach(x => { if (KINDS.indexOf(x.source) === -1) return; const stale = !!(x.freshness && x.freshness.is_stale); out[x.source] = { r: stale ? 'unknown' : (STATE_RESULT[x.state] || 'unknown'), age: minutesSince(x.freshness && x.freshness.observed_at, now), detailKey: x.reason_code ? 'source.detail.' + x.reason_code : 'source.detail.notEnrolled', via: x.via_server_id || null }; });
     return out;
   }
   function apiServer(card, detail, metrics, adminDetail, ctx) {

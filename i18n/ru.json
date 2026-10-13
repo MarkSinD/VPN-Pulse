@@ -301,7 +301,7 @@
   "source.detail.viaServer": "с сервера {server}",
   "source.mobile": "Мобильная сеть",
   "source.mobile.full": "Мобильная сеть в РФ вне VPN; туннель не проверяется",
-  "source.pc": "Компьютер",
+  "source.pc": "Из РФ",
   "source.pc.full": "Полная проверка VPN с компьютера в РФ",
   "source.result.fail": "не прошла",
   "source.result.ok": "прошла",
@@ -311,7 +311,7 @@
   "status.axisStart": "−24 ч",
   "status.coverage.abroad": "нет проверки из-за границы",
   "status.coverage.mobile": "нет проверки из мобильной сети",
-  "status.coverage.pc": "нет проверки с компьютера",
+  "status.coverage.pc": "нет проверки из РФ",
   "status.coveragePartial": "Проверки настроены не полностью: {missing}",
   "status.currentUnknown": "нет данных",
   "status.degraded": "Есть проблемы",
@@ -341,5 +341,9 @@
   "status.state.unknown": "Нет свежих данных",
   "status.unavailable": "Подключение не проходит",
   "status.unknown": "Нет свежих данных",
-  "status.updatedAgo": "Обновлено {duration} назад"
+  "status.updatedAgo": "Обновлено {duration} назад",
+  "android.tab.check": "Проверка",
+  "android.tab.settings": "Настройки",
+  "android.ring.start": "Нажмите, чтобы начать",
+  "android.ring.stop": "Нажмите, чтобы остановить"
 }
