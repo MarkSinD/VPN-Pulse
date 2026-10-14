@@ -15,21 +15,29 @@
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const ico = (n, cls) => '<svg class="i ' + (cls || '') + '" aria-hidden="true"><use href="#i-' + n + '"/></svg>';
   const $ = s => document.querySelector(s);
-  const content = $('#content'), bar = $('#appbar'), tabs = $('#tabbar');
+  const content = $('#content'), bar = $('#appbar'), tabs = $('#tabbar'), steps = $('#steps');
   const STEPS = ['bind', 'exclude', 'cellular', 'done'];
   const ONB = { unbound: 'bind', bind_error: 'bind', exclude: 'exclude', cellular_checking: 'cellular', cellular_ok: 'cellular', cellular_fail: 'cellular', cellular_nosim: 'cellular', done: 'done' };
   const servers = FX.servers.map(s => ({ id: s.id, flag: s.flag, name: s.name }));
   // one place decides how a state looks: ring colour, whether it breathes, the words inside
+  // A circle is a bad place for prose: the word of the state, and at most one short line under it.
+  // Anything longer belongs to the quiet line below the ring — ONB_HINT on the onboarding steps.
   const RING = {
     running: { state: 'operational', live: true, title: 'android.main.running', sub: 'android.main.everyMinute', hint: 'android.ring.stop' },
     queued: { state: 'degraded', live: true, title: 'android.main.running', sub: 'android.main.everyMinute', hint: 'android.ring.stop' },
-    stopped: { state: 'unknown', live: false, title: 'android.main.stopped', sub: 'android.main.background', hint: 'android.ring.start' },
-    stale: { state: 'degraded', live: false, title: 'android.stale', sub: 'android.main.background', hint: 'android.ring.start' },
-    permission: { state: 'unavailable', live: false, title: 'android.permission', sub: null, hint: null },
+    stopped: { state: 'unknown', live: false, title: 'android.main.stopped', sub: null, hint: 'android.ring.start' },
+    stale: { state: 'degraded', live: false, title: 'android.stale', sub: null, hint: 'android.ring.start' },
+    permission: { state: 'unavailable', live: false, title: 'android.ring.noAccess', sub: null, hint: null },
     cellular_checking: { state: 'unknown', busy: true, title: 'android.cellular.checking', sub: null, hint: null },
-    cellular_ok: { state: 'operational', live: false, title: 'android.route.ok', sub: 'android.cellular.ok', hint: null },
-    cellular_fail: { state: 'unavailable', live: false, title: 'android.route.bad', sub: 'android.cellular.fail', hint: null },
-    cellular_nosim: { state: 'unknown', live: false, title: 'android.cellular.noSim', sub: 'android.cellular.fix', hint: null }
+    cellular_ok: { state: 'operational', live: false, title: 'android.route.ok', sub: null, hint: null },
+    cellular_fail: { state: 'unavailable', live: false, title: 'android.route.bad', sub: null, hint: null },
+    cellular_nosim: { state: 'unknown', live: false, title: 'android.cellular.noSim', sub: null, hint: null }
+  };
+  const ONB_HINT = {
+    cellular_checking: 'android.cellularReady',
+    cellular_ok: 'android.cellular.ok',
+    cellular_fail: 'android.cellular.fail',
+    cellular_nosim: 'android.cellular.fix'
   };
 
   function applyTheme() { const h = document.documentElement; if (S.theme === 'auto') h.removeAttribute('data-theme'); else h.setAttribute('data-theme', S.theme); h.style.fontSize = S.text200 ? '200%' : ''; h.lang = S.lang; }
@@ -62,8 +70,8 @@
         : st === 'cellular_checking' ? ''
           : '<button type="button" class="btn btn-primary btn-block" id="retry">' + ico('refresh') + esc(t('android.cellular.retry')) + '</button>'
           + (st === 'cellular_fail' ? '<button type="button" class="btn btn-outline btn-block" id="settings">' + ico('settings') + esc(t('android.permission.action')) + '</button>' : '');
-      return stepper(step)
-        + '<div class="hero">' + ring(st, false) + '<p class="hint">' + esc(t(st === 'cellular_ok' ? 'android.wifiOn' : 'android.cellularReady')) + '</p></div>'
+      return '<div class="pane"><div class="hero">' + ring(st, false)
+        + '<p class="hint">' + esc(t(ONB_HINT[st])) + '</p></div></div>'
         + '<div class="dock">' + act + '</div>';
     }
     let body = '';
@@ -73,15 +81,18 @@
         + (S.state === 'bind_error' ? '<div class="err" id="code-err" role="alert">' + esc(t('android.bind.error')) + '</div>' : '') + '</div></div>'
         + '<div class="dock"><button type="button" class="btn btn-primary btn-block" id="bind">' + esc(t('android.bind.action')) + '</button></div>';
     } else if (step === 'exclude') {
-      body = '<div class="step-body"><h1>' + esc(t('android.exclude')) + '</h1><p>' + esc(t('android.exclude.body')) + '</p><p class="muted small">' + esc(t('android.exclude.why')) + '</p></div>'
+      // three actions, not a paragraph about three actions
+      body = '<div class="step-body"><h1>' + esc(t('android.exclude')) + '</h1>'
+        + '<ol class="steps-list">' + [1, 2, 3].map(n => '<li>' + esc(t('android.exclude.step' + n)) + '</li>').join('') + '</ol>'
+        + '<p class="muted small">' + esc(t('android.exclude.why')) + '</p></div>'
         + '<div class="dock"><button type="button" class="btn btn-primary btn-block" id="excluded">' + ico('check') + esc(t('android.exclude.confirm')) + '</button></div>';
     } else {
       body = '<div class="hero">' + ring('cellular_ok', false) + '</div>'
-        + '<div class="step-body"><h1>' + esc(t('android.step.done')) + '</h1><p class="muted">' + esc(t('android.done.body')) + '</p>'
-        + '<div class="banner banner-info">' + ico('pc') + '<div>' + esc(t('android.pcChecksVpn')) + '</div></div></div>'
+        + '<div class="step-body"><h1>' + esc(t('android.step.done')) + '</h1><p class="muted">' + esc(t('android.done.body')) + '</p></div>'
         + '<div class="dock"><button type="button" class="btn btn-primary btn-block" id="start">' + ico('play') + esc(t('android.start')) + '</button></div>';
     }
-    return stepper(step) + body;
+    const dock = body.indexOf('<div class="dock">');
+    return '<div class="pane">' + body.slice(0, dock) + '</div>' + body.slice(dock);
   }
 
   // ---------- main: ring, route line, sheet ----------
@@ -146,7 +157,9 @@
     const onb = ONB[S.state];
     renderBar(onb);
     renderTabs(!onb);
-    content.className = 'content' + (onb && onb !== 'bind' && onb !== 'exclude' ? ' stage' : '');
+    steps.innerHTML = onb ? stepper(onb) : '';
+    steps.hidden = !onb;
+    content.className = 'content' + (onb ? ' stage' : '');
     content.innerHTML = onb ? onboarding(onb) : (S.tab === 'settings' ? settingsTab() : checkTab());
     const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
     const code = $('#code'); if (code) code.addEventListener('input', () => { S.code = code.value; });

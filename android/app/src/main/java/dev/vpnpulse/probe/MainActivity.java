@@ -58,7 +58,9 @@ public class MainActivity extends Activity implements Onboarding.Host {
     private boolean backRegistered;
 
     private LinearLayout bar;
+    private LinearLayout steps;
     private LinearLayout content;
+    private View dockLine;
     private LinearLayout dock;
     private EditText codeField;
 
@@ -158,28 +160,38 @@ public class MainActivity extends Activity implements Onboarding.Host {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(getColor(R.color.color_bg));
         fitSystemBars(root);
+        // .device { max-width: 480px; margin: 0 auto }: on a wide screen the margins grow instead
+        // of the lines, so the measure stays readable
+        int side = Views.px(this, R.dimen.space_4) + Views.gutter(this);
 
         bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(Views.px(this, R.dimen.space_3), Views.px(this, R.dimen.space_1),
-                Views.px(this, R.dimen.space_3), Views.px(this, R.dimen.space_1));
+        bar.setPadding(side - Views.px(this, R.dimen.space_1), Views.px(this, R.dimen.space_1),
+                side - Views.px(this, R.dimen.space_1), Views.px(this, R.dimen.space_1));
         // the prototype's 56 px app bar: a 44 dp control with a little air around it
         bar.setMinimumHeight(Views.px(this, R.dimen.control_min) + Views.px(this, R.dimen.space_3));
         root.addView(bar, new LinearLayout.LayoutParams(Views.MATCH, Views.WRAP));
 
+        // the step bar: navigation, so it stays put under the title instead of travelling with
+        // the content whenever the step's block is centred
+        steps = Views.column(this);
+        steps.setPadding(side, 0, side, Views.px(this, R.dimen.space_2));
+        root.addView(steps, new LinearLayout.LayoutParams(Views.MATCH, Views.WRAP));
+
         content = Views.column(this);
-        content.setPadding(Views.px(this, R.dimen.space_4), Views.px(this, R.dimen.space_3),
-                Views.px(this, R.dimen.space_4), Views.px(this, R.dimen.space_4));
+        content.setPadding(side, Views.px(this, R.dimen.space_3), side, Views.px(this, R.dimen.space_4));
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);     // so a short step can be centred on its ring
         scroll.setVerticalScrollBarEnabled(false);
         scroll.addView(content, new ScrollView.LayoutParams(Views.MATCH, Views.WRAP));
         root.addView(scroll, new LinearLayout.LayoutParams(Views.MATCH, 0, 1f));
 
+        dockLine = Views.divider(this);
+        root.addView(dockLine, new LinearLayout.LayoutParams(Views.MATCH, Views.hairline(this)));
+
         dock = Views.column(this);
-        dock.setPadding(Views.px(this, R.dimen.space_4), Views.px(this, R.dimen.space_2),
-                Views.px(this, R.dimen.space_4), Views.px(this, R.dimen.space_4));
+        dock.setPadding(side, Views.px(this, R.dimen.space_3), side, Views.px(this, R.dimen.space_4));
         root.addView(dock, new LinearLayout.LayoutParams(Views.MATCH, Views.WRAP));
 
         setContentView(root);
@@ -208,11 +220,18 @@ public class MainActivity extends Activity implements Onboarding.Host {
             text = Text.of(this, flow.lang);
         }
         renderBar();
+        steps.removeAllViews();
+        steps.addView(new StepBar(this, text, flow.step),
+                new LinearLayout.LayoutParams(Views.MATCH, Views.WRAP));
         content.removeAllViews();
         dock.removeAllViews();
-        content.setGravity(flow.isStage() ? Gravity.CENTER_VERTICAL : Gravity.TOP);
+        // every step centres its block in what the bar and the dock leave: the free space is then
+        // split evenly instead of showing up as one half-screen hole
+        content.setGravity(Gravity.CENTER_VERTICAL);
         codeField = Onboarding.build(this, this, flow, content, dock);
-        dock.setVisibility(dock.getChildCount() == 0 ? View.GONE : View.VISIBLE);
+        boolean docked = dock.getChildCount() > 0;
+        dock.setVisibility(docked ? View.VISIBLE : View.GONE);
+        dockLine.setVisibility(docked ? View.VISIBLE : View.GONE);
         syncPredictiveBack();
         if (flow.step != Step.BIND) {
             hideKeyboard();

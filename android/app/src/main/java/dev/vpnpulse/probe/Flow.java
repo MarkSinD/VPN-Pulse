@@ -22,11 +22,6 @@ final class Flow {
     /** null: follow the system. "ru" or "en" once the owner has used the language button. */
     String lang;
 
-    /** The two screens the prototype centres on the ring instead of stacking from the top. */
-    boolean isStage() {
-        return step == Step.CELLULAR || step == Step.DONE;
-    }
-
     void save(Bundle out) {
         out.putString(KEY_STEP, step.name());
         out.putString(KEY_CELLULAR, cellular.name());

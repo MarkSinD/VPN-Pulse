@@ -244,10 +244,13 @@ final class RingView extends View {
         }
     }
 
+    /** Leading as a length, like Views.lineHeight: the multiplier would scale the font's own box. */
     private static StaticLayout layout(String s, TextPaint paint, int width, float lineHeight) {
+        Paint.FontMetricsInt metrics = paint.getFontMetricsInt();
+        int target = Math.round(paint.getTextSize() * lineHeight);
         return StaticLayout.Builder.obtain(s, 0, s.length(), paint, Math.max(1, width))
                 .setAlignment(Layout.Alignment.ALIGN_CENTER)
-                .setLineSpacing(0f, lineHeight)
+                .setLineSpacing(target - (metrics.descent - metrics.ascent), 1f)
                 .setIncludePad(false)
                 .build();
     }

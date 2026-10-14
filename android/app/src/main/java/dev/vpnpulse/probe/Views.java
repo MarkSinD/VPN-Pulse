@@ -3,6 +3,7 @@ package dev.vpnpulse.probe;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -12,6 +13,7 @@ import android.provider.Settings;
 import android.text.Editable;
 import android.text.InputType;
 import android.text.TextWatcher;
+import android.util.DisplayMetrics;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -29,9 +31,10 @@ import android.widget.TextView;
  * the generated resources and nothing else. No XML layout, no AndroidX, so every widget the probe
  * shows is assembled here once and reused by the screens.
  *
- * Three numbers in this file are not resources, and cannot be: a hairline is one physical pixel,
+ * Four numbers in this file are not resources, and cannot be: a hairline is one physical pixel,
  * the tint under an informational panel is a CSS color-mix the theme generator does not export,
- * and letter spacing and line height are ratios, not lengths. Each is named and commented below.
+ * letter spacing and line height are ratios rather than lengths, and the widest the content may
+ * grow is the prototype's own device frame. Each is named and commented below.
  */
 final class Views {
 
@@ -42,6 +45,9 @@ final class Views {
     static final float LH_TIGHT = 1.2f;
     static final float LH_CAPTION = 1.4f;
     static final float LH_NORMAL = 1.5f;
+
+    /** .device { max-width: 480px }: past that, a line of text is too long to read comfortably. */
+    private static final int CONTENT_MAX_DP = 480;
 
     /** .banner-info: color-mix(var(--color-muted) var(--tint)) — --tint is 12 % light, 16 % dark. */
     private static final int PANEL_TINT_ALPHA = 0x24;
@@ -62,6 +68,16 @@ final class Views {
     /** One physical pixel, the thinnest line the screen can draw: the CSS 1 px border. */
     static int hairline(Context c) {
         return Math.max(1, Math.round(c.getResources().getDisplayMetrics().density));
+    }
+
+    /**
+     * Half of whatever the screen has beyond a comfortable measure, so a wide screen gets margins
+     * instead of 70-character lines. Zero on a phone, where the screen is narrower than the cap.
+     */
+    static int gutter(Context c) {
+        DisplayMetrics screen = c.getResources().getDisplayMetrics();
+        int cap = Math.round(CONTENT_MAX_DP * screen.density);
+        return Math.max(0, (screen.widthPixels - cap) / 2);
     }
 
     static int withAlpha(int color, int alpha) {
@@ -93,8 +109,25 @@ final class Views {
         if (bold) {
             v.setTypeface(Typeface.DEFAULT_BOLD);
         }
-        v.setLineSpacing(0f, lineHeight);
+        lineHeight(v, lineHeight);
         return v;
+    }
+
+    /**
+     * The tokens are written for the web box: a line is exactly size × ratio, with nothing above
+     * the first line or below the last. Android instead multiplies the font's own line box — 1.17 em
+     * for Roboto — and adds its recommended padding on top, which turns --lh-normal into 1.76 and
+     * gives every block invisible edges. So the leading is set as a length, and the padding goes.
+     */
+    static void lineHeight(TextView v, float ratio) {
+        v.setIncludeFontPadding(false);
+        int target = Math.round(v.getTextSize() * ratio);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            v.setLineHeight(target);
+            return;
+        }
+        Paint.FontMetricsInt metrics = v.getPaint().getFontMetricsInt();
+        v.setLineSpacing(target - (metrics.descent - metrics.ascent), 1f);
     }
 
     static TextView heading(Context c, CharSequence s) {
@@ -131,6 +164,45 @@ final class Views {
         TextView v = text(c, s, R.dimen.text_sm, R.color.color_unavailable, false, LH_CAPTION);
         v.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         return v;
+    }
+
+    /**
+     * Three actions, numbered, instead of a paragraph about three actions: .steps-list of the
+     * prototype — an accent disc with the number, the step beside it.
+     */
+    static LinearLayout stepsList(Context c, CharSequence... items) {
+        LinearLayout list = column(c);
+        int disc = px(c, R.dimen.space_5);
+        for (int index = 0; index < items.length; index++) {
+            LinearLayout row = new LinearLayout(c);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+
+            TextView number = text(c, String.valueOf(index + 1), R.dimen.text_xs,
+                    R.color.color_accent_text, true, LH_TIGHT);
+            number.setGravity(Gravity.CENTER);
+            GradientDrawable face = new GradientDrawable();
+            face.setShape(GradientDrawable.OVAL);
+            face.setColor(c.getColor(R.color.color_accent));
+            number.setBackground(face);
+            number.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            row.addView(number, new LinearLayout.LayoutParams(disc, disc));
+
+            TextView what = body(c, items[index]);
+            LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(0, WRAP, 1f);
+            textParams.setMarginStart(px(c, R.dimen.space_3));
+            row.addView(what, textParams);
+
+            add(list, row, index == 0 ? 0 : px(c, R.dimen.space_2));
+        }
+        return list;
+    }
+
+    /** The engraved line of the Mini App: one hairline, the width of whatever holds it. */
+    static View divider(Context c) {
+        View line = new View(c);
+        line.setBackgroundColor(c.getColor(R.color.color_border));
+        return line;
     }
 
     // ---------- stacking ----------
@@ -213,7 +285,7 @@ final class Views {
         caption.setTypeface(Typeface.DEFAULT_BOLD);
         caption.setTextColor(ink);
         caption.setGravity(Gravity.CENTER);
-        caption.setLineSpacing(0f, LH_TIGHT);
+        lineHeight(caption, LH_TIGHT);
         b.addView(caption, new LinearLayout.LayoutParams(WRAP, WRAP));
         return b;
     }
@@ -247,6 +319,7 @@ final class Views {
         b.setContentDescription(t.get(R.string.app_lang_switch, t.otherLanguageName()));
         size(b, R.dimen.text_sm);
         b.setTypeface(Typeface.DEFAULT_BOLD);
+        lineHeight(b, LH_TIGHT);
         b.setLetterSpacing(BADGE_TRACKING);
         b.setTextColor(c.getColor(R.color.color_text));
         b.setGravity(Gravity.CENTER);

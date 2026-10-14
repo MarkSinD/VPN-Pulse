@@ -4,26 +4,28 @@
     <string name="action_back" formatted="false">Назад</string>
     <string name="action_retry" formatted="false">Повторить</string>
     <string name="android_bind_action" formatted="false">Привязать</string>
-    <string name="android_bind_body" formatted="false">Введите код из раздела «Админ» в Mini App. Код действует 10 минут.</string>
+    <string name="android_bind_body" formatted="false">Код из раздела «Админ» в Mini App, живёт 10 минут</string>
     <string name="android_bind_code" formatted="false">Код привязки</string>
     <string name="android_bind_error" formatted="false">Код не подошёл или истёк. Запросите новый.</string>
     <string name="android_bind_title" formatted="false">Привяжите телефон</string>
     <string name="android_bound" formatted="false">Привязано</string>
-    <string name="android_cellular_checking" formatted="false">Проверяем путь через мобильную сеть…</string>
+    <string name="android_cellular_checking" formatted="false">проверяем</string>
     <string name="android_cellular_fail" formatted="false">Запросы всё ещё идут через VPN или Wi-Fi</string>
-    <string name="android_cellular_fix" formatted="false">Проверьте исключение в Amnezia и включите мобильные данные</string>
-    <string name="android_cellular_nosim" formatted="false">Нет мобильного интернета</string>
-    <string name="android_cellular_ok" formatted="false">Путь подтверждён: запросы идут через мобильную сеть, мимо VPN</string>
+    <string name="android_cellular_fix" formatted="false">Включите мобильные данные и проверьте исключение</string>
+    <string name="android_cellular_nosim" formatted="false">нет сети</string>
+    <string name="android_cellular_ok" formatted="false">Запросы идут через мобильную сеть, мимо VPN</string>
     <string name="android_cellular_retry" formatted="false">Проверить ещё раз</string>
     <string name="android_cellularready" formatted="false">Проверка идёт через мобильную сеть вне VPN</string>
-    <string name="android_done_body" formatted="false">Телефон будет проверять мобильную сеть из России. Нажмите «Начать», когда удобно.</string>
-    <string name="android_exclude" formatted="false">Исключите VPN Pulse Probe в Split App Tunneling</string>
-    <string name="android_exclude_body" formatted="false">Откройте Amnezia → Split App Tunneling → добавьте VPN Pulse Probe в список приложений, работающих без VPN. Затем переподключите Amnezia.</string>
+    <string name="android_done_body" formatted="false">Телефон будет проверять мобильную сеть из России</string>
+    <string name="android_exclude" formatted="false">Исключите приложение</string>
     <string name="android_exclude_confirm" formatted="false">Я исключил приложение</string>
-    <string name="android_exclude_why" formatted="false">Иначе проверки пойдут через туннель и покажут доступность из-за границы, а не из России.</string>
+    <string name="android_exclude_step1" formatted="false">Amnezia → Split App Tunneling</string>
+    <string name="android_exclude_step2" formatted="false">Добавьте VPN Pulse Probe</string>
+    <string name="android_exclude_step3" formatted="false">Переподключите Amnezia</string>
+    <string name="android_exclude_why" formatted="false">Иначе проверки пойдут через туннель</string>
     <string name="android_lastcheck" formatted="false">Последняя проверка</string>
     <string name="android_main_background" formatted="false">в фоне — не чаще раза в 15 минут</string>
-    <string name="android_main_everyminute" formatted="false">раз в минуту, пока экран открыт</string>
+    <string name="android_main_everyminute" formatted="false">раз в минуту</string>
     <string name="android_main_running" formatted="false">Идёт проверка</string>
     <string name="android_main_stopped" formatted="false">Остановлено</string>
     <string name="android_network" formatted="false">Сеть</string>
@@ -37,18 +39,19 @@
     <string name="android_result_ok" formatted="false">доступен</string>
     <string name="android_result_unknown" formatted="false">нет данных</string>
     <string name="android_results" formatted="false">Результаты</string>
+    <string name="android_ring_noaccess" formatted="false">нет доступа</string>
     <string name="android_ring_start" formatted="false">Нажмите, чтобы начать</string>
     <string name="android_ring_stop" formatted="false">Нажмите, чтобы остановить</string>
     <string name="android_route" formatted="false">Маршрут вне VPN</string>
     <string name="android_route_bad" formatted="false">не подтверждён</string>
     <string name="android_route_ok" formatted="false">подтверждён</string>
     <string name="android_sent" formatted="false">Отправлено</string>
-    <string name="android_stale" formatted="false">Давно не было проверок</string>
+    <string name="android_stale" formatted="false">Нет проверок</string>
     <string name="android_start" formatted="false">Начать</string>
     <string name="android_step_bind" formatted="false">Привязка</string>
     <string name="android_step_cellular" formatted="false">Проверка сети</string>
     <string name="android_step_done" formatted="false">Готово</string>
-    <string name="android_step_exclude" formatted="false">Исключение из VPN</string>
+    <string name="android_step_exclude" formatted="false">Исключение</string>
     <string name="android_stop" formatted="false">Остановить</string>
     <string name="android_subtitle" formatted="false">Проверка мобильной сети из России</string>
     <string name="android_tab_check" formatted="false">Проверка</string>

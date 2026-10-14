@@ -51,8 +51,8 @@ final class Onboarding {
 
     /** @return the code field when the step has one, so the host can put the cursor back in it. */
     static EditText build(Activity a, Host host, Flow flow, LinearLayout content, LinearLayout dock) {
-        int gap = Views.px(a, flow.isStage() ? R.dimen.space_5 : R.dimen.space_4);
-        Views.add(content, new StepBar(a, host.text(), flow.step), 0);
+        // the step bar belongs to the shell: navigation must not drift with the content
+        int gap = Views.px(a, R.dimen.space_5);
         switch (flow.step) {
             case BIND:
                 return bind(a, host, flow, content, dock, gap);
@@ -88,7 +88,7 @@ final class Onboarding {
             Views.add(field, Views.error(a, message), Views.px(a, R.dimen.space_1));
         }
         Views.add(body, field, Views.px(a, R.dimen.space_3));
-        Views.add(content, body, gap);
+        Views.add(content, body, 0);
 
         Views.onTextChanged(code, new Views.Typed() {
             @Override
@@ -122,9 +122,12 @@ final class Onboarding {
         Text t = host.text();
         LinearLayout body = Views.column(a);
         Views.add(body, Views.heading(a, t.get(R.string.android_exclude)), 0);
-        Views.add(body, Views.body(a, t.get(R.string.android_exclude_body)), Views.px(a, R.dimen.space_3));
-        Views.add(body, Views.note(a, t.get(R.string.android_exclude_why)), Views.px(a, R.dimen.space_3));
-        Views.add(content, body, gap);
+        // three actions, numbered, instead of a paragraph about three actions
+        Views.add(body, Views.stepsList(a, t.get(R.string.android_exclude_step1),
+                t.get(R.string.android_exclude_step2), t.get(R.string.android_exclude_step3)),
+                Views.px(a, R.dimen.space_4));
+        Views.add(body, Views.note(a, t.get(R.string.android_exclude_why)), Views.px(a, R.dimen.space_4));
+        Views.add(content, body, 0);
 
         Views.add(dock, Views.primary(a, t.get(R.string.android_exclude_confirm),
                 GlyphDrawable.Glyph.CHECK, new View.OnClickListener() {
@@ -142,13 +145,13 @@ final class Onboarding {
         Text t = host.text();
         CellularState cell = flow.cellular;
         String title = t.get(cell.titleRes);
-        String caption = cell.captionRes == 0 ? null : t.get(cell.captionRes);
+        String hintText = t.get(cell.hintRes);
 
         LinearLayout hero = Views.column(a);
         hero.setGravity(Gravity.CENTER_HORIZONTAL);
         RingView ring = new RingView(a);
-        ring.show(cell.ring, title, caption, cell.busy);
-        ring.setContentDescription(caption == null ? title : title + ". " + caption);
+        ring.show(cell.ring, title, null, cell.busy);
+        ring.setContentDescription(title + ". " + hintText);
         ring.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
@@ -158,10 +161,10 @@ final class Onboarding {
         });
         Views.addCentered(hero, ring, 0);
 
-        TextView hint = Views.note(a, t.get(cell.hintRes));
+        TextView hint = Views.note(a, hintText);
         hint.setGravity(Gravity.CENTER_HORIZONTAL);
         Views.add(hero, hint, Views.px(a, R.dimen.space_4));
-        Views.add(content, hero, gap);
+        Views.add(content, hero, 0);
 
         if (cell == CellularState.OK) {
             Views.add(dock, Views.primary(a, t.get(R.string.android_step_done), null,
@@ -201,21 +204,26 @@ final class Onboarding {
         Text t = host.text();
         CellularState confirmed = CellularState.OK;
         String title = t.get(confirmed.titleRes);
-        String caption = t.get(confirmed.captionRes);
+        String done = t.get(R.string.android_step_done);
 
         LinearLayout hero = Views.column(a);
         hero.setGravity(Gravity.CENTER_HORIZONTAL);
         RingView ring = new RingView(a);
-        ring.show(confirmed.ring, title, caption, false);
-        ring.setContentDescription(title + ". " + caption);
+        // the word in the ring, the heading, one line: the same thing is not said a third time,
+        // and the panel about the computer stays where it belongs, on the main screen
+        ring.show(confirmed.ring, title, null, false);
+        ring.setContentDescription(title + ". " + done);
         Views.addCentered(hero, ring, 0);
-        Views.add(content, hero, gap);
+        Views.add(content, hero, 0);
 
         LinearLayout body = Views.column(a);
-        Views.add(body, Views.heading(a, t.get(R.string.android_step_done)), 0);
-        Views.add(body, Views.muted(a, t.get(R.string.android_done_body)), Views.px(a, R.dimen.space_3));
-        Views.add(body, Views.panel(a, GlyphDrawable.Glyph.PC, t.get(R.string.android_pcchecksvpn)),
-                Views.px(a, R.dimen.space_3));
+        body.setGravity(Gravity.CENTER_HORIZONTAL);
+        TextView heading = Views.heading(a, done);
+        heading.setGravity(Gravity.CENTER_HORIZONTAL);
+        Views.add(body, heading, 0);
+        TextView says = Views.muted(a, t.get(R.string.android_done_body));
+        says.setGravity(Gravity.CENTER_HORIZONTAL);
+        Views.add(body, says, Views.px(a, R.dimen.space_3));
         Views.add(content, body, gap);
 
         Views.add(dock, Views.primary(a, t.get(R.string.android_start),
