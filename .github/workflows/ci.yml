@@ -66,6 +66,47 @@ jobs:
       - name: Fresh install → doctor OK → repeat → upgrade → rollback → uninstall
         run: sudo -E bash scripts/install_check.sh
 
+  android:
+    name: android probe — generated resources are current, APK builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"   # javac --release 11, but the build-tools scripts want a 17 JDK
+
+      - name: Locate the preinstalled Android SDK
+        # the runner image ships the SDK; pick the newest build-tools rather than pinning a version
+        # that the image will drop, and only call sdkmanager if platform 35 is genuinely absent
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:?no Android SDK on this runner}}"
+          BT="$(ls -1d "$SDK"/build-tools/* | sort -V | tail -1)"
+          [ -f "$SDK/platforms/android-35/android.jar" ] || \
+            "$SDK/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-35"
+          {
+            echo "ANDROID_SDK_ROOT=$SDK"
+            echo "BUILD_TOOLS=$BT"
+            echo "ANDROID_JAR=$SDK/platforms/android-35/android.jar"
+          } >> "$GITHUB_ENV"
+          echo "build-tools: $BT"
+
+      - name: Android resources are regenerated from the shared tokens and dictionaries
+        run: |
+          set -euo pipefail
+          python scripts/build_android_theme.py
+          python scripts/build_android_strings.py
+          git diff --exit-code -- android/app/src/main/res
+          # a brand-new file (another locale, say) is not a diff — catch it too
+          test -z "$(git status --porcelain -- android/app/src/main/res)"
+
+      - name: Build the APK without Gradle (aapt2 → javac → d8 → zipalign → apksigner)
+        run: ./android/build.sh
+
   secret-scan:
     name: gitleaks
     runs-on: ubuntu-latest

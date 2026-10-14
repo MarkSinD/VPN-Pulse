@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written (the generators only own colors.xml, dimens.xml and strings.xml).
+
+     The platform's own Material theme, nothing else: no AndroidX, no app compat. The dark
+     variant is the same style in values-night/, which is how a minSdk-26 app follows the
+     system's light/dark setting without a support library (Theme.DeviceDefault.DayNight
+     needs API 29). No action bar: the screen draws its own app bar, like the prototype. -->
+<resources>
+    <style name="AppTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/color_bg</item>
+        <item name="android:colorBackground">@color/color_bg</item>
+        <item name="android:statusBarColor">@color/color_bg</item>
+        <item name="android:navigationBarColor">@color/color_bg</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:textColorPrimary">@color/color_text</item>
+        <item name="android:textColorSecondary">@color/color_muted</item>
+        <item name="android:colorAccent">@color/color_accent</item>
+    </style>
+</resources>

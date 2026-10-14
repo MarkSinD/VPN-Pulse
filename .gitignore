@@ -75,6 +75,11 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+# no-Gradle build (android/build.sh): intermediates and the debug signing key.
+# The key is deliberately kept on the machine and out of git — a new key means a new UID
+# on reinstall, and the VPN client's split-tunnelling exclusion then applies to the old app.
+android/build/
+android/.keystore/
 
 # --- IDE ---
 .idea/

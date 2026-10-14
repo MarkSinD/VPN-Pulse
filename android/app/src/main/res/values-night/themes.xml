@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hand-written. Same theme, dark parent; values-night/colors.xml supplies the dark tokens. -->
+<resources>
+    <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/color_bg</item>
+        <item name="android:colorBackground">@color/color_bg</item>
+        <item name="android:statusBarColor">@color/color_bg</item>
+        <item name="android:navigationBarColor">@color/color_bg</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:textColorPrimary">@color/color_text</item>
+        <item name="android:textColorSecondary">@color/color_muted</item>
+        <item name="android:colorAccent">@color/color_accent</item>
+    </style>
+</resources>

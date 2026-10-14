@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- VPN Pulse Probe. Built without Gradle (android/build.sh), so this file is the whole
+     project definition: aapt2 reads `package` to place R.java and the resource table. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="dev.vpnpulse.probe"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- What ConnectivityManager.requestNetwork() needs: without it the cellular request throws
+         SecurityException (proved by the R-19 spike). Normal permission, no runtime prompt. -->
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+    <application
+        android:label="@string/android_title"
+        android:theme="@style/AppTheme"
+        android:allowBackup="false"
+        android:supportsRtl="true">
+        <activity
+            android:name="dev.vpnpulse.probe.MainActivity"
+            android:label="@string/android_title"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
