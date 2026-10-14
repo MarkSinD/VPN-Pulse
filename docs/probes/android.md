@@ -1,7 +1,9 @@
 # Android probe
 
-> **Status: planned.** Design complete and prototyped in `docs/prototypes/android.html`; the
-> app is not built yet.
+> **Status: planned, and the hard part is proven.** Design complete and prototyped in
+> `docs/prototypes/android.html`; the app itself is not built yet. The one risky assumption — that
+> an app excluded in the VPN client's split tunnelling can bind its sockets to the mobile network
+> while the tunnel is up — was verified on a real phone: see [`android/spike/`](../../android/spike/).
 
 The Android probe checks the **mobile network** from inside the users' country, outside the
 VPN. It does not test VPN tunnels — the PC probe does that — so it stays small and honest:
