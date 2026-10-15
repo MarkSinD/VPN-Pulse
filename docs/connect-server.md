@@ -95,6 +95,6 @@ identifiers.
 
 ## What you get afterwards
 
-The server appears on the Status screen. Until probes are enrolled, the Mini App shows the
-coverage warning ("checks are not fully configured") rather than a green success — see
-[concepts.md](concepts.md).
+The server appears on the Status screen. Until probes are enrolled its state rests on the evidence
+that does exist — member activity and the collector — and a source that has never reported is not
+shown at all rather than counted against the server; see [concepts.md](concepts.md).

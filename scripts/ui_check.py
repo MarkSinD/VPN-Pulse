@@ -220,14 +220,14 @@ def main() -> int:
                 checks_fn(pg)
                 console_clean(pg, f"{scenario} {w}", errs)
                 ctx.close()
-        # silent probes stay visible as hollow lamps; admin still gets the coverage banner
+        # silent probes stay visible as hollow lamps; nobody is nagged about missing probes
         ctx, pg, errs = new_page(390, 844)
         pg.goto(url(MVP, scenario="unknown", lang="ru", showcase="hidden"))
         pg.wait_for_timeout(150)
         ok(pg.locator(".legend .src.s-unknown").count() == 2 and pg.locator(".legend .src.s-ok").count() == 1, "unknown: legend lamps should be 2 silent + 1 reporting")
         pg.goto(url(MVP, scenario="partial_coverage", role="admin", lang="ru", showcase="hidden"))
         pg.wait_for_timeout(150)
-        ok(pg.locator(".banner-warn").count() >= 1, "admin partial coverage banner missing")
+        ok(pg.locator(".banner-warn").count() == 0, "nothing warns about coverage, not even for admin")
         pg.goto(url(MVP, scenario="partial_coverage", lang="ru", showcase="hidden", screen="server:s2"))
         pg.wait_for_timeout(150)
         ok("Пробники не подключены" in pg.locator("#panel-checks").inner_text(), "checks group should explain missing probes")
