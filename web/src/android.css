@@ -95,11 +95,17 @@ body[data-showcase="hidden"] .showcase { display: none; }
 .flag { width: 22px; height: 16px; border-radius: 3px; box-shadow: 0 0 0 1px var(--color-border); flex: none; object-fit: cover; }
 
 /* ---------- onboarding ---------- */
-.stepper { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-1); }
-.stepper div { display: grid; gap: 6px; font-size: var(--text-xs); color: var(--color-muted); text-align: center; }
+.stepper { display: grid; gap: 6px; }
+.stepper .bars, .stepper .names { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-1); }
 .stepper i { height: 4px; border-radius: 2px; background: var(--color-border); display: block; }
-.stepper div[data-on="true"] { color: var(--color-text); font-weight: 700; }
-.stepper div[data-on="true"] i, .stepper div[data-done="true"] i { background: var(--color-accent); }
+.stepper i[data-done="true"] { background: var(--color-accent); }
+.stepper .names span, .stepper .now { font-size: var(--text-xs); line-height: var(--lh-caption); color: var(--color-muted); text-align: center; }
+.stepper .names span[data-on="true"], .stepper .now { color: var(--color-text); font-weight: 700; }
+.stepper .now { display: none; }
+/* 200 %: a quarter of the width cannot hold "Исключение", and a word broken in half is worse than
+   three unnamed bars — so only the step in hand is named, across the whole bar */
+html[data-text200="true"] .stepper .names { display: none; }
+html[data-text200="true"] .stepper .now { display: block; }
 h1 { font-size: var(--text-xl); line-height: var(--lh-tight); margin: 0; font-weight: 700; }
 h2 { font-size: var(--text-lg); margin: 0; font-weight: 700; }
 p { margin: 0; }

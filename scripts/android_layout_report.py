@@ -8,6 +8,7 @@ It walks the four onboarding screens (and all four answers of the route check) o
 device, dumps the view tree at each stop with `uiautomator`, and checks five things:
 
   line box   the pitch between lines is exactly the token, and no block carries hidden padding
+             (only at 100 % text — see NON_LINEAR_NOTE)
   measure    no line averages more than 60 characters
   gaps       inside a block, nothing is more than --space-6 apart
   balance    the free space above the block and below it differ by no more than 8 dp
@@ -52,6 +53,20 @@ MAX_CHARS_PER_LINE = 60
 FONT_BOX_FALLBACK = 1.17
 FIT_TOLERANCE_PX = 1
 TITLE_SIZE_SP = 16
+# Android 14 scales sp through a curve, not a factor: at a system scale of 2.0 a 16 sp line grows
+# 1.76x, and a large size grows less than a small one, on purpose. Measured here: the face is
+# 1.167 em of 16 sp at 100 % and 1.024 em of a doubled 16 sp at 200 %. So above 100 % the token
+# arithmetic no longer predicts the pixel height, and the pitch check is not run — what the 200 %
+# pass is for is the other four thresholds: nothing clipped, nothing overlapping, the button
+# still reachable.
+NON_LINEAR_NOTE = "skipped: Android scales sp non-linearly above 100 %, the tokens do not predict px"
+
+# A character the UI face does not have — an arrow, an emoji — is drawn by another font, and the
+# line grows to that font's box. The pitch is still the token, so such a block is allowed to be
+# up to a quarter of an em taller than the face would make it.
+FALLBACK_SLACK_EM = 0.25
+CYRILLIC_END = 0x04FF
+DASHES = (0x2010, 0x2027)
 # RingView caps its caption at 18 characters and shrinks the text until it fits; a word that long
 # never triggers the shrink, so the ring keeps the size the type scale gives it.
 RING_MAX_CHARS = 18
@@ -199,6 +214,15 @@ def line_boxes(density: float, scale: float) -> list[tuple[int, int, int, float]
     return out
 
 
+def needs_fallback(text: str) -> bool:
+    """True when the text holds a character the UI face is unlikely to carry — an arrow, an emoji.
+
+    Such a character is drawn by another font and the line grows to that font's box, so the block
+    is taller than the type scale alone would make it. The pitch between lines is still the token.
+    """
+    return any(ord(c) > CYRILLIC_END and not (DASHES[0] <= ord(c) <= DASHES[1]) for c in text)
+
+
 def font_box(tree: ET.Element, density: float, scale: float) -> float:
     """The face's own line box, in em, measured from the app bar's title: one line of --text-md."""
     for node, parent in walk(tree):
@@ -207,24 +231,26 @@ def font_box(tree: ET.Element, density: float, scale: float) -> float:
     return FONT_BOX_FALLBACK
 
 
-def fit(tall: int, boxes: list[tuple[int, int, int, float]], em: float):
+def fit(tall: int, boxes: list[tuple[int, int, int, float]], em: float, slack: float):
     """(error in px, size, ratio, lines) for the token pair that explains a block this tall."""
     best = None
     for pitch, px, size, ratio in boxes:
         if pitch <= 0 or px <= 0:
             continue
         box_px = round(em * px)
+        room = round(slack * px)
         for lines in range(1, 9):
-            error = abs(tall - ((lines - 1) * pitch + box_px))
+            floor = (lines - 1) * pitch + box_px
+            error = max(floor - tall, tall - floor - room, 0)
             if best is None or error < best[0]:
                 best = (error, size, ratio, lines)
-            if (lines - 1) * pitch + box_px > tall:
+            if floor > tall:
                 break
     return best
 
 
 def check_text_metrics(report: Report, where: str, tree: ET.Element,
-                       boxes: list[tuple[int, int, int, float]], em: float) -> None:
+                       boxes: list[tuple[int, int, int, float]], em: float, scale: float) -> None:
     parents = {}
     for node, parent in walk(tree):
         parents[id(node)] = parent
@@ -234,8 +260,12 @@ def check_text_metrics(report: Report, where: str, tree: ET.Element,
         text = (node.get("text") or "").strip()
         if not text or len(node) or clickable_chain(node, parents):
             continue          # containers, buttons and the code field have their own metrics
+        left, top, right, bottom = box(node)
+        if len(text) <= 2 and abs((right - left) - (bottom - top)) <= 2:
+            continue          # a disc or a badge: sized by --space-5 or --control-min, not by type
         tall = height(node)
-        best = fit(tall, boxes, em)
+        slack = FALLBACK_SLACK_EM if needs_fallback(text) else 0.0
+        best = fit(tall, boxes, em, slack)
         if best is None:
             continue
         error, size, ratio, lines = best
@@ -243,7 +273,9 @@ def check_text_metrics(report: Report, where: str, tree: ET.Element,
             worst = (error, text, size, ratio, lines, tall)
         if len(text) / lines > MAX_CHARS_PER_LINE:
             long_lines.append((round(len(text) / lines), text))
-    if worst:
+    if worst and scale != 1.0:
+        report.add(where, "line box", "ok", NON_LINEAR_NOTE)
+    elif worst:
         error, text, size, ratio, lines, tall = worst
         verdict = "ok" if error <= FIT_TOLERANCE_PX else "FAIL"
         report.add(where, "line box", verdict,
@@ -293,7 +325,7 @@ def check_rhythm(report: Report, where: str, tree: ET.Element, density: float) -
                f"{above} px above the block, {below} px below (allowed {allowed} px apart)")
 
 
-def check_step_bar(report: Report, where: str, tree: ET.Element) -> None:
+def check_step_bar(report: Report, where: str, tree: ET.Element, scale: float) -> None:
     labels = []
     for node, parent in walk(tree):
         # uiautomator reports the base class, so the bar is known by what a screen reader hears
@@ -304,9 +336,14 @@ def check_step_bar(report: Report, where: str, tree: ET.Element) -> None:
         # the bar's names are not individually accessible: measure the bar itself instead
         return
     heights = [height(node) for node in labels]
-    verdict = "ok" if max(heights) <= min(heights) * 1.5 else "FAIL"
+    one_line = max(heights) <= min(heights) * 1.5
+    if scale == 1.0:
+        wanted, verdict = "4 names, one line each", "ok" if len(labels) == 4 and one_line else "FAIL"
+    else:
+        # past a large font the bar names only the step in hand — four would break words in half
+        wanted, verdict = "1 name, one line", "ok" if len(labels) == 1 else "FAIL"
     report.add(where, "steps", verdict,
-               f"step names {min(heights)}–{max(heights)} px tall ({len(labels)} names)")
+               f"{len(labels)} name(s), {min(heights)}–{max(heights)} px tall (want {wanted})")
 
 
 def check_ring_words(report: Report, lang: str) -> None:
@@ -468,10 +505,9 @@ def main() -> int:
             em = font_box(device.tree(), density, font)
             for name, tree in screens(device, words, not options.no_cycle):
                 where = f"{theme}/{lang}/{int(font * 100)} % {name}"
-                check_text_metrics(report, where, tree, boxes, em)
+                check_text_metrics(report, where, tree, boxes, em, font)
                 check_rhythm(report, where, tree, density)
-                if font == 1.0:
-                    check_step_bar(report, where, tree)
+                check_step_bar(report, where, tree, font)
     finally:
         device.set_font_scale(was_scale)
 

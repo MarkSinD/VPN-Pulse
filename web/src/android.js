@@ -40,10 +40,19 @@
     cellular_nosim: 'android.cellular.fix'
   };
 
-  function applyTheme() { const h = document.documentElement; if (S.theme === 'auto') h.removeAttribute('data-theme'); else h.setAttribute('data-theme', S.theme); h.style.fontSize = S.text200 ? '200%' : ''; h.lang = S.lang; }
+  function applyTheme() { const h = document.documentElement; if (S.theme === 'auto') h.removeAttribute('data-theme'); else h.setAttribute('data-theme', S.theme); h.style.fontSize = S.text200 ? '200%' : ''; if (S.text200) h.setAttribute('data-text200', 'true'); else h.removeAttribute('data-text200'); h.lang = S.lang; }
   function toast(m) { const el = $('#toast'); el.textContent = m; el.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => el.classList.remove('show'), 2000); }
   function set(state) { S.state = state; render(); const sel = document.getElementById('sc-state'); if (sel) sel.value = state; }
-  function stepper(cur) { const idx = STEPS.indexOf(cur); return '<div class="stepper" aria-label="' + esc(STEPS.map(s => t('android.step.' + s)).join(' → ')) + '">' + STEPS.map((s, i) => '<div data-on="' + (i === idx) + '" data-done="' + (i < idx) + '"><i></i><span>' + esc(t('android.step.' + s)) + '</span></div>').join('') + '</div>'; }
+  // bars, names under them, and — at 200 % text, where four names cannot share the width without
+  // breaking words in half — the name of the step in hand alone, across the whole bar
+  function stepper(cur) {
+    const idx = STEPS.indexOf(cur);
+    const label = s => esc(t('android.step.' + s));
+    return '<div class="stepper" aria-label="' + esc(STEPS.map(s => t('android.step.' + s)).join(' → ')) + '">'
+      + '<div class="bars">' + STEPS.map((s, i) => '<i data-done="' + (i <= idx) + '"></i>').join('') + '</div>'
+      + '<div class="names">' + STEPS.map((s, i) => '<span data-on="' + (i === idx) + '">' + label(s) + '</span>').join('') + '</div>'
+      + '<div class="now">' + label(STEPS[idx]) + '</div></div>';
+  }
 
   function renderBar(onb) {
     bar.innerHTML = '<button type="button" class="icon-btn ' + (onb && onb !== 'bind' ? '' : 'hidden') + '" id="back" aria-label="' + esc(t('action.back')) + '">' + ico('back') + '</button>'
