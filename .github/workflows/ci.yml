@@ -100,6 +100,7 @@ jobs:
           set -euo pipefail
           python scripts/build_android_theme.py
           python scripts/build_android_strings.py
+          python scripts/build_android_icon.py
           git diff --exit-code -- android/app/src/main/res
           # a brand-new file (another locale, say) is not a diff — catch it too
           test -z "$(git status --porcelain -- android/app/src/main/res)"
