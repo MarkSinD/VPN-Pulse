@@ -97,7 +97,7 @@
         + '<div class="dock"><button type="button" class="btn btn-primary btn-block" id="excluded">' + ico('check') + esc(t('android.exclude.confirm')) + '</button></div>';
     } else {
       body = '<div class="hero">' + ring('cellular_ok', false) + '</div>'
-        + '<div class="step-body"><h1>' + esc(t('android.step.done')) + '</h1><p class="muted">' + esc(t('android.done.body')) + '</p></div>'
+        + '<div class="step-body centred"><h1>' + esc(t('android.step.done')) + '</h1><p class="muted">' + esc(t('android.done.body')) + '</p></div>'
         + '<div class="dock"><button type="button" class="btn btn-primary btn-block" id="start">' + ico('play') + esc(t('android.start')) + '</button></div>';
     }
     const dock = body.indexOf('<div class="dock">');

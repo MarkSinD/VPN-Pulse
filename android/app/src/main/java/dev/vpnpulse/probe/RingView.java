@@ -12,6 +12,7 @@ import android.text.Layout;
 import android.text.StaticLayout;
 import android.text.TextPaint;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.AnimationUtils;
 
@@ -52,6 +53,8 @@ final class RingView extends View {
     private static final int CAPTION_MAX_CH = 18;
     private static final String CH = "0";
     /** Room for 200 % system text inside a circle that cannot grow: shrink, never spill. */
+    /** What scripts/android_layout_report.py greps the log for. */
+    static final String SHRINK_TAG = "vpnpulse-ring";
     private static final int SHRINK_STEPS = 4;
     private static final float SHRINK_BY = 0.12f;
 
@@ -124,7 +127,10 @@ final class RingView extends View {
     }
 
     /**
-     * @param caption the second, quieter line, or null when the state says it in one word.
+     * @param caption the second, quieter line, or null when the state says it in one word. Every
+     *                onboarding step passes null — a circle is no place for a sentence; the main
+     *                screen of Э2 is what brings it back, with the ring's short «раз в минуту»
+     *                (the RING table's `sub` in web/src/android.js).
      * @param busy    the check is running: dash the stroke and turn it.
      */
     void show(RingState state, String title, String caption, boolean busy) {
@@ -222,7 +228,15 @@ final class RingView extends View {
         }
     }
 
-    /** Wraps both lines to the circle's inner width, shrinking them until the stack fits. */
+    /**
+     * Wraps both lines to the circle's inner width, shrinking them until the stack fits.
+     *
+     * The shrink is a safety net for a huge system font, not a licence to put a sentence in a
+     * circle: at 100 % text no state should reach it, because a word that needs it is drawn at a
+     * size the type scale does not contain. Canvas text is invisible to uiautomator, so each
+     * shrink says so in the log and scripts/android_layout_report.py fails the run when it sees
+     * one — that is the only acceptance Э1б's second defect has.
+     */
     private void layoutText(int width, int height) {
         float scale = 1f;
         for (int attempt = 0; ; attempt++) {
@@ -238,6 +252,14 @@ final class RingView extends View {
             int used = titleLayout.getHeight()
                     + (captionLayout == null ? 0 : innerGap + captionLayout.getHeight());
             if (used <= height || attempt >= SHRINK_STEPS) {
+                // both ways a word can outgrow the circle: the stack had to be shrunk, or the
+                // word did fit vertically only by wrapping. One line at the scale's own size is
+                // the whole rule, so either one is worth saying out loud.
+                if (attempt > 0 || titleLayout.getLineCount() > 1) {
+                    Log.d(SHRINK_TAG, "ring text at " + Math.round(scale * 100) + " % over "
+                            + titleLayout.getLineCount() + " line(s): " + title
+                            + (caption == null ? "" : " / " + caption));
+                }
                 return;
             }
             scale -= SHRINK_BY;

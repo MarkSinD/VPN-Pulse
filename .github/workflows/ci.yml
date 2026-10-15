@@ -107,6 +107,11 @@ jobs:
       - name: Build the APK without Gradle (aapt2 → javac → d8 → zipalign → apksigner)
         run: ./android/build.sh
 
+      # The layout report needs a device, so CI cannot run it. It can still refuse to let the
+      # stage's acceptance tool land broken: a syntax error or a bad f-string fails here.
+      - name: The layout report at least parses
+        run: python -m py_compile scripts/android_layout_report.py
+
   secret-scan:
     name: gitleaks
     runs-on: ubuntu-latest

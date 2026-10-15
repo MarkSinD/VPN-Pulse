@@ -159,16 +159,9 @@ public class MainActivity extends Activity implements Onboarding.Host {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setBackgroundColor(getColor(R.color.color_bg));
-        fitSystemBars(root);
-        // .device { max-width: 480px; margin: 0 auto }: on a wide screen the margins grow instead
-        // of the lines, so the measure stays readable
-        int side = Views.px(this, R.dimen.space_4) + Views.gutter(this);
-
         bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(side - Views.px(this, R.dimen.space_1), Views.px(this, R.dimen.space_1),
-                side - Views.px(this, R.dimen.space_1), Views.px(this, R.dimen.space_1));
         // the prototype's 56 px app bar: a 44 dp control with a little air around it
         bar.setMinimumHeight(Views.px(this, R.dimen.control_min) + Views.px(this, R.dimen.space_3));
         root.addView(bar, new LinearLayout.LayoutParams(Views.MATCH, Views.WRAP));
@@ -176,11 +169,9 @@ public class MainActivity extends Activity implements Onboarding.Host {
         // the step bar: navigation, so it stays put under the title instead of travelling with
         // the content whenever the step's block is centred
         steps = Views.column(this);
-        steps.setPadding(side, 0, side, Views.px(this, R.dimen.space_2));
         root.addView(steps, new LinearLayout.LayoutParams(Views.MATCH, Views.WRAP));
 
         content = Views.column(this);
-        content.setPadding(side, Views.px(this, R.dimen.space_3), side, Views.px(this, R.dimen.space_4));
         ScrollView scroll = new ScrollView(this);
         scroll.setFillViewport(true);     // so a short step can be centred on its ring
         scroll.setVerticalScrollBarEnabled(false);
@@ -191,10 +182,29 @@ public class MainActivity extends Activity implements Onboarding.Host {
         root.addView(dockLine, new LinearLayout.LayoutParams(Views.MATCH, Views.hairline(this)));
 
         dock = Views.column(this);
-        dock.setPadding(side, Views.px(this, R.dimen.space_3), side, Views.px(this, R.dimen.space_4));
         root.addView(dock, new LinearLayout.LayoutParams(Views.MATCH, Views.WRAP));
 
+        applySides(Views.windowWidth(this));
+        fitSystemBars(root);
         setContentView(root);
+    }
+
+    /**
+     * .device { max-width: 480px; margin: 0 auto }: on a wide screen the margins grow instead of
+     * the lines. The width that counts is what the window leaves after the system bars and a
+     * cutout, which is why this is re-applied whenever the insets change and not computed once.
+     */
+    private void applySides(int available) {
+        if (bar == null) {
+            return;
+        }
+        int side = Views.px(this, R.dimen.space_4) + Views.gutter(this, available);
+        int air = Views.px(this, R.dimen.space_1);
+        // the app bar's own control is a 44 dp circle, so its glyph lines up a notch further in
+        bar.setPadding(side - air, air, side - air, air);
+        steps.setPadding(side, 0, side, Views.px(this, R.dimen.space_2));
+        content.setPadding(side, Views.px(this, R.dimen.space_3), side, Views.px(this, R.dimen.space_4));
+        dock.setPadding(side, Views.px(this, R.dimen.space_3), side, Views.px(this, R.dimen.space_4));
     }
 
     /** targetSdk 35 draws edge to edge: keep the bar and the dock out from under the system's own. */
@@ -207,6 +217,7 @@ public class MainActivity extends Activity implements Onboarding.Host {
                             WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
                     Insets keyboard = insets.getInsets(WindowInsets.Type.ime());
                     v.setPadding(bars.left, bars.top, bars.right, Math.max(bars.bottom, keyboard.bottom));
+                    applySides(Views.windowWidth(MainActivity.this) - bars.left - bars.right);
                     return insets;
                 }
             });

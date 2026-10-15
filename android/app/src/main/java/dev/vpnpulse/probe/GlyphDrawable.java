@@ -17,7 +17,7 @@ import android.graphics.drawable.Drawable;
  */
 final class GlyphDrawable extends Drawable {
 
-    enum Glyph { BACK, CHECK, REFRESH, SETTINGS, PC, PLAY }
+    enum Glyph { BACK, CHECK, REFRESH, SETTINGS, PLAY }
 
     /** svg.i: stroke-width 1.8 on a 22-unit viewport. */
     private static final float STROKE_RATIO = 1.8f / 22f;
@@ -96,15 +96,6 @@ final class GlyphDrawable extends Drawable {
                 canvas.drawPath(path, stroke);
                 canvas.drawCircle(left + side * 0.64f, top + side * 0.34f, side * 0.10f, stroke);
                 canvas.drawCircle(left + side * 0.36f, top + side * 0.66f, side * 0.10f, stroke);
-                break;
-            case PC:
-                box.set(left + side * 0.14f, top + side * 0.22f, left + side * 0.86f, top + side * 0.62f);
-                path.addRoundRect(box, side * 0.06f, side * 0.06f, Path.Direction.CW);
-                move(left, top, side, 0.50f, 0.62f);
-                line(left, top, side, 0.50f, 0.76f);
-                move(left, top, side, 0.32f, 0.80f);
-                line(left, top, side, 0.68f, 0.80f);
-                canvas.drawPath(path, stroke);
                 break;
             default:
                 move(left, top, side, 0.32f, 0.20f);

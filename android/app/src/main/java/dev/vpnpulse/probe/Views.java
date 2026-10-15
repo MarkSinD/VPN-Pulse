@@ -3,7 +3,6 @@ package dev.vpnpulse.probe;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
-import android.graphics.Paint;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
@@ -31,8 +30,7 @@ import android.widget.TextView;
  * the generated resources and nothing else. No XML layout, no AndroidX, so every widget the probe
  * shows is assembled here once and reused by the screens.
  *
- * Four numbers in this file are not resources, and cannot be: a hairline is one physical pixel,
- * the tint under an informational panel is a CSS color-mix the theme generator does not export,
+ * Three numbers in this file are not resources, and cannot be: a hairline is one physical pixel,
  * letter spacing and line height are ratios rather than lengths, and the widest the content may
  * grow is the prototype's own device frame. Each is named and commented below.
  */
@@ -49,8 +47,6 @@ final class Views {
     /** .device { max-width: 480px }: past that, a line of text is too long to read comfortably. */
     private static final int CONTENT_MAX_DP = 480;
 
-    /** .banner-info: color-mix(var(--color-muted) var(--tint)) — --tint is 12 % light, 16 % dark. */
-    private static final int PANEL_TINT_ALPHA = 0x24;
     private static final int RIPPLE_ALPHA = 0x3D;
     /** .field input { letter-spacing: .08em } and .lang-btn { letter-spacing: .06em }. */
     private static final float CODE_TRACKING = 0.08f;
@@ -71,13 +67,21 @@ final class Views {
     }
 
     /**
-     * Half of whatever the screen has beyond a comfortable measure, so a wide screen gets margins
+     * Half of whatever the window has beyond a comfortable measure, so a wide screen gets margins
      * instead of 70-character lines. Zero on a phone, where the screen is narrower than the cap.
+     *
+     * @param available the width the content may actually use — the window less whatever the
+     *                  system bars and a display cutout have taken, which on a phone lying on its
+     *                  side is not the same on both edges.
      */
-    static int gutter(Context c) {
+    static int gutter(Context c, int available) {
+        int cap = Math.round(CONTENT_MAX_DP * c.getResources().getDisplayMetrics().density);
+        return Math.max(0, (available - cap) / 2);
+    }
+
+    static int windowWidth(Context c) {
         DisplayMetrics screen = c.getResources().getDisplayMetrics();
-        int cap = Math.round(CONTENT_MAX_DP * screen.density);
-        return Math.max(0, (screen.widthPixels - cap) / 2);
+        return screen.widthPixels;
     }
 
     static int withAlpha(int color, int alpha) {
@@ -126,8 +130,9 @@ final class Views {
             v.setLineHeight(target);
             return;
         }
-        Paint.FontMetricsInt metrics = v.getPaint().getFontMetricsInt();
-        v.setLineSpacing(target - (metrics.descent - metrics.ascent), 1f);
+        // the same quantity setLineHeight uses above: the face's recommended line spacing, which
+        // includes its line gap — descent - ascent alone would leave the two branches apart
+        v.setLineSpacing(target - v.getPaint().getFontMetricsInt(null), 1f);
     }
 
     static TextView heading(Context c, CharSequence s) {
@@ -339,30 +344,6 @@ final class Views {
         b.setOnClickListener(onClick);
         b.setAccessibilityDelegate(buttonRole());
         return b;
-    }
-
-    /** .banner-info: a tinted strip that states a fact and asks for nothing. */
-    static View panel(Context c, GlyphDrawable.Glyph glyph, CharSequence s) {
-        int quiet = c.getColor(R.color.color_muted);
-        LinearLayout p = new LinearLayout(c);
-        p.setOrientation(LinearLayout.HORIZONTAL);
-        p.setGravity(Gravity.TOP);
-        p.setPadding(px(c, R.dimen.space_4), px(c, R.dimen.space_3), px(c, R.dimen.space_4), px(c, R.dimen.space_3));
-        GradientDrawable face = new GradientDrawable();
-        face.setShape(GradientDrawable.RECTANGLE);
-        face.setCornerRadius(px(c, R.dimen.radius_md));
-        face.setColor(withAlpha(quiet, PANEL_TINT_ALPHA));
-        p.setBackground(face);
-        int icon = px(c, R.dimen.space_5);
-        ImageView image = new ImageView(c);
-        image.setImageDrawable(new GlyphDrawable(glyph, quiet, icon));
-        image.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-        LinearLayout.LayoutParams iconParams = new LinearLayout.LayoutParams(icon, icon);
-        iconParams.setMarginEnd(px(c, R.dimen.space_3));
-        p.addView(image, iconParams);
-        p.addView(text(c, s, R.dimen.text_sm, R.color.color_text, false, LH_CAPTION),
-                new LinearLayout.LayoutParams(0, WRAP, 1f));
-        return p;
     }
 
     /**

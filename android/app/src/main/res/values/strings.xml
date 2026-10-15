@@ -13,7 +13,7 @@
     <string name="android_cellular_fail" formatted="false">Requests still go through the VPN or Wi-Fi</string>
     <string name="android_cellular_fix" formatted="false">Turn on mobile data and check the exclusion</string>
     <string name="android_cellular_nosim" formatted="false">no network</string>
-    <string name="android_cellular_ok" formatted="false">Requests go through the mobile network, bypassing the VPN</string>
+    <string name="android_cellular_ok" formatted="false">Requests go over the mobile network, past the VPN</string>
     <string name="android_cellular_retry" formatted="false">Check again</string>
     <string name="android_cellularready" formatted="false">Checks use the mobile network outside the VPN</string>
     <string name="android_done_body" formatted="false">This phone will check the mobile network from Russia</string>
@@ -39,7 +39,7 @@
     <string name="android_result_ok" formatted="false">reachable</string>
     <string name="android_result_unknown" formatted="false">no data</string>
     <string name="android_results" formatted="false">Results</string>
-    <string name="android_ring_noaccess" formatted="false">no access</string>
+    <string name="android_ring_noaccess" formatted="false">No access</string>
     <string name="android_ring_start" formatted="false">Tap to start</string>
     <string name="android_ring_stop" formatted="false">Tap to stop</string>
     <string name="android_route" formatted="false">Route outside VPN</string>

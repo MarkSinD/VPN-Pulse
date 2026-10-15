@@ -125,8 +125,8 @@ final class Onboarding {
         // three actions, numbered, instead of a paragraph about three actions
         Views.add(body, Views.stepsList(a, t.get(R.string.android_exclude_step1),
                 t.get(R.string.android_exclude_step2), t.get(R.string.android_exclude_step3)),
-                Views.px(a, R.dimen.space_4));
-        Views.add(body, Views.note(a, t.get(R.string.android_exclude_why)), Views.px(a, R.dimen.space_4));
+                Views.px(a, R.dimen.space_3));
+        Views.add(body, Views.note(a, t.get(R.string.android_exclude_why)), Views.px(a, R.dimen.space_3));
         Views.add(content, body, 0);
 
         Views.add(dock, Views.primary(a, t.get(R.string.android_exclude_confirm),
@@ -151,7 +151,10 @@ final class Onboarding {
         hero.setGravity(Gravity.CENTER_HORIZONTAL);
         RingView ring = new RingView(a);
         ring.show(cell.ring, title, null, cell.busy);
-        ring.setContentDescription(title + ". " + hintText);
+        // the ring says its word and nothing else — the sentence under it is its own node, and a
+        // screen reader that heard both would hear the same sentence twice (role="img" in the
+        // prototype is labelled the same way)
+        ring.setContentDescription(title);
         ring.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
@@ -212,7 +215,7 @@ final class Onboarding {
         // the word in the ring, the heading, one line: the same thing is not said a third time,
         // and the panel about the computer stays where it belongs, on the main screen
         ring.show(confirmed.ring, title, null, false);
-        ring.setContentDescription(title + ". " + done);
+        ring.setContentDescription(title);
         Views.addCentered(hero, ring, 0);
         Views.add(content, hero, 0);
 
