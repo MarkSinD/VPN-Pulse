@@ -367,7 +367,6 @@
     const parts = [];
     if (SC.api === 'offline') parts.push('<div class="banner banner-warn" role="status">' + ico('offline') + '<div><b>' + esc(t('status.offline')) + '</b><br>' + esc(t('status.offlineBody', { time: SC.lastKnownTime })) + '</div><div class="act"><button type="button" class="btn btn-ghost" data-retry="status" data-event="retry_pressed">' + ico('refresh') + esc(t('action.retry')) + '</button></div></div>');
     parts.push(overallBlock());
-    if (SC.coverageMissing && S.role === 'admin') parts.push('<div class="banner banner-warn">' + ico('alert') + '<div>' + esc(t('status.coveragePartial', { missing: SC.coverageMissing.map(k => t('status.coverage.' + k)).join(', ') })) + '</div></div>');
     parts.push(noteBlock());
     if (SC.empty) {
       parts.push('<div class="empty">' + ico('pulse') + '<p>' + esc(t('status.settingUpBody')) + '</p></div>');
