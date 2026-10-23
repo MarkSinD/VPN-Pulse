@@ -66,10 +66,14 @@
         if (Array.isArray(parameters.dns) && parameters.dns.length) {
           lines.push(`DNS = ${parameters.dns.map(value => clean('DNS server', value)).join(', ')}`);
         }
-        for (const key of ['Jc', 'Jmin', 'Jmax', 'S1', 'S2', 'H1', 'H2', 'H3', 'H4']) {
+        for (const key of ['Jc', 'Jmin', 'Jmax', 'S1', 'S2', 'S3', 'S4', 'H1', 'H2', 'H3', 'H4']) {
           if (parameters[key] !== undefined) lines.push(`${key} = ${Number(parameters[key])}`);
         }
         if (parameters.HeaderProtectionKey !== undefined) lines.push(`HeaderProtectionKey = ${clean('header protection key', parameters.HeaderProtectionKey)}`);
+        for (const key of ['ContentPaddingAddition', 'RekeyAfterTime', 'RekeyTimeout', 'RejectAfterTime',
+          'KeepaliveTimeout', 'MaxHandshakeAttempts', 'RandomTrailers', 'DisableCookies']) {
+          if (parameters[key] !== undefined) lines.push(`${key} = ${clean(key, String(parameters[key]))}`);
+        }
         lines.push('', '[Peer]', `PublicKey = ${clean('server public key', parameters.serverPublicKey)}`,
           `PresharedKey = ${clean('preshared key', parameters.presharedKey)}`,
           `Endpoint = ${clean('endpoint', parameters.endpoint)}`,

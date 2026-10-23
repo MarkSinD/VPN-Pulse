@@ -1464,8 +1464,13 @@ window.VPNPulseApi = function (opts) {
         const text = S.keyMaterial.buildConfig({ address: d.address, dns: d.dns, serverPublicKey: d.server_public_key,
           presharedKey: d.preshared_key, endpoint: d.endpoint, allowedIPs: extra.allowed_ips,
           persistentKeepalive: extra.persistent_keepalive, Jc: extra.Jc, Jmin: extra.Jmin, Jmax: extra.Jmax,
-          S1: extra.S1, S2: extra.S2, H1: extra.H1, H2: extra.H2, H3: extra.H3, H4: extra.H4,
-          HeaderProtectionKey: extra.HeaderProtectionKey });
+          S1: extra.S1, S2: extra.S2, S3: extra.S3, S4: extra.S4,
+          H1: extra.H1, H2: extra.H2, H3: extra.H3, H4: extra.H4,
+          HeaderProtectionKey: extra.HeaderProtectionKey, ContentPaddingAddition: extra.ContentPaddingAddition,
+          RekeyAfterTime: extra.RekeyAfterTime, RekeyTimeout: extra.RekeyTimeout,
+          RejectAfterTime: extra.RejectAfterTime, KeepaliveTimeout: extra.KeepaliveTimeout,
+          MaxHandshakeAttempts: extra.MaxHandshakeAttempts, RandomTrailers: extra.RandomTrailers,
+          DisableCookies: extra.DisableCookies });
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
         a.download = 'vpn-' + S.keyServer + '.conf'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         S.keyMaterial.destroy(); S.keyMaterial = null; download.disabled = true; toast(t('keys.saved'));
