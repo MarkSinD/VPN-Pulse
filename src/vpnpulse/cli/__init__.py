@@ -21,7 +21,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from vpnpulse.cli import backup, bot, collector, demo, doctor, init, note, probe, run, serve, server
+from vpnpulse.cli import access, backup, bot, collector, demo, doctor, init, note, probe, run, serve, server
 from vpnpulse.cli.common import CliError, Output
 
 
@@ -49,6 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     note.add_parser(commands, parents)
     demo.add_parser(commands, parents)
     backup.add_parsers(commands, parents)
+    access.add_parser(commands, parents)
     return parser
 
 

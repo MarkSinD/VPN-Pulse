@@ -60,7 +60,7 @@ def test_start_gets_one_button_in_the_installations_language_and_nothing_else_is
     assert bot.offset == 6
     # the next poll asks from the offset and finds nothing new
     assert bot.poll_once() == 0
-    assert api.calls[-1] == ("getUpdates", {"timeout": 1, "allowed_updates": ["message"], "offset": 6})
+    assert api.calls[-1] == ("getUpdates", {"timeout": 1, "allowed_updates": ["message", "chat_member"], "offset": 6})
 
 
 def test_an_english_installation_answers_in_english():
@@ -83,3 +83,12 @@ def test_failures_back_off_and_stop_is_honoured():
 
     bot.run_forever(sleep=nap)
     assert naps == [2, 4, 8]
+
+
+def test_chat_member_updates_are_forwarded_without_replying():
+    event = {"update_id": 9, "chat_member": {"chat": {"id": -100123, "type": "supergroup"},
+             "date": 1, "new_chat_member": {"status": "left", "user": {"id": 42, "first_name": "Member"}}}}
+    api = FakeBotApi([event]); seen = []; maintained = []
+    bot = TelegramBot(TOKEN, APP, opener=api, timeout=1, membership_handler=seen.append,
+                      maintenance=lambda: maintained.append(True))
+    assert bot.poll_once() == 0 and seen == [event] and maintained == [True]

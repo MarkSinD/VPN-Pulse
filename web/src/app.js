@@ -29,7 +29,8 @@
     hintDismissed: store.get('hint', '') === '1',
     scrollPos: 0, originRow: null, eventsPage: 1, noteExpanded: false, eventsState: 'ok',
     text200: q.get('text') === '200',
-    sessionRole: null, help: null
+    sessionRole: null, memberId: null, help: null, access: null, profiles: null, adminMembers: null,
+    keyStep: 1, keyServer: null, keyBusy: false, keyResult: null, keyMaterial: null
   };
   if (!I18N[S.lang]) S.lang = 'ru';
   const screenParam = q.get('screen');
@@ -124,7 +125,7 @@
   }
   async function ensureSession() {
     if (S.sessionRole) return;
-    if (tg && tg.initData) { await api.session(tg.initData); const me = await api.me(); S.role = me.role; S.sessionRole = S.role; }
+    if (tg && tg.initData) { await api.session(tg.initData); const me = await api.me(); S.role = me.role; S.memberId = me.member_id; S.sessionRole = S.role; }
     else {
       // no Telegram around us: the dev server hands out a session; production has no such route (404),
       // which means "open this from Telegram" rather than "the service is down"
@@ -156,13 +157,14 @@
       details[c.id] = d; metrics[c.id] = { '24h': m24, '7d': (BUNDLE.metrics[c.id] || {})['7d'] || null };
       if (S.role === 'admin') adminDetails[c.id] = await api.adminServer(c.id);
     }));
-    const [ev, help] = await Promise.all([api.events('all', 100), api.help()]);
+    const [ev, help, access] = await Promise.all([api.events('all', 100), api.help(), api.access().catch(e => e && e.status === 409 ? null : Promise.reject(e))]);
+    const profiles = access ? await api.profiles().catch(() => null) : null;
     let admin = null;
     if (S.role === 'admin') {
-      const [overview, probes, readiness] = await Promise.all([api.adminOverview(), api.adminProbes(), api.ready()]);
-      admin = { overview, probes, readiness, details: adminDetails };
+      const [overview, probes, readiness, members] = await Promise.all([api.adminOverview(), api.adminProbes(), api.ready(), api.adminMembers().catch(() => null)]);
+      admin = { overview, probes, readiness, members, details: adminDetails };
     }
-    return { status, details, metrics, events: ev, help, admin };
+    return { status, details, metrics, events: ev, help, access, profiles, admin };
   }
   async function load() {
     if (MODE !== 'api') { SC = Model.fromFixtures(FX, S.scenario, ctx()); render(); document.body.setAttribute('data-load', 'ready'); return; }
@@ -175,6 +177,9 @@
       catch (e) { if (e && e.status === 401) { S.sessionRole = null; await ensureSession(); bundle = await fetchBundle(); } else throw e; }
       if (seq !== loadSeq) return;
       S.help = bundle.help;
+      S.access = bundle.access;
+      S.profiles = bundle.profiles;
+      S.adminMembers = bundle.access && bundle.admin && bundle.admin.members;
       SC = Model.fromApi(bundle, ctx()); lastGood = SC; lastGoodAt = new Date();
       if (S.server && !byId(S.server)) S.server = null;
     } catch (e) {
@@ -368,6 +373,7 @@
     if (SC.api === 'offline') parts.push('<div class="banner banner-warn" role="status">' + ico('offline') + '<div><b>' + esc(t('status.offline')) + '</b><br>' + esc(t('status.offlineBody', { time: SC.lastKnownTime })) + '</div><div class="act"><button type="button" class="btn btn-ghost" data-retry="status" data-event="retry_pressed">' + ico('refresh') + esc(t('action.retry')) + '</button></div></div>');
     parts.push(overallBlock());
     parts.push(noteBlock());
+    parts.push(accessCard());
     if (SC.empty) {
       parts.push('<div class="empty">' + ico('pulse') + '<p>' + esc(t('status.settingUpBody')) + '</p></div>');
       if (S.role === 'admin' && SC.adminData) parts.push('<section class="admin-block"><span class="admin-tag">' + esc(t('app.nav.admin')) + '</span><h2 class="sub">' + esc(t('admin.serverAdd')) + '</h2><p class="small muted">' + esc(t('admin.serverAddBody')) + '</p>' + copyRow(SC.adminData.nextCommand || 'vpn-pulse server add') + '<a class="btn btn-text" href="#quick-start" data-event="quick_start_opened" style="justify-self:start">' + ico('ext') + esc(t('action.quickStart')) + '</a></section>');
@@ -379,6 +385,14 @@
     parts.push('<div class="servers" id="servers">' + SC.list.map(serverRow).join('') + '</div>');
     const side = window.innerWidth >= 1024 ? '<aside class="ctx">' + (SC.eventsList.length ? '<div class="panel"><h3>' + esc(t('events.title')) + '</h3>' + eventRow(SC.eventsList[0]) + '</div>' : '') + '<div class="panel"><h3>' + esc(t('status.legend')) + '</h3><div class="stack small muted">' + kinds().map(k => '<span>' + ico(srcIcon[k]) + ' ' + esc(t('source.' + k + '.full')) + '</span>').join('') + '</div></div></aside>' : '';
     return '<div class="status-layout"><div class="screen">' + parts.join('') + '</div>' + side + '</div>';
+  }
+  function accessCard() {
+    const access = S.access;
+    if (!access) return '';
+    const grants = access.grants || [];
+    const active = grants.filter(g => g.state === 'active');
+    if (active.length) return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.setupTitle')) + '</h2><p>' + esc(t('access.setupBody', { n: active.length })) + '</p></div><button type="button" class="btn btn-primary" data-access="setup">' + esc(t('access.setupAction')) + '</button></section>';
+    return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.requestTitle')) + '</h2><p>' + esc(t('access.requestBody')) + '</p></div><button type="button" class="btn btn-primary" data-access="request">' + esc(t('access.requestAction')) + '</button></section>';
   }
   function skeleton() {
     const row = '<div class="srow" aria-hidden="true"><span class="sk" style="width:64px;height:64px;border-radius:50%"></span><span class="main"><span class="sk" style="height:20px;width:40%"></span><span class="sk" style="height:14px;width:60%"></span><span class="sk" style="height:30px;width:100%"></span></span><span class="sk" style="width:48px;height:20px"></span></div>';
@@ -400,6 +414,11 @@
     }));
     root.querySelectorAll('[data-event="quick_start_opened"]').forEach(a => a.addEventListener('click', () => track('quick_start_opened', { entry_point: 'status' })));
     bindCopy();
+    root.querySelectorAll('[data-access]').forEach(b => b.addEventListener('click', () => {
+      if (b.getAttribute('data-access') === 'setup') { S.tab = 'keys'; render(); root.scrollTop = 0; return; }
+      if (!api) { toast(t('access.requested')); return; }
+      b.disabled = true; api.requestAccess().then(() => { toast(t('access.requested')); return load(); }).catch(e => { b.disabled = false; toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })); });
+    }));
   }
 
   // ---------- server ----------
@@ -521,7 +540,47 @@
   // ---------- keys / help ----------
   function contactAvailable() { return !S.help || S.help.contact_available !== false; }
   function keysScreen() {
-    return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1><div class="stack"><p><b>' + esc(t('keys.mvp')) + '</b></p><p class="muted small">' + esc(t('keys.body')) + '</p></div>' + (contactAvailable() ? '<button type="button" class="btn btn-primary" data-contact="keys" data-event="contact_admin_pressed">' + ico('send') + esc(t('help.contact')) + '</button>' : '') + '<div class="divider"></div><div class="stack"><h2 class="sub">' + esc(t('keys.reserveTitle')) + '</h2><p>' + esc(t('keys.reserve')) + '</p><p class="muted small">' + esc(t('keys.reserveBody')) + '</p></div></div>';
+    const profiles = (S.profiles && S.profiles.items) || [];
+    const live = profiles.filter(p => !['revoked', 'failed'].includes(p.state));
+    const grants = ((S.access && S.access.grants) || []).filter(g => g.state === 'active' && !live.some(p => p.server_id === g.server_id));
+    const current = live.length ? '<section class="stack"><h2 class="sub">' + esc(t('keys.current')) + '</h2>' + live.map(p => '<article class="profile-row"><div><b>' + esc(sname(p.server_id)) + '</b><span class="small muted">' + esc(t('keys.profileState.' + p.state)) + '</span></div><button type="button" class="btn btn-ghost btn-danger" data-profile-revoke="' + esc(p.id) + '">' + esc(t('keys.revoke')) + '</button></article>').join('') + '</section><div class="divider"></div>' : '';
+    if (!grants.length) return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + (!live.length ? '<p>' + esc(t('keys.noAccess')) + '</p>' : '') + '</div>';
+    const progress = '<div class="key-progress" aria-label="' + esc(t('keys.progress', { n: S.keyStep })) + '"><b>' + S.keyStep + '</b><span>/ 3</span></div>';
+    let body = '';
+    if (S.keyStep === 1) body = '<h2 class="sub">' + esc(t('keys.chooseServer')) + '</h2><div class="key-servers">' + grants.map(g => { const s = byId(g.server_id); return '<button type="button" class="btn btn-ghost btn-block key-server" data-key-server="' + esc(g.server_id) + '"><b>' + esc(sname(s || g.server_id)) + '</b><span>' + esc(t('keys.choose')) + '</span></button>'; }).join('') + '</div>';
+    else if (S.keyStep === 2) body = '<h2 class="sub">' + esc(t('keys.creating')) + '</h2><p>' + esc(t('keys.creatingBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-create" ' + (S.keyBusy ? 'disabled' : '') + '>' + esc(S.keyBusy ? t('keys.wait') : t('keys.create')) + '</button><button type="button" class="btn btn-text btn-block" id="key-back">' + esc(t('action.back')) + '</button>';
+    else body = '<h2 class="sub">' + esc(t('keys.ready')) + '</h2><p>' + esc(t('keys.readyBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-download">' + esc(t('keys.download')) + '</button><p class="small muted">' + esc(t('keys.once')) + '</p>';
+    return '<div class="screen keys-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + progress + '<section class="stack key-wizard">' + body + '</section></div>';
+  }
+  function bindKeys() {
+    root.querySelectorAll('[data-profile-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('keys.revoke')) + '</h2><p>' + esc(t('keys.revokeConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
+      () => apiAction(() => api.revokeProfile(b.getAttribute('data-profile-revoke'), uuid())).then(ok => { if (ok) { S.keyStep = 1; load(); } }))));
+    root.querySelectorAll('[data-key-server]').forEach(b => b.addEventListener('click', () => { S.keyServer = b.getAttribute('data-key-server'); S.keyStep = 2; render(); }));
+    const back = $('#key-back'); if (back) back.addEventListener('click', () => { if (S.keyMaterial) S.keyMaterial.destroy(); S.keyMaterial = null; S.keyStep = 1; render(); });
+    const create = $('#key-create'); if (create) create.addEventListener('click', async () => {
+      if (!api || !window.VpnPulseAccessKeys) return toast(t('error.generic', { code: 'KEYGEN_UNAVAILABLE' }));
+      S.keyBusy = true; render();
+      try {
+        const material = window.VpnPulseAccessKeys.generate();
+        const result = await api.issueProfile(S.keyServer, material.publicKey, uuid());
+        if (!result.delivery) { material.destroy(); throw { code: 'PROFILE_ALREADY_DELIVERED' }; }
+        S.keyMaterial = material; S.keyResult = result; S.keyStep = 3; track('profile_issued', { server_public_id: S.keyServer });
+      } catch (e) { if (S.keyMaterial) S.keyMaterial.destroy(); S.keyMaterial = null; toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })); }
+      S.keyBusy = false; render();
+    });
+    const download = $('#key-download'); if (download) download.addEventListener('click', () => {
+      const d = S.keyResult && S.keyResult.delivery, extra = (d && d.extra) || {};
+      try {
+        const text = S.keyMaterial.buildConfig({ address: d.address, dns: d.dns, serverPublicKey: d.server_public_key,
+          presharedKey: d.preshared_key, endpoint: d.endpoint, allowedIPs: extra.allowed_ips,
+          persistentKeepalive: extra.persistent_keepalive, Jc: extra.Jc, Jmin: extra.Jmin, Jmax: extra.Jmax,
+          S1: extra.S1, S2: extra.S2, H1: extra.H1, H2: extra.H2, H3: extra.H3, H4: extra.H4,
+          HeaderProtectionKey: extra.HeaderProtectionKey });
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+        a.download = 'vpn-' + S.keyServer + '.conf'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        S.keyMaterial.destroy(); S.keyMaterial = null; download.disabled = true; toast(t('keys.saved'));
+      } catch (e) { toast(t('error.generic', { code: 'CONFIG_BUILD_FAILED' })); }
+    });
   }
   function helpScreen() {
     const steps = [1, 2, 3, 4].map(n => '<div class="step"><button type="button" class="step-btn" aria-expanded="' + (S.open === 'h' + n) + '" aria-controls="hs-' + n + '" data-step="' + n + '" data-event="help_step_opened"><span class="n">' + n + '</span><span>' + esc(t('help.step' + n + '.title')) + '</span>' + ico('chevron-down', 'chev') + '</button><div class="step-body" id="hs-' + n + '" ' + (S.open === 'h' + n ? '' : 'hidden') + '>' + esc(t('help.step' + n + '.body')) + '</div></div>').join('');
@@ -559,8 +618,20 @@
     const doctor = '<div class="doctor"><div class="res c-' + dc + '">' + ico(d.result === 'ok' ? 'check' : d.result === 'warn' ? 'alert' : 'x') + '<span>' + esc(t('admin.doctor.' + d.result)) + '</span></div>' + d.items.map(it => '<div class="item"><div><b>' + esc(t('admin.service.' + it.name) === 'admin.service.' + it.name ? it.name : t('admin.service.' + it.name)) + '</b> · <span class="c-' + { ok: 'operational', warn: 'degraded', fail: 'unavailable' }[it.state] + '">' + esc(t('admin.state.' + it.state)) + '</span></div><div class="muted">' + esc(t('admin.doctor.next')) + ': ' + esc(it.next) + '</div>' + (it.cmd ? copyRow(it.cmd) : '') + '</div>').join('') + (A.nextCommand && !d.items.length ? copyRow(A.nextCommand) : '') + '</div>';
     const nt = SC.note, noteVal = noteDraft !== null ? noteDraft : (nt ? nt.text : '');
     const note = '<div class="stack"><textarea class="note-input" id="note-input" maxlength="' + SC.noteMax + '" placeholder="' + esc(t('admin.note.placeholder')) + '" aria-label="' + esc(t('admin.note')) + '">' + esc(noteVal) + '</textarea><div class="small muted" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span id="note-count">' + esc(t('admin.note.chars', { n: noteVal.length, max: SC.noteMax })) + '</span>' + (nt && nt.expires ? '<span>' + esc(t('admin.note.expires', { time: fmtTime(nt.expires) })) + '</span>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="note-save">' + esc(t('action.save')) + '</button>' + (nt ? '<button type="button" class="btn btn-ghost btn-danger" id="note-del">' + esc(t('admin.note.delete')) + '</button>' : '') + '</div>' + (!nt && !noteVal ? '<p class="small muted">' + esc(t('admin.note.empty')) + '</p>' : '') + '</div>';
+    const registry = S.adminMembers;
+    const members = registry ? '<div class="member-summary">' + esc(t('admin.membersCoverage', { active: registry.coverage.active, known: registry.coverage.known })) + '</div><div class="member-list">' + registry.items.map(m => {
+      const name = m.display_name || (m.username ? '@' + m.username : t('admin.memberUnnamed'));
+      const grants = m.grants || [];
+      const actions = SC.list.map(s => { const g = grants.find(x => x.server_id === s.id && ['active', 'suspended'].includes(x.state));
+        if (!g) return '<button type="button" class="btn btn-ghost member-grant" data-grant-member="' + esc(m.id) + '" data-grant-server="' + esc(s.id) + '">' + esc(t('admin.grantServer', { server: s.name })) + '</button>';
+        if (g.state === 'suspended') return '<button type="button" class="btn btn-ghost member-grant" data-grant-state="active" data-grant-id="' + esc(g.id) + '">' + esc(t('admin.resumeServer', { server: s.name })) + '</button>';
+        return '<span class="member-grant c-operational">' + esc(s.name) + ' · ' + esc(t('admin.granted')) + '</span><button type="button" class="btn btn-ghost member-grant" data-grant-state="suspended" data-grant-id="' + esc(g.id) + '">' + esc(t('admin.suspend')) + '</button><button type="button" class="btn btn-ghost btn-danger member-grant" data-grant-state="revoked" data-grant-id="' + esc(g.id) + '">' + esc(t('admin.revoke')) + '</button>';
+      }).join('');
+      return '<article class="member-row"><div><b>' + esc(name) + '</b><span class="xs muted">' + esc(t('admin.memberState.' + m.membership_state)) + '</span></div><div class="member-actions">' + actions + '</div></article>';
+    }).join('') + '</div>' : '<p class="small muted">' + esc(t('status.unknown')) + '</p>';
     return '<div class="screen admin-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.attention')) + '</h2>' + attHtml + '</section>' +
+      (registry ? '<section class="stack"><h2 class="sub">' + esc(t('admin.members')) + '</h2>' + members + '</section>' : '') +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.probes')) + '</h2><div>' + probes + '</div></section>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.services')) + '</h2>' + svc + '</section>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.doctor')) + '</h2>' + doctor + '</section>' +
@@ -578,6 +649,16 @@
     }));
     root.querySelectorAll('[data-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.revoke')) + '</h2><p>' + esc(t('admin.revokeConfirm', { name: b.getAttribute('data-revoke') })) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
       () => apiAction(() => api.revokeProbe(b.getAttribute('data-probe'))).then(ok => { if (ok) load(); }))));
+    root.querySelectorAll('[data-grant-member]').forEach(b => b.addEventListener('click', () => {
+      const server = b.getAttribute('data-grant-server');
+      openSheet('<h2>' + esc(t('admin.grantConfirmTitle')) + '</h2><p>' + esc(t('admin.grantConfirmBody', { server: sname(server) })) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
+        () => apiAction(() => api.grantAccess(b.getAttribute('data-grant-member'), server, 'owner_admin', null)).then(ok => { if (ok) load(); }));
+    }));
+    root.querySelectorAll('[data-grant-state]').forEach(b => b.addEventListener('click', () => {
+      const state = b.getAttribute('data-grant-state');
+      openSheet('<h2>' + esc(t('admin.grantStateTitle')) + '</h2><p>' + esc(t('admin.grantStateBody.' + state)) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
+        () => apiAction(() => api.setGrantState(b.getAttribute('data-grant-id'), state)).then(ok => { if (ok) load(); }));
+    }));
     const ni = $('#note-input'); if (ni) ni.addEventListener('input', () => { noteDraft = ni.value; $('#note-count').textContent = t('admin.note.chars', { n: ni.value.length, max: SC.noteMax }); });
     const ns = $('#note-save'); if (ns) ns.addEventListener('click', () => { const text = ($('#note-input').value || '').trim(); if (!text) return; apiAction(() => api.putNote(text)).then(ok => { if (ok) { noteDraft = null; load(); } }); });
     const nd = $('#note-del'); if (nd) nd.addEventListener('click', () => openSheet('<h2>' + esc(t('admin.note.delete')) + '</h2><p>' + esc(t('admin.note.deleteConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', nd,
@@ -607,7 +688,7 @@
     else html = adminScreen();
     root.innerHTML = html;
     if (S.tab === 'status') { S.server ? bindServer() : bindStatus(); }
-    else if (S.tab === 'events') bindEvents(); else if (S.tab === 'help') bindHelp(); else if (S.tab === 'admin') bindAdmin(); else if (S.tab === 'keys') bindHelp();
+    else if (S.tab === 'events') bindEvents(); else if (S.tab === 'help') bindHelp(); else if (S.tab === 'admin') bindAdmin(); else if (S.tab === 'keys') bindKeys();
     drawCharts();
     document.body.setAttribute('data-scenario', SC.id); document.body.setAttribute('data-source', SC.source || MODE);
     try { document.dispatchEvent(new CustomEvent('vpnpulse:render', { detail: { lang: S.lang, scenario: S.scenario, role: S.role, tab: S.tab, server: S.server, source: SC.source } })); } catch (e) { /* old webview */ }
@@ -653,6 +734,10 @@
   const scLabel = document.querySelector('.showcase .sc-label'); if (scLabel && MODE === 'api') scLabel.textContent = 'Showcase · API';
 
   // ---------- boot ----------
+  window.addEventListener('pagehide', () => {
+    if (S.keyMaterial) S.keyMaterial.destroy();
+    S.keyMaterial = null; S.keyResult = null;
+  });
   history.replaceState({ tab: S.tab, server: S.server }, '');
   if (S.server) history.pushState({ tab: 'status', server: S.server }, '');
   render(); syncShowcase();

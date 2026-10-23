@@ -8,6 +8,8 @@ from __future__ import annotations
 import argparse
 import logging
 import signal
+import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 from vpnpulse.cli.common import CliError, Output, config_path_of, load_public_config, secret_file_status
@@ -23,6 +25,10 @@ def add_parser(commands, parents) -> None:
 
 def command_bot(args: argparse.Namespace, out: Output) -> int:
     from vpnpulse.bot import TelegramBot
+    from vpnpulse.auth import Identity
+    from vpnpulse.cli.common import contracts_dir, open_database, resolve_db
+    from vpnpulse.storage import SqliteStore
+    from vpnpulse.profile_service import ProfileService, SshProvisioner
 
     if not args.quiet:
         configure_logging(logging.INFO)
@@ -43,7 +49,39 @@ def command_bot(args: argparse.Namespace, out: Output) -> int:
         raise CliError(f"telegram token file {token_file}: {status} (vpn-pulse doctor telegram)")
     token = token_file.read_text(encoding="utf-8").strip()
     out.secret(token)
-    bot = TelegramBot(token, app_url, default_language=(config.get("app") or {}).get("default_language", "ru"))
+    membership_handler = maintenance = None
+    if (config.get("access") or {}).get("member_registry_enabled") is True:
+        identity_key_file = config_path.parent / "secrets" / "member-identity.key"
+        if not identity_key_file.exists():
+            raise CliError(f"member identity key {identity_key_file}: missing")
+        db = open_database(resolve_db(None, config), create=True)
+        store = SqliteStore(db, analytics_schema=contracts_dir() / "analytics-events.schema.json", config=config,
+                            pepper=token, identity_key=identity_key_file.read_text(encoding="utf-8").strip())
+        group_id = str(telegram["group_chat_id"])
+
+        def membership_handler(update: dict) -> None:
+            event = update["chat_member"]
+            if str((event.get("chat") or {}).get("id")) != group_id:
+                return
+            member = event.get("new_chat_member") or {}
+            user = member.get("user") or {}
+            status = member.get("status")
+            state = "active" if status in {"member", "administrator", "creator"} or (status == "restricted" and member.get("is_member")) else "banned" if status == "kicked" else "left" if status in {"left", "restricted"} else "unknown"
+            display_name = " ".join(str(user.get(k, "")).strip() for k in ("first_name", "last_name")).strip() or None
+            store.record_membership(Identity(int(user["id"]), "member", display_name=display_name,
+                                              username=user.get("username")), state, source="chat_member",
+                                    external_event_id=f"telegram:{update['update_id']}",
+                                    now=datetime.fromtimestamp(int(event.get("date", 0)), UTC) if event.get("date") else None)
+
+        if (config.get("access") or {}).get("issuance_enabled") is True:
+            deployment_file = config_path.parent / "secrets" / "access-deployment.json"
+            if not deployment_file.exists():
+                raise CliError(f"access deployment {deployment_file}: missing")
+            deployment = json.loads(deployment_file.read_text(encoding="utf-8"))
+            service = ProfileService(store, config, deployment, SshProvisioner(deployment))
+            maintenance = lambda: service.process_lifecycle_jobs()
+    bot = TelegramBot(token, app_url, default_language=(config.get("app") or {}).get("default_language", "ru"),
+                      membership_handler=membership_handler, maintenance=maintenance)
     if args.once:
         out.line(f"replies: {bot.poll_once()}")
         return 0

@@ -10,7 +10,7 @@ and `Retry-After`. The key is a process-salted hash held only in memory. `X-Forw
 only when the socket peer is loopback, matching the supported same-host Caddy deployment.
 
 The contract is [`contracts/openapi.yaml`](../contracts/openapi.yaml) (OpenAPI 3.1, version
-1.6.0). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
+1.7.0). Base path `/api/v1`. Unknown values are `null`, never zero. Errors are RFC 9457
 Problem Details with a stable `code` and a `trace_id`.
 
 ## Authentication
@@ -63,8 +63,9 @@ project's UI-to-contract map; the essentials:
 
 ## Sessions and language
 
-`POST /sessions` sets the cookie; `GET /sessions/current` tells the client its role (member or
-admin) so the Admin tab is shown only when it will work. Server names and doctor hints come back
+`POST /sessions` sets the cookie; `GET /sessions/current` tells the client its role so the Admin
+tab is shown only when it will work and, when the member registry is enabled, its opaque
+`member_id`. Installations with the registry disabled return `member_id: null`. Server names and doctor hints come back
 in the language of the documented `Accept-Language` header (`ru` or `en`, first supported tag
 wins, otherwise the installation default); the administrator note is returned as written.
 

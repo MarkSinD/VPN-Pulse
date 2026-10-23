@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import base64
 import json
 import secrets
 import sqlite3
@@ -25,6 +26,8 @@ import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+from cryptography.fernet import Fernet
 
 from vpnpulse.analytics import SqliteAnalyticsRepository
 from vpnpulse.auth import Identity, Session
@@ -88,6 +91,7 @@ class SqliteStore:
         analytics_schema: Path,
         config: dict | None = None,
         pepper: str = "",
+        identity_key: str | bytes | None = None,
         now: Callable[[], datetime] | None = None,
         session_minutes: int = 30,
         enrollment_minutes: int = 10,
@@ -95,6 +99,8 @@ class SqliteStore:
         self.db = connection
         self.config = config or {}
         self.pepper = pepper
+        raw_identity_key = identity_key.encode() if isinstance(identity_key, str) else identity_key
+        self.identity_cipher = Fernet(base64.urlsafe_b64encode(hashlib.sha256(raw_identity_key).digest())) if raw_identity_key else None
         self.now = now or (lambda: datetime.now(UTC))
         self.session_ttl = timedelta(minutes=session_minutes)
         self.enrollment_ttl = timedelta(minutes=enrollment_minutes)
@@ -110,14 +116,135 @@ class SqliteStore:
         self.analytics = SqliteAnalyticsRepository(analytics_schema, connection, retention_days=self.retention["analytics_raw_days"])
 
     # ---------- sessions ----------
+    @staticmethod
+    def _cipher(key: str | bytes) -> Fernet:
+        raw = key.encode() if isinstance(key, str) else key
+        return Fernet(base64.urlsafe_b64encode(hashlib.sha256(raw).digest()))
+
+    def _member_hash(self, telegram_user_id: int) -> bytes:
+        return hmac.new(self.pepper.encode(), str(telegram_user_id).encode(), hashlib.sha256).digest()
+
+    def upsert_member(self, identity: Identity, now: datetime | None = None, *, source: str = "session") -> str:
+        if self.identity_cipher is None:
+            raise RuntimeError("member registry requires a separate identity encryption key")
+        now = now or self.now()
+        lookup = self._member_hash(identity.telegram_user_id)
+        row = self.db.execute("SELECT id, membership_state FROM members WHERE telegram_user_hash = ?", (lookup,)).fetchone()
+        member_id = row[0] if row else str(uuid.uuid4())
+        previous = row[1] if row else None
+        ciphertext = self.identity_cipher.encrypt(str(identity.telegram_user_id).encode())
+        with self.db:
+            self.db.execute(
+                """
+                INSERT INTO members(id, telegram_id_ciphertext, telegram_user_hash, display_name, username,
+                                    membership_state, first_seen_at, last_seen_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+                ON CONFLICT(telegram_user_hash) DO UPDATE SET
+                  telegram_id_ciphertext=excluded.telegram_id_ciphertext,
+                  display_name=COALESCE(excluded.display_name, members.display_name),
+                  username=COALESCE(excluded.username, members.username),
+                  membership_state='active', last_seen_at=excluded.last_seen_at, updated_at=excluded.updated_at
+                """,
+                (member_id, ciphertext, lookup, identity.display_name, identity.username, _iso(now), _iso(now), _iso(now)),
+            )
+            if previous != "active":
+                self.db.execute(
+                    "INSERT INTO membership_events VALUES (?, ?, ?, ?, 'active', NULL, ?, ?)",
+                    (str(uuid.uuid4()), member_id, source, previous, _iso(now), _iso(now)),
+                )
+            self.db.execute("UPDATE access_lifecycle_jobs SET state='cancelled',updated_at=? WHERE member_id=? AND state='pending'",
+                            (_iso(now), member_id))
+        return member_id
+
+    def record_membership(
+        self,
+        identity: Identity,
+        state: str,
+        *,
+        source: str,
+        external_event_id: str | None = None,
+        now: datetime | None = None,
+    ) -> str:
+        """Apply an idempotent Telegram/admin membership event and return the member id."""
+        if state not in {"active", "left", "banned", "unknown"}:
+            raise ValueError("invalid membership state")
+        if source not in {"session", "chat_member", "admin_import"}:
+            raise ValueError("invalid membership source")
+        if self.identity_cipher is None:
+            raise RuntimeError("member registry requires a separate identity encryption key")
+        if external_event_id:
+            existing = self.db.execute("SELECT member_id FROM membership_events WHERE external_event_id = ?", (external_event_id,)).fetchone()
+            if existing:
+                return existing[0]
+        now = now or self.now()
+        lookup = self._member_hash(identity.telegram_user_id)
+        row = self.db.execute("SELECT id, membership_state FROM members WHERE telegram_user_hash = ?", (lookup,)).fetchone()
+        member_id = row[0] if row else str(uuid.uuid4())
+        previous = row[1] if row else None
+        ciphertext = self.identity_cipher.encrypt(str(identity.telegram_user_id).encode())
+        with self.db:
+            self.db.execute(
+                """
+                INSERT INTO members(id, telegram_id_ciphertext, telegram_user_hash, display_name, username,
+                                    membership_state, first_seen_at, last_seen_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(telegram_user_hash) DO UPDATE SET
+                  telegram_id_ciphertext=excluded.telegram_id_ciphertext,
+                  display_name=COALESCE(excluded.display_name, members.display_name),
+                  username=COALESCE(excluded.username, members.username),
+                  membership_state=excluded.membership_state,
+                  last_seen_at=excluded.last_seen_at, updated_at=excluded.updated_at
+                """,
+                (member_id, ciphertext, lookup, identity.display_name, identity.username,
+                 state, _iso(now), _iso(now), _iso(now)),
+            )
+            if previous != state or external_event_id:
+                self.db.execute(
+                    "INSERT INTO membership_events VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (str(uuid.uuid4()), member_id, source, previous, state, external_event_id, _iso(now), _iso(now)),
+                )
+            if state == "active":
+                self.db.execute("UPDATE access_lifecycle_jobs SET state='cancelled',updated_at=? WHERE member_id=? AND state='pending'",
+                                (_iso(now), member_id))
+            elif state in {"left", "banned"} and previous != state:
+                grace = 0 if state == "banned" else int((self.config.get("access") or {}).get("leave_grace_hours", 24))
+                due = now + timedelta(hours=grace)
+                self.db.execute(
+                    "INSERT OR IGNORE INTO access_lifecycle_jobs(id,member_id,kind,due_at,state,created_at,updated_at) VALUES (?,?,'revoke_all',?,'pending',?,?)",
+                    (str(uuid.uuid4()), member_id, _iso(due), _iso(now), _iso(now)),
+                )
+        return member_id
+
+    def telegram_id_for_member(self, member_id: str) -> int | None:
+        if self.identity_cipher is None:
+            return None
+        row = self.db.execute("SELECT telegram_id_ciphertext FROM members WHERE id = ?", (member_id,)).fetchone()
+        return int(self.identity_cipher.decrypt(row[0]).decode()) if row else None
+
+    def rotate_identity_key(self, new_key: str | bytes) -> int:
+        if self.identity_cipher is None:
+            raise RuntimeError("member registry requires the current identity encryption key")
+        replacement = self._cipher(new_key)
+        rows = self.db.execute("SELECT id, telegram_id_ciphertext FROM members").fetchall()
+        with self.db:
+            for member_id, ciphertext in rows:
+                plaintext = self.identity_cipher.decrypt(ciphertext)
+                self.db.execute("UPDATE members SET telegram_id_ciphertext = ? WHERE id = ?", (replacement.encrypt(plaintext), member_id))
+        self.identity_cipher = replacement
+        return len(rows)
+
     def create_session(self, identity: Identity, now: datetime | None = None) -> Session:
         now = now or self.now()
         token = secrets.token_urlsafe(32)
         expires = now + self.session_ttl
+        member_id = identity.member_id
+        if (self.config.get("access") or {}).get("member_registry_enabled") is True:
+            member_id = self.upsert_member(identity, now)
+            identity = Identity(identity.telegram_user_id, identity.role, member_id, identity.display_name, identity.username)
         with self.db:
             self.db.execute(
-                "INSERT INTO web_sessions VALUES (?, ?, ?, ?, ?, ?, NULL)",
-                (_sha(token), identity.role, _sha(f"{self.pepper}:{identity.telegram_user_id}"), _iso(now), _iso(expires), _iso(now)),
+                "INSERT INTO web_sessions(id_hash, role, telegram_user_hash, created_at, expires_at, last_membership_check_at, revoked_at, member_id) VALUES (?, ?, ?, ?, ?, ?, NULL, ?)",
+                (_sha(token), identity.role, self._member_hash(identity.telegram_user_id), _iso(now), _iso(expires), _iso(now), member_id),
             )
         return Session(token, identity, expires)
 
@@ -125,20 +252,328 @@ class SqliteStore:
         if not token:
             return None
         now = now or self.now()
-        row = self.db.execute("SELECT role, expires_at, revoked_at FROM web_sessions WHERE id_hash = ?", (_sha(token),)).fetchone()
+        row = self.db.execute("SELECT role, expires_at, revoked_at, member_id FROM web_sessions WHERE id_hash = ?", (_sha(token),)).fetchone()
         if row is None or row[2] is not None:
             return None
         expires = _dt(row[1])
         if expires is None or expires <= now:
             return None
         # the Telegram id is stored only as a hash; the session carries the role, which is all routes need
-        return Session(token, Identity(0, row[0]), expires)
+        return Session(token, Identity(0, row[0], row[3]), expires)
 
     def revoke_session(self, token: str | None, now: datetime | None = None) -> None:
         if not token:
             return
         with self.db:
             self.db.execute("UPDATE web_sessions SET revoked_at = ? WHERE id_hash = ? AND revoked_at IS NULL", (_iso(now or self.now()), _sha(token)))
+
+    # ---------- member access ----------
+    def request_access(self, member_id: str, now: datetime | None = None) -> dict:
+        now = now or self.now()
+        existing = self.db.execute(
+            "SELECT id, state, created_at FROM access_requests WHERE member_id = ? AND state = 'pending'", (member_id,)
+        ).fetchone()
+        if existing:
+            return {"id": existing[0], "state": existing[1], "created_at": existing[2]}
+        request_id = str(uuid.uuid4())
+        with self.db:
+            self.db.execute(
+                "INSERT INTO access_requests(id, member_id, state, message, created_at) VALUES (?, ?, 'pending', NULL, ?)",
+                (request_id, member_id, _iso(now)),
+            )
+        return {"id": request_id, "state": "pending", "created_at": _iso(now)}
+
+    def grant_access(
+        self, member_id: str, server_id: str, *, actor: str, reason: str,
+        valid_until: datetime | None = None, now: datetime | None = None,
+    ) -> dict:
+        now = now or self.now()
+        if valid_until is not None and valid_until <= now:
+            raise ValueError("grant expiry must be in the future")
+        existing = self.db.execute(
+            "SELECT id, state, valid_until FROM access_grants WHERE member_id = ? AND server_id = ? AND state IN ('active','suspended')",
+            (member_id, server_id),
+        ).fetchone()
+        if existing:
+            return {"id": existing[0], "state": existing[1], "valid_until": existing[2]}
+        grant_id = str(uuid.uuid4())
+        with self.db:
+            self.db.execute(
+                """INSERT INTO access_grants(id, member_id, server_id, state, reason, valid_until,
+                   granted_by_hash, created_at, updated_at, revoked_at)
+                   VALUES (?, ?, ?, 'active', ?, ?, ?, ?, ?, NULL)""",
+                (grant_id, member_id, server_id, reason[:240], _iso(valid_until), _sha(f"{self.pepper}:{actor}"), _iso(now), _iso(now)),
+            )
+            self.db.execute(
+                "UPDATE access_requests SET state='approved', decided_at=?, decided_by_hash=? WHERE member_id=? AND state='pending'",
+                (_iso(now), _sha(f"{self.pepper}:{actor}"), member_id),
+            )
+        return {"id": grant_id, "state": "active", "valid_until": _iso(valid_until)}
+
+    def set_grant_state(self, grant_id: str, state: str, *, now: datetime | None = None) -> bool:
+        if state not in {"active", "suspended", "revoked"}:
+            raise ValueError("invalid grant state")
+        now = now or self.now()
+        with self.db:
+            changed = self.db.execute(
+                "UPDATE access_grants SET state=?, updated_at=?, revoked_at=? WHERE id=? AND state != 'expired'",
+                (state, _iso(now), _iso(now) if state == "revoked" else None, grant_id),
+            ).rowcount
+        return changed == 1
+
+    def grant_context(self, grant_id: str) -> dict | None:
+        row = self.db.execute("SELECT member_id,server_id,state FROM access_grants WHERE id=?", (grant_id,)).fetchone()
+        return {"member_id": row[0], "server_id": row[1], "state": row[2]} if row else None
+
+    def member_access(self, member_id: str, now: datetime | None = None) -> list[dict]:
+        now = now or self.now()
+        with self.db:
+            self.db.execute(
+                "UPDATE access_grants SET state='expired', updated_at=? WHERE member_id=? AND state='active' AND valid_until IS NOT NULL AND valid_until <= ?",
+                (_iso(now), member_id, _iso(now)),
+            )
+        return [
+            {"id": row[0], "server_id": row[1], "state": row[2], "valid_until": row[3], "reason": row[4]}
+            for row in self.db.execute(
+                "SELECT id, server_id, state, valid_until, reason FROM access_grants WHERE member_id=? ORDER BY server_id", (member_id,)
+            ).fetchall()
+        ]
+
+    def member_coverage(self) -> dict:
+        rows = dict(self.db.execute("SELECT membership_state, count(*) FROM members GROUP BY membership_state").fetchall())
+        return {"known": sum(rows.values()), "active": rows.get("active", 0), "left": rows.get("left", 0),
+                "banned": rows.get("banned", 0), "unknown": rows.get("unknown", 0)}
+
+    def list_members(self) -> list[dict]:
+        items = [
+            {"id": row[0], "display_name": row[1], "username": row[2], "membership_state": row[3],
+             "first_seen_at": row[4], "last_seen_at": row[5], "grants": []}
+            for row in self.db.execute(
+                "SELECT id, display_name, username, membership_state, first_seen_at, last_seen_at FROM members ORDER BY COALESCE(display_name, username, id)"
+            ).fetchall()
+        ]
+        by_id = {item["id"]: item for item in items}
+        for row in self.db.execute(
+            "SELECT id,member_id,server_id,state,valid_until,reason FROM access_grants ORDER BY server_id"
+        ).fetchall():
+            if row[1] in by_id:
+                by_id[row[1]]["grants"].append({"id": row[0], "server_id": row[2], "state": row[3],
+                                                 "valid_until": row[4], "reason": row[5]})
+        return items
+
+    # ---------- profile reservations (no secret material) ----------
+    def reserve_profile(
+        self, member_id: str, server_id: str, public_key: str, addresses: list[str],
+        *, idempotency_key: str, now: datetime | None = None,
+    ) -> dict:
+        """Reserve one profile and address atomically; safe to retry with the same key."""
+        now = now or self.now()
+        existing_op = self.db.execute(
+            "SELECT p.id, p.address, p.state, o.id, o.state, p.member_id, o.operation FROM profile_operations o JOIN vpn_profiles p ON p.id=o.profile_id WHERE o.idempotency_key=?",
+            (idempotency_key,),
+        ).fetchone()
+        if existing_op:
+            if existing_op[5] != member_id or existing_op[6] != "issue":
+                raise ValueError("idempotency key conflict")
+            return {"profile_id": existing_op[0], "address": existing_op[1], "profile_state": existing_op[2],
+                    "operation_id": existing_op[3], "operation_state": existing_op[4], "replayed": True}
+        grant = self.db.execute(
+            "SELECT id FROM access_grants WHERE member_id=? AND server_id=? AND state='active' AND (valid_until IS NULL OR valid_until>?)",
+            (member_id, server_id, _iso(now)),
+        ).fetchone()
+        if not grant:
+            raise ValueError("active grant required")
+        current = self.db.execute(
+            "SELECT id, address, state FROM vpn_profiles WHERE member_id=? AND server_id=? AND state IN ('reserved','applied','delivered','connected','revoking','needs_review')",
+            (member_id, server_id),
+        ).fetchone()
+        if current:
+            return {"profile_id": current[0], "address": current[1], "profile_state": current[2],
+                    "operation_id": None, "operation_state": "completed", "replayed": True}
+        unavailable = {
+            row[0] for row in self.db.execute(
+                "SELECT address FROM address_leases WHERE server_id=? AND (state='leased' OR quarantine_until>?)",
+                (server_id, _iso(now)),
+            ).fetchall()
+        }
+        address = next((candidate for candidate in addresses if candidate not in unavailable), None)
+        if not address:
+            raise ValueError("address pool exhausted")
+        profile_id, operation_id = str(uuid.uuid4()), str(uuid.uuid4())
+        fp = hashlib.sha256(public_key.encode()).hexdigest()[:12]
+        try:
+            with self.db:
+                self.db.execute(
+                    "INSERT INTO vpn_profiles(id,member_id,server_id,grant_id,public_key,public_key_fingerprint,address,state,created_at,updated_at) VALUES (?,?,?,?,?,?,?,'reserved',?,?)",
+                    (profile_id, member_id, server_id, grant[0], public_key, fp, address, _iso(now), _iso(now)),
+                )
+                self.db.execute(
+                    "INSERT INTO address_leases(server_id,address,profile_id,state,leased_at) VALUES (?, ?, ?, 'leased', ?)",
+                    (server_id, address, profile_id, _iso(now)),
+                )
+                self.db.execute(
+                    "INSERT INTO profile_operations(id,idempotency_key,profile_id,operation,state,created_at,updated_at) VALUES (?, ?, ?, 'issue', 'reserved', ?, ?)",
+                    (operation_id, idempotency_key, profile_id, _iso(now), _iso(now)),
+                )
+        except sqlite3.IntegrityError:
+            current = self.db.execute(
+                "SELECT id,address,state FROM vpn_profiles WHERE member_id=? AND server_id=? AND state IN ('reserved','applied','delivered','connected','revoking','needs_review')",
+                (member_id, server_id),
+            ).fetchone()
+            if not current:
+                raise
+            return {"profile_id": current[0], "address": current[1], "profile_state": current[2],
+                    "operation_id": None, "operation_state": "completed", "replayed": True}
+        return {"profile_id": profile_id, "address": address, "profile_state": "reserved",
+                "operation_id": operation_id, "operation_state": "reserved", "replayed": False}
+
+    def set_profile_operation(self, operation_id: str, state: str, *, error_code: str | None = None,
+                              now: datetime | None = None) -> None:
+        if state not in {"applying", "applied", "delivered", "completed", "failed", "needs_review"}:
+            raise ValueError("invalid operation state")
+        now = now or self.now()
+        profile_state = {"applied": "applied", "delivered": "delivered",
+                         "failed": "failed", "needs_review": "needs_review"}.get(state)
+        with self.db:
+            self.db.execute("UPDATE profile_operations SET state=?, error_code=?, updated_at=? WHERE id=?",
+                            (state, error_code, _iso(now), operation_id))
+            if profile_state:
+                self.db.execute("UPDATE vpn_profiles SET state=?, updated_at=?, delivered_at=CASE WHEN ?='delivered' THEN ? ELSE delivered_at END WHERE id=(SELECT profile_id FROM profile_operations WHERE id=?)",
+                                (profile_state, _iso(now), profile_state, _iso(now), operation_id))
+
+    def fail_profile_issue(self, operation_id: str, *, error_code: str,
+                           now: datetime | None = None, quarantine_hours: int = 24) -> None:
+        """Fail a known-unsuccessful issue and quarantine its address atomically."""
+        now = now or self.now()
+        until = now + timedelta(hours=quarantine_hours)
+        with self.db:
+            self.db.execute(
+                "UPDATE profile_operations SET state='failed', error_code=?, updated_at=? WHERE id=? AND operation='issue'",
+                (error_code, _iso(now), operation_id),
+            )
+            self.db.execute(
+                "UPDATE vpn_profiles SET state='failed', updated_at=? WHERE id=(SELECT profile_id FROM profile_operations WHERE id=? AND operation='issue')",
+                (_iso(now), operation_id),
+            )
+            self.db.execute(
+                "UPDATE address_leases SET state='quarantine', released_at=?, quarantine_until=? WHERE profile_id=(SELECT profile_id FROM profile_operations WHERE id=? AND operation='issue')",
+                (_iso(now), _iso(until), operation_id),
+            )
+
+    def mark_profile_connected(self, profile_id: str, handshake_at: datetime, *, now: datetime | None = None) -> bool:
+        now = now or self.now()
+        with self.db:
+            changed = self.db.execute(
+                "UPDATE vpn_profiles SET state='connected', first_handshake_at=COALESCE(first_handshake_at, ?), updated_at=? WHERE id=? AND state IN ('applied','delivered','connected')",
+                (_iso(handshake_at), _iso(now), profile_id),
+            ).rowcount
+        return changed == 1
+
+    def release_profile(self, profile_id: str, *, now: datetime | None = None, quarantine_hours: int = 24) -> bool:
+        now = now or self.now()
+        until = now + timedelta(hours=quarantine_hours)
+        with self.db:
+            changed = self.db.execute(
+                "UPDATE vpn_profiles SET state='revoked', revoked_at=?, updated_at=? WHERE id=? AND state NOT IN ('revoked','failed')",
+                (_iso(now), _iso(now), profile_id),
+            ).rowcount
+            if changed:
+                self.db.execute(
+                    "UPDATE address_leases SET state='quarantine', released_at=?, quarantine_until=? WHERE profile_id=?",
+                    (_iso(now), _iso(until), profile_id),
+                )
+        return changed == 1
+
+    def profile_pool_status(self, server_id: str, addresses: list[str], *, now: datetime | None = None) -> dict:
+        now = now or self.now()
+        unavailable = self.db.execute(
+            "SELECT count(*) FROM address_leases WHERE server_id=? AND (state='leased' OR quarantine_until>?)",
+            (server_id, _iso(now)),
+        ).fetchone()[0]
+        total = len(addresses)
+        free = max(0, total - unavailable)
+        return {"total": total, "free": free, "used_or_quarantined": unavailable,
+                "exhausted": free == 0, "low": total > 0 and free / total <= 0.10}
+
+    def member_profiles(self, member_id: str) -> list[dict]:
+        return [
+            {"id": row[0], "server_id": row[1], "address": row[2], "state": row[3],
+             "created_at": row[4], "first_handshake_at": row[5]}
+            for row in self.db.execute(
+                "SELECT id,server_id,address,state,created_at,first_handshake_at FROM vpn_profiles WHERE member_id=? ORDER BY created_at DESC",
+                (member_id,),
+            ).fetchall()
+        ]
+
+    def managed_profile_fingerprints(self, server_id: str) -> dict[str, str]:
+        return {
+            row[0]: row[1]
+            for row in self.db.execute(
+                "SELECT public_key_fingerprint,state FROM vpn_profiles WHERE server_id=? AND state NOT IN ('revoked','failed')",
+                (server_id,),
+            ).fetchall()
+        }
+
+    def due_lifecycle_jobs(self, *, now: datetime | None = None, limit: int = 20) -> list[dict]:
+        now = now or self.now()
+        rows = self.db.execute(
+            "SELECT id,member_id,kind,attempts FROM access_lifecycle_jobs WHERE state IN ('pending','failed') AND due_at<=? AND attempts<5 ORDER BY due_at LIMIT ?",
+            (_iso(now), limit),
+        ).fetchall()
+        jobs = []
+        with self.db:
+            for row in rows:
+                changed = self.db.execute(
+                    "UPDATE access_lifecycle_jobs SET state='running',attempts=attempts+1,updated_at=? WHERE id=? AND state IN ('pending','failed')",
+                    (_iso(now), row[0]),
+                ).rowcount
+                if changed:
+                    jobs.append({"id": row[0], "member_id": row[1], "kind": row[2], "attempt": row[3] + 1})
+        return jobs
+
+    def finish_lifecycle_job(self, job_id: str, *, error: str | None = None, now: datetime | None = None) -> None:
+        now = now or self.now()
+        with self.db:
+            if error:
+                row = self.db.execute("SELECT attempts FROM access_lifecycle_jobs WHERE id=?", (job_id,)).fetchone()
+                delay_minutes = min(60, 2 ** max(0, (row[0] if row else 1) - 1))
+                self.db.execute(
+                    "UPDATE access_lifecycle_jobs SET state='failed',last_error=?,due_at=?,updated_at=? WHERE id=?",
+                    (error[:120], _iso(now + timedelta(minutes=delay_minutes)), _iso(now), job_id),
+                )
+            else:
+                self.db.execute("UPDATE access_lifecycle_jobs SET state='completed',last_error=NULL,updated_at=? WHERE id=?",
+                                (_iso(now), job_id))
+
+    def reserve_profile_revoke(self, member_id: str, profile_id: str, *, idempotency_key: str,
+                               now: datetime | None = None) -> dict:
+        now = now or self.now()
+        existing = self.db.execute(
+            "SELECT o.id,o.state,p.server_id,p.public_key,p.state,p.member_id,o.operation FROM profile_operations o JOIN vpn_profiles p ON p.id=o.profile_id WHERE o.idempotency_key=?",
+            (idempotency_key,),
+        ).fetchone()
+        if existing:
+            if existing[5] != member_id or existing[6] != "revoke":
+                raise ValueError("idempotency key conflict")
+            return {"operation_id": existing[0], "operation_state": existing[1], "server_id": existing[2],
+                    "public_key": existing[3], "profile_state": existing[4], "replayed": True}
+        profile = self.db.execute(
+            "SELECT server_id,public_key,state FROM vpn_profiles WHERE id=? AND member_id=?", (profile_id, member_id)
+        ).fetchone()
+        if not profile:
+            raise ValueError("profile not found")
+        if profile[2] in {"revoked", "failed"}:
+            return {"operation_id": None, "operation_state": "completed", "server_id": profile[0],
+                    "public_key": profile[1], "profile_state": profile[2], "replayed": True}
+        operation_id = str(uuid.uuid4())
+        with self.db:
+            self.db.execute("UPDATE vpn_profiles SET state='revoking',updated_at=? WHERE id=?", (_iso(now), profile_id))
+            self.db.execute(
+                "INSERT INTO profile_operations(id,idempotency_key,profile_id,operation,state,created_at,updated_at) VALUES (?, ?, ?, 'revoke', 'reserved', ?, ?)",
+                (operation_id, idempotency_key, profile_id, _iso(now), _iso(now)),
+            )
+        return {"operation_id": operation_id, "operation_state": "reserved", "server_id": profile[0],
+                "public_key": profile[1], "profile_state": "revoking", "replayed": False}
 
     # ---------- enrollment codes ----------
     def create_enrollment(self, kind: str, capabilities: list[str], created_by: str, now: datetime | None = None, via_server_id: str | None = None) -> tuple[str, datetime]:

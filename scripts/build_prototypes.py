@@ -46,6 +46,7 @@ def main() -> int:
         "APP_JS": read(SRC / "app.js"),
         "MODEL_JS": read(SRC / "model.js"),
         "API_JS": read(SRC / "api.js"),
+        "ACCESS_KEYGEN_JS": read(SRC / "access-keygen.js"),
         "ANDROID_CSS": read(SRC / "android.css"),
         "ANDROID_JS": read(SRC / "android.js"),
         "ICONS": read(SRC / "icons.svg"),

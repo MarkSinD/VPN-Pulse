@@ -33,6 +33,8 @@ class TelegramBot:
         translator: Translator | None = None,
         opener: Callable | None = None,
         timeout: int = 50,
+        membership_handler: Callable[[dict], None] | None = None,
+        maintenance: Callable[[], None] | None = None,
     ) -> None:
         self.token = token
         self.app_url = app_url
@@ -40,6 +42,8 @@ class TelegramBot:
         self.i18n = translator or Translator()
         self.opener = opener or urllib.request.urlopen
         self.timeout = timeout
+        self.membership_handler = membership_handler
+        self.maintenance = maintenance
         self.offset: int | None = None
         self._stop = False
 
@@ -66,17 +70,25 @@ class TelegramBot:
     # ---------- one poll ----------
     def poll_once(self) -> int:
         """Fetch pending updates, answer the commands, advance the offset. Returns the number of replies."""
-        params = {"timeout": self.timeout, "allowed_updates": ["message"]}
+        params = {"timeout": self.timeout, "allowed_updates": ["message", "chat_member"]}
         if self.offset is not None:
             params["offset"] = self.offset
         updates = self._call("getUpdates", **params)
         if updates is None:
             raise ConnectionError("getUpdates failed")  # run_forever backs off instead of spinning
         if not updates:
+            if self.maintenance:
+                self.maintenance()
             return 0
         replies = 0
         for update in updates:
             self.offset = int(update.get("update_id", 0)) + 1
+            if update.get("chat_member") and self.membership_handler:
+                try:
+                    self.membership_handler(update)
+                except Exception as error:  # one malformed update must not stop the bot
+                    log.error("membership update failed: %s", type(error).__name__)
+                continue
             message = update.get("message") or {}
             chat = message.get("chat") or {}
             text = (message.get("text") or "").strip()
@@ -89,6 +101,8 @@ class TelegramBot:
                 replies += 1
         if replies:
             log.info("bot replied", extra={"event": "bot.reply", "details": {"replies": replies}})  # a count, never who
+        if self.maintenance:
+            self.maintenance()
         return replies
 
     def reply(self, chat_id: int, lang: str) -> bool:

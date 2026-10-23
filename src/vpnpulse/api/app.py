@@ -21,11 +21,12 @@ from vpnpulse.api import schemas
 from vpnpulse.api.read_model import ReadModel, ReadModelUnavailable, StatusOnlyReadModel, pick_language
 from vpnpulse.api.security import RateLimiter, client_address
 from vpnpulse.auth import AuthenticationError, MembershipChecker, validate_telegram_init_data
+from vpnpulse.profile_service import ProfileService, ProfileServiceError
 from vpnpulse.storage.database import apply_migrations, connect
 from vpnpulse.storage.store import SqliteStore, sync_servers
 
 # The version the API reports is the contract it implements; a test keeps the two equal.
-API_VERSION = "1.6.0"
+API_VERSION = "1.7.0"
 
 
 class SessionInput(BaseModel):
@@ -92,6 +93,23 @@ class AdminNoteInput(BaseModel):
         return value
 
 
+class GrantInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    server_id: str = Field(pattern=r"^[a-z][a-z0-9-]{1,63}$")
+    reason: str = Field(min_length=1, max_length=240)
+    valid_until: datetime | None = None
+
+
+class GrantStateInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    state: Literal["active", "suspended", "revoked"]
+
+
+class ProfileIssueInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    public_key: str = Field(pattern=r"^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$")
+
+
 def _migrations_dir() -> Path:
     for parent in Path(__file__).resolve().parents:
         candidate = parent / "migrations"
@@ -113,6 +131,7 @@ def create_app(
     default_language: str = "ru",
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     limits: bool = True,
+    profile_service: ProfileService | None = None,
 ) -> FastAPI:
     """Build the API. Reads: `read_model` (or the legacy status-only `status_provider`); writes: `store`.
 
@@ -143,7 +162,7 @@ def create_app(
 
     @app.middleware("http")
     async def request_guards(request: Request, call_next):
-        if request.method in {"POST", "PUT", "PATCH"}:
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
             origin = request.headers.get("origin")
             expected = f"{request.url.scheme}://{request.headers.get('host')}"
             if origin and origin.rstrip("/") != expected.rstrip("/"):
@@ -158,6 +177,10 @@ def create_app(
                 return {"type": "http.request", "body": body, "more_body": False}
             request._receive = receive
         limit = limited.get(request.url.path) if limits and request.method == "POST" else None
+        if limits and request.method == "POST" and request.url.path.startswith("/api/v1/access/servers/") and request.url.path.endswith("/profiles"):
+            limit = 5
+        if limits and request.method == "DELETE" and request.url.path.startswith("/api/v1/access/profiles/"):
+            limit = 10
         if limit:
             allowed, retry = limiter.allow(request.url.path, client_address(request), limit)
             if not allowed:
@@ -233,11 +256,133 @@ def create_app(
     @app.get("/api/v1/sessions/current", response_model=schemas.SessionInfo)
     def current_session(vpnpulse_session: str | None = Cookie(default=None)):
         session = require_session(vpnpulse_session)
-        return {"role": session.identity.role, "expires_at": session.expires_at.isoformat()}
+        return {"role": session.identity.role, "member_id": session.identity.member_id,
+                "expires_at": session.expires_at.isoformat()}
 
     @app.delete("/api/v1/sessions/current", status_code=204)
     def delete_session(vpnpulse_session: str | None = Cookie(default=None)):
         store.revoke_session(vpnpulse_session, now())
+
+    # ---------- member access ----------
+    @app.post("/api/v1/access/requests", response_model=schemas.AccessRequest, status_code=202)
+    def request_access(vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session)
+        if not session.identity.member_id:
+            raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
+        return store.request_access(session.identity.member_id, now())
+
+    @app.get("/api/v1/access", response_model=schemas.MemberAccess)
+    def my_access(vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session)
+        if not session.identity.member_id:
+            raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
+        return {"grants": store.member_access(session.identity.member_id, now())}
+
+    @app.post("/api/v1/access/servers/{server_id}/profiles", response_model=schemas.ProfileIssueResponse,
+              status_code=201)
+    def issue_profile(server_id: str, payload: ProfileIssueInput, response: Response,
+                      idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+                      vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
+        if not session.identity.member_id:
+            raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
+        if profile_service is None:
+            raise HTTPException(status_code=503, detail={"code": "ISSUANCE_UNAVAILABLE"})
+        if not idempotency_key or len(idempotency_key) > 128:
+            raise HTTPException(status_code=400, detail={"code": "IDEMPOTENCY_KEY_REQUIRED"})
+        try:
+            return profile_service.issue(member_id=session.identity.member_id, server_id=server_id,
+                                         public_key=payload.public_key, idempotency_key=idempotency_key)
+        except ProfileServiceError as error:
+            status = 409 if error.code in {"active_grant_required", "profile_already_exists"} else 503
+            raise HTTPException(status_code=status, detail={"code": error.code.upper()}) from error
+
+    @app.get("/api/v1/access/profiles", response_model=schemas.ProfileList)
+    def my_profiles(vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session)
+        if not session.identity.member_id:
+            raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
+        return {"items": store.member_profiles(session.identity.member_id)}
+
+    @app.delete("/api/v1/access/profiles/{profile_id}", response_model=schemas.ProfileRevokeResponse)
+    def revoke_profile(profile_id: str,
+                       idempotency_key: str | None = Header(default=None, alias="Idempotency-Key"),
+                       vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session)
+        if not session.identity.member_id:
+            raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
+        if profile_service is None:
+            raise HTTPException(status_code=503, detail={"code": "ISSUANCE_UNAVAILABLE"})
+        if not idempotency_key or len(idempotency_key) > 128:
+            raise HTTPException(status_code=400, detail={"code": "IDEMPOTENCY_KEY_REQUIRED"})
+        try:
+            return profile_service.revoke(member_id=session.identity.member_id, profile_id=profile_id,
+                                          idempotency_key=idempotency_key)
+        except ProfileServiceError as error:
+            status = 404 if error.code == "profile_not_found" else 503
+            raise HTTPException(status_code=status, detail={"code": error.code.upper()}) from error
+
+    @app.get("/api/v1/admin/members", response_model=schemas.AdminMembers)
+    def admin_members(vpnpulse_session: str | None = Cookie(default=None)):
+        require_session(vpnpulse_session, "admin")
+        return {"coverage": store.member_coverage(), "items": store.list_members()}
+
+    @app.post("/api/v1/admin/members/{member_id}/grants", response_model=schemas.AccessGrant, status_code=201)
+    def admin_grant(member_id: str, payload: GrantInput, request: Request,
+                    vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session, "admin")
+        if (config or {}).get("access", {}).get("grants_enabled") is not True:
+            raise HTTPException(status_code=503, detail={"code": "GRANTS_DISABLED"})
+        if not any(item.get("id") == payload.server_id for item in (config or {}).get("servers", [])):
+            raise HTTPException(status_code=404, detail={"code": "SERVER_NOT_FOUND"})
+        try:
+            grant = store.grant_access(member_id, payload.server_id, actor=session.token,
+                                       reason=payload.reason, valid_until=payload.valid_until, now=now())
+        except ValueError as error:
+            raise HTTPException(status_code=422, detail={"code": "GRANT_INVALID"}) from error
+        store.audit(actor=session.token, role="admin", action="access.grant", target_type="member",
+                    target_id=member_id, details={"server_id": payload.server_id}, trace_id=trace_of(request), now=now())
+        return {**grant, "server_id": payload.server_id, "reason": payload.reason}
+
+    @app.patch("/api/v1/admin/grants/{grant_id}", status_code=204)
+    def admin_grant_state(grant_id: str, payload: GrantStateInput, request: Request,
+                          vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session, "admin")
+        context = store.grant_context(grant_id)
+        if context is None:
+            raise HTTPException(status_code=404, detail={"code": "GRANT_NOT_FOUND"})
+        if payload.state in {"suspended", "revoked"}:
+            live_profiles = [p for p in store.member_profiles(context["member_id"])
+                             if p["server_id"] == context["server_id"] and p["state"] not in {"revoked", "failed"}]
+            if live_profiles and profile_service is None:
+                raise HTTPException(status_code=503, detail={"code": "ISSUANCE_UNAVAILABLE"})
+            for profile in live_profiles:
+                try:
+                    profile_service.revoke(member_id=context["member_id"], profile_id=profile["id"],
+                                           idempotency_key=f"grant:{grant_id}:{payload.state}:{profile['id']}")
+                except ProfileServiceError as error:
+                    raise HTTPException(status_code=503, detail={"code": error.code.upper()}) from error
+        if not store.set_grant_state(grant_id, payload.state, now=now()):
+            raise HTTPException(status_code=404, detail={"code": "GRANT_NOT_FOUND"})
+        store.audit(actor=session.token, role="admin", action=f"access.grant.{payload.state}",
+                    target_type="grant", target_id=grant_id, trace_id=trace_of(request), now=now())
+
+    @app.get("/api/v1/admin/access/reconciliation/{server_id}", response_model=schemas.ReconciliationResult)
+    def reconcile_access(server_id: str, request: Request,
+                         vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session, "admin")
+        if profile_service is None:
+            raise HTTPException(status_code=503, detail={"code": "ISSUANCE_UNAVAILABLE"})
+        try:
+            result = profile_service.reconcile(server_id=server_id)
+        except Exception as error:
+            raise HTTPException(status_code=503, detail={"code": "RECONCILIATION_UNAVAILABLE"}) from error
+        store.audit(actor=session.token, role="admin", action="access.reconcile", target_type="server",
+                    target_id=server_id, details={"ok": result["ok"], "missing": len(result["missing_managed"])},
+                    trace_id=trace_of(request), now=now())
+        return result
 
     # ---------- member reads ----------
     @app.get("/api/v1/status", response_model=schemas.StatusResponse)

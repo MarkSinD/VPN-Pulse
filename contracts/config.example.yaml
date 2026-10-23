@@ -18,6 +18,17 @@ telegram:
   open_url: https://t.me/example_bot/status   # the button under every message; omit it for no button
   admin_chat_id: "123456789"                                   # optional; defaults to the group
 
+# Self-service profile management is fail-closed. Enabling these switches does not grant access;
+# members and per-server grants are managed separately. Keep issuance off until a provisioner and
+# address pool have passed their live acceptance test.
+access:
+  member_registry_enabled: false
+  grants_enabled: false
+  issuance_enabled: false
+  address_quarantine_hours: 24
+  leave_grace_hours: 24
+  pool_low_percent: 10
+
 servers:
   - id: primary-vpn
     type: awg-host
@@ -28,6 +39,9 @@ servers:
     enabled: true
     recommended_priority: 10
     collector_ref: collector-primary
+    access:
+      issuance_enabled: false
+      maintenance: false
 
   - id: backup-vpn
     type: awg-docker
@@ -38,6 +52,9 @@ servers:
     enabled: true
     recommended_priority: 20
     collector_ref: collector-backup
+    access:
+      issuance_enabled: false
+      maintenance: false
 
 monitoring:
   collection_interval_seconds: 60

@@ -1,4 +1,4 @@
-/* VPN Pulse — API client for contracts/openapi.yaml (v1.4).
+/* VPN Pulse — API client for contracts/openapi.yaml (v1.7).
    One fetch wrapper: same-origin cookies, Accept-Language, problem+json errors.
    `scenario` is a dev-server affordance (?scenario=…); a real deployment ignores it. */
 window.VPNPulseApi = function (opts) {
@@ -17,6 +17,7 @@ window.VPNPulseApi = function (opts) {
   async function call(method, path, params, body, options) {
     const headers = { 'Accept': 'application/json', 'Accept-Language': opts.lang() };
     if (body !== undefined) headers['Content-Type'] = 'application/json';
+    Object.assign(headers, (options && options.headers) || {});
     let res;
     try {
       res = await fetch(url(path, params), { method, headers, credentials: 'same-origin', keepalive: !!(options && options.keepalive), body: body === undefined ? undefined : JSON.stringify(body) });
@@ -42,10 +43,18 @@ window.VPNPulseApi = function (opts) {
     events: (filter, limit, cursor) => call('GET', '/events', { filter, limit, cursor }),
     help: () => call('GET', '/help'),
     ready: () => call('GET', '/health/ready'),
+    access: () => call('GET', '/access'),
+    requestAccess: () => call('POST', '/access/requests'),
+    issueProfile: (serverId, publicKey, idempotencyKey) => call('POST', '/access/servers/' + encodeURIComponent(serverId) + '/profiles', null, { public_key: publicKey }, { headers: { 'Idempotency-Key': idempotencyKey } }),
+    profiles: () => call('GET', '/access/profiles'),
+    revokeProfile: (profileId, idempotencyKey) => call('DELETE', '/access/profiles/' + encodeURIComponent(profileId), null, undefined, { headers: { 'Idempotency-Key': idempotencyKey } }),
     // admin
     adminServer: id => call('GET', '/admin/servers/' + encodeURIComponent(id)),
     adminProbes: () => call('GET', '/admin/probes'),
     adminOverview: () => call('GET', '/admin/overview'),
+    adminMembers: () => call('GET', '/admin/members'),
+    grantAccess: (memberId, serverId, reason, validUntil) => call('POST', '/admin/members/' + encodeURIComponent(memberId) + '/grants', null, { server_id: serverId, reason, valid_until: validUntil || null }),
+    setGrantState: (grantId, state) => call('PATCH', '/admin/grants/' + encodeURIComponent(grantId), null, { state }),
     createEnrollment: (kind, capabilities) => call('POST', '/admin/probe-enrollments', null, { kind, capabilities }),
     revokeProbe: id => call('POST', '/admin/probes/' + encodeURIComponent(id) + '/revoke'),
     putNote: (text, expiresAt) => call('PUT', '/admin/note', null, { text, expires_at: expiresAt || null }),

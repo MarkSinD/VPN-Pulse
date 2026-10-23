@@ -9,6 +9,7 @@ answers `mode: demo` and the Mini App shows its "Demo data" mark.
 from __future__ import annotations
 
 import os
+import json
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from vpnpulse.api import create_app
 from vpnpulse.api.static import AppFiles
 from vpnpulse.cli.common import CliError, contracts_dir, load_public_config, open_database, repo_root, resolve_db
 from vpnpulse.storage import SqliteReadModel, SqliteStore
+from vpnpulse.profile_service import ProfileService, SshProvisioner
 from vpnpulse.telegram import NoMembership, TelegramMembership
 
 DEMO_MARKER = "demo-data"
@@ -48,7 +50,24 @@ def build_app(config_path: Path, *, now=None, opener=None) -> FastAPI:
         membership = TelegramMembership(token, telegram["group_chat_id"], admin_ids, now=now, opener=opener)
     mode = "demo" if demo_marker(db_path).exists() else "live"
     read_model = SqliteReadModel(connection, config, now=now, mode=mode)
-    store = SqliteStore(connection, analytics_schema=contracts_dir() / "analytics-events.schema.json", config=config, pepper=token or "vpn-pulse", now=now)
+    identity_key = None
+    if (config.get("access") or {}).get("member_registry_enabled") is True:
+        identity_key_file = config_path.parent / "secrets" / "member-identity.key"
+        if not identity_key_file.exists() or not identity_key_file.read_text(encoding="utf-8").strip():
+            raise CliError(f"member identity key {identity_key_file}: missing or empty")
+        identity_key = identity_key_file.read_text(encoding="utf-8").strip()
+    store = SqliteStore(connection, analytics_schema=contracts_dir() / "analytics-events.schema.json",
+                        config=config, pepper=token or "vpn-pulse", identity_key=identity_key, now=now)
+    profile_service = None
+    if (config.get("access") or {}).get("issuance_enabled") is True:
+        deployment_file = config_path.parent / "secrets" / "access-deployment.json"
+        if not deployment_file.exists():
+            raise CliError(f"access deployment {deployment_file}: missing")
+        try:
+            deployment = json.loads(deployment_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError) as error:
+            raise CliError(f"access deployment {deployment_file}: invalid") from error
+        profile_service = ProfileService(store, config, deployment, SshProvisioner(deployment))
     app_cfg = config.get("app") or {}
     app = create_app(
         bot_token=token,
@@ -60,6 +79,7 @@ def build_app(config_path: Path, *, now=None, opener=None) -> FastAPI:
         contact_url=app_cfg.get("admin_contact_url"),
         default_language=app_cfg.get("default_language", "ru"),
         now=now,
+        profile_service=profile_service,
     )
     static_dir = repo_root() / "docs" / "prototypes"
     if static_dir.exists():

@@ -116,6 +116,48 @@
       },
       "description": "delivery settings for vpn-pulse run; optional — without it messages are printed to the console"
     },
+    "access": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "member_registry_enabled",
+        "grants_enabled",
+        "issuance_enabled"
+      ],
+      "properties": {
+        "member_registry_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "grants_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "issuance_enabled": {
+          "type": "boolean",
+          "default": false
+        },
+        "address_quarantine_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 24
+        },
+        "leave_grace_hours": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 168,
+          "default": 24
+        },
+        "pool_low_percent": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 10
+        }
+      },
+      "description": "self-service access switches; optional and fail-closed when absent"
+    },
     "servers": {
       "type": "array",
       "minItems": 0,
@@ -177,6 +219,25 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 80
+          },
+          "access": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "issuance_enabled",
+              "maintenance"
+            ],
+            "properties": {
+              "issuance_enabled": {
+                "type": "boolean",
+                "default": false
+              },
+              "maintenance": {
+                "type": "boolean",
+                "default": false
+              }
+            },
+            "description": "per-server self-service circuit breakers; omitted means disabled"
           }
         }
       },

@@ -59,3 +59,41 @@ def test_unknown_config_field_is_rejected(tmp_path):
     path.write_text(json.dumps(config), encoding="utf-8")
     with pytest.raises(ConfigurationError):
         load_config(path, SCHEMA)
+
+
+def test_access_block_is_optional_and_fail_closed(tmp_path):
+    path = tmp_path / "config.yaml"
+    path.write_text(json.dumps(valid_config()), encoding="utf-8")
+    loaded = load_config(path, SCHEMA)
+    assert "access" not in loaded
+
+
+def test_access_flags_and_server_breakers_validate(tmp_path):
+    config = valid_config()
+    config["access"] = {
+        "member_registry_enabled": False,
+        "grants_enabled": False,
+        "issuance_enabled": False,
+        "address_quarantine_hours": 24,
+        "pool_low_percent": 10,
+    }
+    config["servers"][0]["access"] = {"issuance_enabled": False, "maintenance": False}
+    path = tmp_path / "config.yaml"
+    path.write_text(json.dumps(config), encoding="utf-8")
+    assert load_config(path, SCHEMA)["access"]["issuance_enabled"] is False
+
+
+def test_access_flags_reject_unknown_or_unsafe_values(tmp_path):
+    config = valid_config()
+    config["access"] = {
+        "member_registry_enabled": False,
+        "grants_enabled": False,
+        "issuance_enabled": False,
+        "address_quarantine_hours": 0,
+        "pool_low_percent": 10,
+        "provisioner_host": "must-not-be-public",
+    }
+    path = tmp_path / "config.yaml"
+    path.write_text(json.dumps(config), encoding="utf-8")
+    with pytest.raises(ConfigurationError):
+        load_config(path, SCHEMA)

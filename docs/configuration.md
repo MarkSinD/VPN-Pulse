@@ -11,6 +11,15 @@ an invalid file. Changing the file requires a restart of the API and the collect
 
 [Русская версия](configuration.ru.md)
 
+## Self-service access switches
+
+The optional `access` block and each `servers[].access` block are circuit breakers for profile
+management. Every switch defaults to off when the block is absent. Turn them on only after the
+member registry, grants, provisioner and private address-pool map are configured and tested.
+Address pools, SSH hosts, key paths and provisioner commands are private deployment data and never
+belong in this public file. Setting `maintenance: true` stops new operations for one server without
+changing existing VPN peers.
+
 ## `version`
 
 | Field | Type | Default | Notes |

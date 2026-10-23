@@ -21,6 +21,9 @@ class MembershipChecker(Protocol):
 class Identity:
     telegram_user_id: int
     role: str
+    member_id: str | None = None
+    display_name: str | None = None
+    username: str | None = None
 
 
 def validate_telegram_init_data(
@@ -56,7 +59,9 @@ def validate_telegram_init_data(
     role = membership.role_for(telegram_user_id)
     if role not in {"member", "admin"}:
         raise AuthenticationError("MEMBERSHIP_REQUIRED")
-    return Identity(telegram_user_id, role)
+    display_name = " ".join(str(user.get(key, "")).strip() for key in ("first_name", "last_name")).strip() or None
+    username = str(user.get("username", "")).strip() or None
+    return Identity(telegram_user_id, role, display_name=display_name, username=username)
 
 
 @dataclass(frozen=True, slots=True)

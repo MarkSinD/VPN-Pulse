@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.6.0
+  version: 1.7.0
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -58,6 +58,157 @@ paths:
       security: [{ webSession: [] }]
       responses:
         "204": { description: Session revoked }
+  /access/requests:
+    post:
+      tags: [Status]
+      summary: Create or return the member's pending access request
+      operationId: requestAccess
+      security: [{ webSession: [] }]
+      responses:
+        "202":
+          description: Pending request
+          content: { application/json: { schema: { $ref: "#/components/schemas/AccessRequest" } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /access:
+    get:
+      tags: [Status]
+      summary: Current member's server grants
+      operationId: getMyAccess
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Grants without profile secrets
+          content: { application/json: { schema: { $ref: "#/components/schemas/MemberAccess" } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /access/servers/{serverId}/profiles:
+    post:
+      tags: [Status]
+      summary: Issue one profile; secret delivery is returned once and must not be cached
+      operationId: issueProfile
+      security: [{ webSession: [] }]
+      parameters:
+        - { name: serverId, in: path, required: true, schema: { $ref: "#/components/schemas/PublicId" } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 128 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [public_key]
+              properties:
+                public_key: { type: string, pattern: "^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$" }
+      responses:
+        "201":
+          description: One-time delivery; response has Cache-Control no-store
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+          content: { application/json: { schema: { $ref: "#/components/schemas/ProfileIssueResponse" } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /access/profiles:
+    get:
+      tags: [Status]
+      summary: List the current member's profiles without key material
+      operationId: listMyProfiles
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Profile lifecycle states
+          content: { application/json: { schema: { $ref: "#/components/schemas/ProfileList" } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+  /access/profiles/{profile_id}:
+    delete:
+      tags: [Status]
+      summary: Revoke the current member's profile and quarantine its address
+      operationId: revokeMyProfile
+      security: [{ webSession: [] }]
+      parameters:
+        - { name: profile_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, minLength: 1, maxLength: 128 } }
+      responses:
+        "200":
+          description: Revoke operation result
+          content: { application/json: { schema: { $ref: "#/components/schemas/ProfileRevokeResponse" } } }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /admin/members:
+    get:
+      tags: [Admin]
+      summary: Member registry and coverage counters
+      operationId: listMembers
+      security: [{ webSession: [] }]
+      responses:
+        "200":
+          description: Member-safe registry; Telegram IDs are never returned
+          content: { application/json: { schema: { $ref: "#/components/schemas/AdminMembers" } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+  /admin/members/{member_id}/grants:
+    post:
+      tags: [Admin]
+      summary: Grant one member access to one server
+      operationId: grantMemberAccess
+      security: [{ webSession: [] }]
+      parameters:
+        - { name: member_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: "#/components/schemas/GrantInput" } } }
+      responses:
+        "201":
+          description: Active grant
+          content: { application/json: { schema: { $ref: "#/components/schemas/AccessGrant" } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /admin/grants/{grant_id}:
+    patch:
+      tags: [Admin]
+      summary: Suspend, resume or revoke a grant
+      operationId: updateGrantState
+      security: [{ webSession: [] }]
+      parameters:
+        - { name: grant_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [state]
+              properties: { state: { type: string, enum: [active, suspended, revoked] } }
+      responses:
+        "204": { description: Grant state updated }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+  /admin/access/reconciliation/{serverId}:
+    get:
+      tags: [Admin]
+      summary: Compare managed profiles with server fingerprints; unknown legacy peers are report-only
+      operationId: reconcileAccess
+      security: [{ webSession: [] }]
+      parameters:
+        - { name: serverId, in: path, required: true, schema: { $ref: "#/components/schemas/PublicId" } }
+      responses:
+        "200":
+          description: Drift report without public keys
+          content: { application/json: { schema: { $ref: "#/components/schemas/ReconciliationResult" } } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
   /status:
     get:
       tags: [Status]
@@ -641,10 +792,133 @@ components:
     SessionInfo:
       type: object
       additionalProperties: false
-      required: [role, expires_at]
+      required: [role, member_id, expires_at]
       properties:
         role: { type: string, enum: [member, admin] }
+        member_id: { type: [string, "null"], format: uuid }
         expires_at: { type: string, format: date-time }
+    AccessRequest:
+      type: object
+      additionalProperties: false
+      required: [id, state, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string, enum: [pending, approved, denied, cancelled] }
+        created_at: { type: string, format: date-time }
+    GrantInput:
+      type: object
+      additionalProperties: false
+      required: [server_id, reason, valid_until]
+      properties:
+        server_id: { $ref: "#/components/schemas/PublicId" }
+        reason: { type: string, minLength: 1, maxLength: 240 }
+        valid_until: { type: [string, "null"], format: date-time }
+    AccessGrant:
+      type: object
+      additionalProperties: false
+      required: [id, server_id, state, valid_until, reason]
+      properties:
+        id: { type: string, format: uuid }
+        server_id: { $ref: "#/components/schemas/PublicId" }
+        state: { type: string, enum: [active, suspended, revoked, expired] }
+        valid_until: { type: [string, "null"], format: date-time }
+        reason: { type: string, maxLength: 240 }
+    MemberAccess:
+      type: object
+      additionalProperties: false
+      required: [grants]
+      properties:
+        grants: { type: array, items: { $ref: "#/components/schemas/AccessGrant" } }
+    ProfileDelivery:
+      type: object
+      additionalProperties: false
+      required: [address, preshared_key, server_public_key, endpoint, dns, extra]
+      properties:
+        address: { type: string }
+        preshared_key: { type: [string, "null"] }
+        server_public_key: { type: string }
+        endpoint: { type: [string, "null"] }
+        dns: { type: array, items: { type: string } }
+        extra: { type: object, additionalProperties: true }
+    ProfileIssueResponse:
+      type: object
+      additionalProperties: false
+      required: [profile_id, address, profile_state, operation_id, operation_state, replayed, delivery]
+      properties:
+        profile_id: { type: string, format: uuid }
+        address: { type: string }
+        profile_state: { type: string }
+        operation_id: { type: [string, "null"], format: uuid }
+        operation_state: { type: string }
+        replayed: { type: boolean }
+        delivery: { anyOf: [{ $ref: "#/components/schemas/ProfileDelivery" }, { type: "null" }] }
+    ProfileSummary:
+      type: object
+      additionalProperties: false
+      required: [id, server_id, address, state, created_at, first_handshake_at]
+      properties:
+        id: { type: string, format: uuid }
+        server_id: { $ref: "#/components/schemas/PublicId" }
+        address: { type: string }
+        state: { type: string }
+        created_at: { type: string, format: date-time }
+        first_handshake_at: { type: [string, "null"], format: date-time }
+    ProfileList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items: { type: array, items: { $ref: "#/components/schemas/ProfileSummary" } }
+    ProfileRevokeResponse:
+      type: object
+      additionalProperties: false
+      required: [operation_id, operation_state, server_id, profile_state, replayed]
+      properties:
+        operation_id: { type: [string, "null"], format: uuid }
+        operation_state: { type: string }
+        server_id: { $ref: "#/components/schemas/PublicId" }
+        profile_state: { type: string }
+        replayed: { type: boolean }
+    ReconciliationResult:
+      type: object
+      additionalProperties: false
+      required: [server_id, managed, observed, missing_managed, unmanaged, ok]
+      properties:
+        server_id: { $ref: "#/components/schemas/PublicId" }
+        managed: { type: integer, minimum: 0 }
+        observed: { type: integer, minimum: 0 }
+        missing_managed: { type: array, items: { type: string, pattern: "^[0-9a-f]{12}$" } }
+        unmanaged: { type: array, items: { type: string, pattern: "^[0-9a-f]{12}$" } }
+        ok: { type: boolean }
+    MemberSummary:
+      type: object
+      additionalProperties: false
+      required: [id, display_name, username, membership_state, first_seen_at, last_seen_at, grants]
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: [string, "null"], maxLength: 160 }
+        username: { type: [string, "null"], maxLength: 64 }
+        membership_state: { type: string, enum: [active, left, banned, unknown] }
+        first_seen_at: { type: string, format: date-time }
+        last_seen_at: { type: string, format: date-time }
+        grants: { type: array, items: { $ref: "#/components/schemas/AccessGrant" } }
+    MemberCoverage:
+      type: object
+      additionalProperties: false
+      required: [known, active, left, banned, unknown]
+      properties:
+        known: { type: integer, minimum: 0 }
+        active: { type: integer, minimum: 0 }
+        left: { type: integer, minimum: 0 }
+        banned: { type: integer, minimum: 0 }
+        unknown: { type: integer, minimum: 0 }
+    AdminMembers:
+      type: object
+      additionalProperties: false
+      required: [coverage, items]
+      properties:
+        coverage: { $ref: "#/components/schemas/MemberCoverage" }
+        items: { type: array, items: { $ref: "#/components/schemas/MemberSummary" } }
     AdminOverview:
       description: >-
         one call for the administrator dashboard: attention items across all servers and the

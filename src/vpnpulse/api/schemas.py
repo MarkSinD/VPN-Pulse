@@ -211,7 +211,98 @@ class Readiness(Strict):
 
 class SessionInfo(Strict):
     role: Literal["member", "admin"]
+    member_id: str | None = None
     expires_at: datetime
+
+
+class AccessRequest(Strict):
+    id: str
+    state: Literal["pending", "approved", "denied", "cancelled"]
+    created_at: datetime
+
+
+class AccessGrant(Strict):
+    id: str
+    server_id: str
+    state: Literal["active", "suspended", "revoked", "expired"]
+    valid_until: datetime | None = None
+    reason: str = Field(max_length=240)
+
+
+class MemberAccess(Strict):
+    grants: list[AccessGrant]
+
+
+class ProfileDelivery(Strict):
+    address: str
+    preshared_key: str | None = None
+    server_public_key: str
+    endpoint: str | None = None
+    dns: list[str] = Field(default_factory=list)
+    extra: dict = Field(default_factory=dict)
+
+
+class ProfileIssueResponse(Strict):
+    profile_id: str
+    address: str
+    profile_state: str
+    operation_id: str | None = None
+    operation_state: str
+    replayed: bool
+    delivery: ProfileDelivery | None = None
+
+
+class ProfileSummary(Strict):
+    id: str
+    server_id: str
+    address: str
+    state: str
+    created_at: datetime
+    first_handshake_at: datetime | None = None
+
+
+class ProfileList(Strict):
+    items: list[ProfileSummary]
+
+
+class ProfileRevokeResponse(Strict):
+    operation_id: str | None = None
+    operation_state: str
+    server_id: str
+    profile_state: str
+    replayed: bool
+
+
+class ReconciliationResult(Strict):
+    server_id: str
+    managed: int = Field(ge=0)
+    observed: int = Field(ge=0)
+    missing_managed: list[str]
+    unmanaged: list[str]
+    ok: bool
+
+
+class MemberSummary(Strict):
+    id: str
+    display_name: str | None = Field(default=None, max_length=160)
+    username: str | None = Field(default=None, max_length=64)
+    membership_state: Literal["active", "left", "banned", "unknown"]
+    first_seen_at: datetime
+    last_seen_at: datetime
+    grants: list[AccessGrant] = Field(default_factory=list)
+
+
+class MemberCoverage(Strict):
+    known: int = Field(ge=0)
+    active: int = Field(ge=0)
+    left: int = Field(ge=0)
+    banned: int = Field(ge=0)
+    unknown: int = Field(ge=0)
+
+
+class AdminMembers(Strict):
+    coverage: MemberCoverage
+    items: list[MemberSummary]
 
 
 class ProbeTarget(Strict):
