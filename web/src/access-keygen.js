@@ -78,7 +78,7 @@
           `PresharedKey = ${clean('preshared key', parameters.presharedKey)}`,
           `Endpoint = ${clean('endpoint', parameters.endpoint)}`,
           `AllowedIPs = ${clean('allowed IPs', parameters.allowedIPs || '0.0.0.0/0, ::/0')}`,
-          `PersistentKeepalive = ${Number(parameters.persistentKeepalive || 25)}`, '');
+          `PersistentKeepalive = ${clean('persistent keepalive', String(parameters.persistentKeepalive || 25))}`, '');
         return lines.join('\n');
       },
       destroy() { secret.fill(0); publicBytes.fill(0); destroyed = true; },

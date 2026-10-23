@@ -19,7 +19,7 @@ def test_javascript_x25519_matches_cryptography_and_destroys_secret():
         pair = page.evaluate("""() => {
           const pair = VpnPulseAccessKeys.generate();
           const publicKey = pair.publicKey;
-          const config = pair.buildConfig({address:'fd00::100/128',dns:['2001:db8::53'],serverPublicKey:'server-key',presharedKey:'psk',endpoint:'example.invalid:1234',S3:56,S4:12,HeaderProtectionKey:'header-key',ContentPaddingAddition:'10-100',RandomTrailers:'on',DisableCookies:'on'});
+          const config = pair.buildConfig({address:'fd00::100/128',dns:['2001:db8::53'],serverPublicKey:'server-key',presharedKey:'psk',endpoint:'example.invalid:1234',persistentKeepalive:'25-35',S3:56,S4:12,HeaderProtectionKey:'header-key',ContentPaddingAddition:'10-100',RandomTrailers:'on',DisableCookies:'on'});
           pair.destroy();
           let destroyed = false; try { pair.buildConfig({}); } catch (_) { destroyed = true; }
           return {publicKey, config, destroyed};
@@ -32,3 +32,4 @@ def test_javascript_x25519_matches_cryptography_and_destroys_secret():
     assert "S3 = 56" in pair["config"] and "S4 = 12" in pair["config"]
     assert "ContentPaddingAddition = 10-100" in pair["config"]
     assert "RandomTrailers = on" in pair["config"] and "DisableCookies = on" in pair["config"]
+    assert "PersistentKeepalive = 25-35" in pair["config"]
