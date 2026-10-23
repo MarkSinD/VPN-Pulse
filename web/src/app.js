@@ -542,15 +542,14 @@
   function keysScreen() {
     const profiles = (S.profiles && S.profiles.items) || [];
     const live = profiles.filter(p => !['revoked', 'failed'].includes(p.state));
-    const grants = ((S.access && S.access.grants) || []).filter(g => g.state === 'active' && !live.some(p => p.server_id === g.server_id));
-    const current = live.length ? '<section class="stack"><h2 class="sub">' + esc(t('keys.current')) + '</h2>' + live.map(p => '<article class="profile-row"><div><b>' + esc(sname(p.server_id)) + '</b><span class="small muted">' + esc(t('keys.profileState.' + p.state)) + '</span></div><button type="button" class="btn btn-ghost btn-danger" data-profile-revoke="' + esc(p.id) + '">' + esc(t('keys.revoke')) + '</button></article>').join('') + '</section><div class="divider"></div>' : '';
+    const order = new Map(SC.list.map((server, index) => [server.id, index]));
+    const grants = ((S.access && S.access.grants) || []).filter(g => g.state === 'active' && !live.some(p => p.server_id === g.server_id)).sort((a, b) => (order.get(a.server_id) ?? 999) - (order.get(b.server_id) ?? 999));
+    const current = live.length ? '<section class="stack"><h2 class="sub">' + esc(t('keys.current')) + '</h2>' + live.map(p => { const s = byId(p.server_id); return '<article class="profile-row">' + (s ? ring(s, 'sm') : '') + '<div><b>' + esc(sname(s || p.server_id)) + '</b><span class="small muted">' + esc((s && s.country ? s.country + ' · ' : '') + t('keys.profileState.' + p.state)) + '</span></div><button type="button" class="btn btn-ghost btn-danger" data-profile-revoke="' + esc(p.id) + '">' + esc(t('keys.revoke')) + '</button></article>'; }).join('') + '</section><div class="divider"></div>' : '';
     if (!grants.length) return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + (!live.length ? '<p>' + esc(t('keys.noAccess')) + '</p>' : '') + '</div>';
-    const progress = '<div class="key-progress" aria-label="' + esc(t('keys.progress', { n: S.keyStep })) + '"><b>' + S.keyStep + '</b><span>/ 3</span></div>';
     let body = '';
-    if (S.keyStep === 1) body = '<h2 class="sub">' + esc(t('keys.chooseServer')) + '</h2><div class="key-servers">' + grants.map(g => { const s = byId(g.server_id); return '<button type="button" class="btn btn-ghost btn-block key-server" data-key-server="' + esc(g.server_id) + '"><b>' + esc(sname(s || g.server_id)) + '</b><span>' + esc(t('keys.choose')) + '</span></button>'; }).join('') + '</div>';
-    else if (S.keyStep === 2) body = '<h2 class="sub">' + esc(t('keys.creating')) + '</h2><p>' + esc(t('keys.creatingBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-create" ' + (S.keyBusy ? 'disabled' : '') + '>' + esc(S.keyBusy ? t('keys.wait') : t('keys.create')) + '</button><button type="button" class="btn btn-text btn-block" id="key-back">' + esc(t('action.back')) + '</button>';
-    else body = '<h2 class="sub">' + esc(t('keys.ready')) + '</h2><p>' + esc(t('keys.readyBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-send">' + esc(t('keys.sendTelegram')) + '</button><button type="button" class="btn btn-ghost btn-block" id="key-download">' + esc(t('keys.download')) + '</button><p class="small muted">' + esc(t('keys.once')) + '</p>';
-    return '<div class="screen keys-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + progress + '<section class="stack key-wizard">' + body + '</section></div>';
+    if (S.keyStep === 1) body = '<h2 class="sub">' + esc(t('keys.chooseServer')) + '</h2><p class="small muted key-hint">' + esc(t('keys.chooseHint')) + '</p><div class="key-servers">' + grants.map(g => { const s = byId(g.server_id); const busy = S.keyBusy && S.keyServer === g.server_id; const label = t('keys.serverLabel', { server: sname(s || g.server_id), country: (s && s.country) || '', state: s ? t('status.state.' + s.state) : '' }); return '<button type="button" class="key-server-card" data-key-server="' + esc(g.server_id) + '" aria-label="' + esc(label) + '" ' + (S.keyBusy ? 'disabled' : '') + '>' + (s ? ring(s) : '') + '<span class="key-server-main"><span class="key-server-name"><b>' + esc(sname(s || g.server_id)) + '</b>' + (SC.recommended === g.server_id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span><span class="key-server-meta">' + esc(s ? t('status.state.' + s.state) + ' · ' + s.country : '') + '</span></span><span class="key-server-action">' + esc(busy ? t('keys.wait') : t('keys.receive')) + (busy ? '' : ico('chevron', 'chev')) + '</span></button>'; }).join('') + '</div>';
+    else body = '<h2 class="sub">' + esc(t('keys.deliveryProblem')) + '</h2><p>' + esc(t('keys.deliveryProblemBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-send">' + esc(t('keys.sendTelegram')) + '</button><button type="button" class="btn btn-ghost btn-block" id="key-download">' + esc(t('keys.download')) + '</button><p class="small muted">' + esc(t('keys.once')) + '</p>';
+    return '<div class="screen keys-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + '<section class="stack key-wizard">' + body + '</section></div>';
   }
   function profileText() {
     const d = S.keyResult && S.keyResult.delivery, extra = (d && d.extra) || {};
@@ -569,24 +568,34 @@
   function bindKeys() {
     root.querySelectorAll('[data-profile-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('keys.revoke')) + '</h2><p>' + esc(t('keys.revokeConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
       () => apiAction(() => api.revokeProfile(b.getAttribute('data-profile-revoke'), uuid())).then(ok => { if (ok) { S.keyStep = 1; load(); } }))));
-    root.querySelectorAll('[data-key-server]').forEach(b => b.addEventListener('click', () => { S.keyServer = b.getAttribute('data-key-server'); S.keyStep = 2; render(); }));
-    const back = $('#key-back'); if (back) back.addEventListener('click', () => { if (S.keyMaterial) S.keyMaterial.destroy(); S.keyMaterial = null; S.keyStep = 1; render(); });
-    const create = $('#key-create'); if (create) create.addEventListener('click', async () => {
+    root.querySelectorAll('[data-key-server]').forEach(b => b.addEventListener('click', async () => {
       if (!api || !window.VpnPulseAccessKeys) return toast(t('error.generic', { code: 'KEYGEN_UNAVAILABLE' }));
+      S.keyServer = b.getAttribute('data-key-server');
       S.keyBusy = true; render();
       try {
         const material = window.VpnPulseAccessKeys.generate();
         const result = await api.issueProfile(S.keyServer, material.publicKey, uuid());
         if (!result.delivery) { material.destroy(); throw { code: 'PROFILE_ALREADY_DELIVERED' }; }
-        S.keyMaterial = material; S.keyResult = result; S.keyStep = 3; track('profile_issued', { server_public_id: S.keyServer });
-      } catch (e) { if (S.keyMaterial) S.keyMaterial.destroy(); S.keyMaterial = null; toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })); }
-      S.keyBusy = false; render();
-    });
+        S.keyMaterial = material; S.keyResult = result; track('profile_issued', { server_public_id: S.keyServer });
+        await api.sendProfile(result.profile_id, profileText());
+        material.destroy(); S.keyMaterial = null; S.keyResult = null; S.keyBusy = false;
+        toast(t('keys.sentTelegram')); await load();
+        if (tg && tg.close) setTimeout(() => tg.close(), 350);
+        return;
+      } catch (e) {
+        S.keyBusy = false;
+        if (S.keyMaterial && S.keyResult) { S.keyStep = 3; render(); toast(t('keys.deliveryRetry')); return; }
+        if (S.keyMaterial) S.keyMaterial.destroy(); S.keyMaterial = null; S.keyResult = null; S.keyStep = 1;
+        render(); toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' }));
+      }
+    }));
     const send = $('#key-send'); if (send) send.addEventListener('click', async () => {
       try {
         send.disabled = true;
         await api.sendProfile(S.keyResult.profile_id, profileText());
-        S.keyMaterial.destroy(); S.keyMaterial = null; toast(t('keys.sentTelegram')); await load();
+        S.keyMaterial.destroy(); S.keyMaterial = null; S.keyResult = null; S.keyBusy = false; S.keyStep = 1;
+        toast(t('keys.sentTelegram')); await load();
+        if (tg && tg.close) setTimeout(() => tg.close(), 350);
       } catch (e) { send.disabled = false; toast(t('error.generic', { code: (e && e.code) || 'TELEGRAM_DELIVERY_FAILED' })); }
     });
     const download = $('#key-download'); if (download) download.addEventListener('click', () => {
