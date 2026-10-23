@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.7.0
+  version: 1.8.0
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -140,6 +140,34 @@ paths:
         "401": { $ref: "#/components/responses/Problem" }
         "404": { $ref: "#/components/responses/Problem" }
         "409": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+  /access/profiles/{profile_id}/send:
+    post:
+      tags: [Status]
+      summary: Send a client-built profile once to its owner through the Telegram bot
+      operationId: sendMyProfile
+      security: [{ webSession: [] }]
+      parameters:
+        - { name: profile_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [config]
+              properties:
+                config: { type: string, minLength: 100, maxLength: 32768 }
+      responses:
+        "204":
+          description: Sent without persisting profile contents
+          headers:
+            Cache-Control: { schema: { type: string, const: no-store } }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "502": { $ref: "#/components/responses/Problem" }
         "503": { $ref: "#/components/responses/Problem" }
   /admin/members:
     get:

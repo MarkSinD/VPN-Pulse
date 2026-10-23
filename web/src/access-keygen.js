@@ -68,12 +68,12 @@
         }
         if (parameters.MTU !== undefined) lines.push(`MTU = ${clean('MTU', String(parameters.MTU))}`);
         for (const key of ['Jc', 'Jmin', 'Jmax', 'S1', 'S2', 'S3', 'S4', 'H1', 'H2', 'H3', 'H4']) {
-          if (parameters[key] !== undefined) lines.push(`${key} = ${Number(parameters[key])}`);
+          if (parameters[key] !== undefined && parameters[key] !== '') lines.push(`${key} = ${clean(key, String(parameters[key]))}`);
         }
         if (parameters.HeaderProtectionKey !== undefined) lines.push(`HeaderProtectionKey = ${clean('header protection key', parameters.HeaderProtectionKey)}`);
         for (const key of ['I1', 'I2', 'I3', 'I4', 'I5', 'ContentPaddingAddition', 'RekeyAfterTime', 'RekeyTimeout', 'RejectAfterTime',
           'KeepaliveTimeout', 'MaxHandshakeAttempts', 'RandomTrailers', 'DisableCookies']) {
-          if (parameters[key] !== undefined) lines.push(`${key} = ${clean(key, String(parameters[key]))}`);
+          if (parameters[key] !== undefined && parameters[key] !== '') lines.push(`${key} = ${clean(key, String(parameters[key]))}`);
         }
         lines.push('', '[Peer]', `PublicKey = ${clean('server public key', parameters.serverPublicKey)}`,
           `PresharedKey = ${clean('preshared key', parameters.presharedKey)}`,

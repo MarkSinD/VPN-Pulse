@@ -26,7 +26,7 @@ from vpnpulse.storage.database import apply_migrations, connect
 from vpnpulse.storage.store import SqliteStore, sync_servers
 
 # The version the API reports is the contract it implements; a test keeps the two equal.
-API_VERSION = "1.7.0"
+API_VERSION = "1.8.0"
 
 
 class SessionInput(BaseModel):
@@ -110,6 +110,19 @@ class ProfileIssueInput(BaseModel):
     public_key: str = Field(pattern=r"^[A-Za-z0-9+/]{42}[AEIMQUYcgkosw048]=$")
 
 
+class ProfileSendInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    config: str = Field(min_length=100, max_length=32768)
+
+    @field_validator("config")
+    @classmethod
+    def valid_config(cls, value: str) -> str:
+        required = ("[Interface]", "PrivateKey = ", "Address = ", "[Peer]", "PublicKey = ", "PresharedKey = ")
+        if any(marker not in value for marker in required) or "\x00" in value:
+            raise ValueError("invalid VPN profile")
+        return value
+
+
 def _migrations_dir() -> Path:
     for parent in Path(__file__).resolve().parents:
         candidate = parent / "migrations"
@@ -132,6 +145,7 @@ def create_app(
     now: Callable[[], datetime] = lambda: datetime.now(UTC),
     limits: bool = True,
     profile_service: ProfileService | None = None,
+    profile_sender: Callable[[int, str, str], bool] | None = None,
 ) -> FastAPI:
     """Build the API. Reads: `read_model` (or the legacy status-only `status_provider`); writes: `store`.
 
@@ -305,6 +319,23 @@ def create_app(
         if not session.identity.member_id:
             raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
         return {"items": store.member_profiles(session.identity.member_id)}
+
+    @app.post("/api/v1/access/profiles/{profile_id}/send", status_code=204)
+    def send_profile(profile_id: str, payload: ProfileSendInput,
+                     vpnpulse_session: str | None = Cookie(default=None)):
+        session = require_session(vpnpulse_session)
+        member_id = session.identity.member_id
+        if not member_id:
+            raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
+        profile = next((item for item in store.member_profiles(member_id) if item["id"] == profile_id), None)
+        if profile is None or profile["state"] in {"revoked", "failed"}:
+            raise HTTPException(status_code=404, detail={"code": "PROFILE_NOT_FOUND"})
+        telegram_id = store.telegram_id_for_member(member_id)
+        if profile_sender is None or telegram_id is None:
+            raise HTTPException(status_code=503, detail={"code": "TELEGRAM_DELIVERY_UNAVAILABLE"})
+        if not profile_sender(telegram_id, f"vpn-{profile['server_id']}.conf", payload.config):
+            raise HTTPException(status_code=502, detail={"code": "TELEGRAM_DELIVERY_FAILED"})
+        return Response(status_code=204, headers={"Cache-Control": "no-store", "Pragma": "no-cache"})
 
     @app.delete("/api/v1/access/profiles/{profile_id}", response_model=schemas.ProfileRevokeResponse)
     def revoke_profile(profile_id: str,

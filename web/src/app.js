@@ -549,8 +549,22 @@
     let body = '';
     if (S.keyStep === 1) body = '<h2 class="sub">' + esc(t('keys.chooseServer')) + '</h2><div class="key-servers">' + grants.map(g => { const s = byId(g.server_id); return '<button type="button" class="btn btn-ghost btn-block key-server" data-key-server="' + esc(g.server_id) + '"><b>' + esc(sname(s || g.server_id)) + '</b><span>' + esc(t('keys.choose')) + '</span></button>'; }).join('') + '</div>';
     else if (S.keyStep === 2) body = '<h2 class="sub">' + esc(t('keys.creating')) + '</h2><p>' + esc(t('keys.creatingBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-create" ' + (S.keyBusy ? 'disabled' : '') + '>' + esc(S.keyBusy ? t('keys.wait') : t('keys.create')) + '</button><button type="button" class="btn btn-text btn-block" id="key-back">' + esc(t('action.back')) + '</button>';
-    else body = '<h2 class="sub">' + esc(t('keys.ready')) + '</h2><p>' + esc(t('keys.readyBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-download">' + esc(t('keys.download')) + '</button><p class="small muted">' + esc(t('keys.once')) + '</p>';
+    else body = '<h2 class="sub">' + esc(t('keys.ready')) + '</h2><p>' + esc(t('keys.readyBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-send">' + esc(t('keys.sendTelegram')) + '</button><button type="button" class="btn btn-ghost btn-block" id="key-download">' + esc(t('keys.download')) + '</button><p class="small muted">' + esc(t('keys.once')) + '</p>';
     return '<div class="screen keys-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + progress + '<section class="stack key-wizard">' + body + '</section></div>';
+  }
+  function profileText() {
+    const d = S.keyResult && S.keyResult.delivery, extra = (d && d.extra) || {};
+    return S.keyMaterial.buildConfig({ address: d.address, dns: d.dns, serverPublicKey: d.server_public_key,
+      presharedKey: d.preshared_key, endpoint: d.endpoint, allowedIPs: extra.allowed_ips,
+      persistentKeepalive: extra.persistent_keepalive, MTU: extra.MTU,
+      Jc: extra.Jc, Jmin: extra.Jmin, Jmax: extra.Jmax, S1: extra.S1, S2: extra.S2, S3: extra.S3, S4: extra.S4,
+      H1: extra.H1, H2: extra.H2, H3: extra.H3, H4: extra.H4,
+      I1: extra.I1, I2: extra.I2, I3: extra.I3, I4: extra.I4, I5: extra.I5,
+      HeaderProtectionKey: extra.HeaderProtectionKey, ContentPaddingAddition: extra.ContentPaddingAddition,
+      RekeyAfterTime: extra.RekeyAfterTime, RekeyTimeout: extra.RekeyTimeout,
+      RejectAfterTime: extra.RejectAfterTime, KeepaliveTimeout: extra.KeepaliveTimeout,
+      MaxHandshakeAttempts: extra.MaxHandshakeAttempts, RandomTrailers: extra.RandomTrailers,
+      DisableCookies: extra.DisableCookies });
   }
   function bindKeys() {
     root.querySelectorAll('[data-profile-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('keys.revoke')) + '</h2><p>' + esc(t('keys.revokeConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
@@ -568,19 +582,16 @@
       } catch (e) { if (S.keyMaterial) S.keyMaterial.destroy(); S.keyMaterial = null; toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })); }
       S.keyBusy = false; render();
     });
-    const download = $('#key-download'); if (download) download.addEventListener('click', () => {
-      const d = S.keyResult && S.keyResult.delivery, extra = (d && d.extra) || {};
+    const send = $('#key-send'); if (send) send.addEventListener('click', async () => {
       try {
-        const text = S.keyMaterial.buildConfig({ address: d.address, dns: d.dns, serverPublicKey: d.server_public_key,
-          presharedKey: d.preshared_key, endpoint: d.endpoint, allowedIPs: extra.allowed_ips,
-          persistentKeepalive: extra.persistent_keepalive, Jc: extra.Jc, Jmin: extra.Jmin, Jmax: extra.Jmax,
-          S1: extra.S1, S2: extra.S2, S3: extra.S3, S4: extra.S4,
-          H1: extra.H1, H2: extra.H2, H3: extra.H3, H4: extra.H4,
-          HeaderProtectionKey: extra.HeaderProtectionKey, ContentPaddingAddition: extra.ContentPaddingAddition,
-          RekeyAfterTime: extra.RekeyAfterTime, RekeyTimeout: extra.RekeyTimeout,
-          RejectAfterTime: extra.RejectAfterTime, KeepaliveTimeout: extra.KeepaliveTimeout,
-          MaxHandshakeAttempts: extra.MaxHandshakeAttempts, RandomTrailers: extra.RandomTrailers,
-          DisableCookies: extra.DisableCookies });
+        send.disabled = true;
+        await api.sendProfile(S.keyResult.profile_id, profileText());
+        S.keyMaterial.destroy(); S.keyMaterial = null; toast(t('keys.sentTelegram')); await load();
+      } catch (e) { send.disabled = false; toast(t('error.generic', { code: (e && e.code) || 'TELEGRAM_DELIVERY_FAILED' })); }
+    });
+    const download = $('#key-download'); if (download) download.addEventListener('click', () => {
+      try {
+        const text = profileText();
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
         a.download = 'vpn-' + S.keyServer + '.conf'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
         S.keyMaterial.destroy(); S.keyMaterial = null; download.disabled = true; toast(t('keys.saved'));

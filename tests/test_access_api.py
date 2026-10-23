@@ -65,6 +65,7 @@ def test_grants_flag_is_fail_closed(tmp_path):
 
 
 def test_profile_issue_is_one_time_and_never_cacheable(tmp_path):
+    sent = []
     class Provisioner:
         def issue(self, **kwargs):
             return {"address": kwargs["address"], "preshared_key": "deliver-once",
@@ -84,7 +85,8 @@ def test_profile_issue_is_one_time_and_never_cacheable(tmp_path):
     service = ProfileService(store, config, {"servers": {"s1": {"addresses": ["fd00::100/128"]}}}, Provisioner())
     app = create_app(bot_token=BOT_TOKEN, membership=Membership(), read_model=SqliteReadModel(db, config, now=lambda: NOW),
                      store=store, config=config, analytics_schema=ANALYTICS_SCHEMA, now=lambda: NOW,
-                     profile_service=service)
+                     profile_service=service,
+                     profile_sender=lambda telegram_id, filename, content: sent.append((telegram_id, filename, content)) or True)
     api = TestClient(app, base_url="https://testserver"); login(api, 1)
     member_id = api.get("/api/v1/sessions/current").json()["member_id"]
     store.grant_access(member_id, "s1", actor="owner", reason="test", now=NOW)
@@ -98,6 +100,10 @@ def test_profile_issue_is_one_time_and_never_cacheable(tmp_path):
                       headers={"Idempotency-Key": "browser-request-1"})
     assert replay.status_code == 201 and replay.json()["delivery"] is None
     profile_id = issued.json()["profile_id"]
+    profile_config = "[Interface]\nPrivateKey = private\nAddress = fd00::100/128\n[Peer]\nPublicKey = public\nPresharedKey = psk\n"
+    delivered = api.post(f"/api/v1/access/profiles/{profile_id}/send", json={"config": profile_config})
+    assert delivered.status_code == 204 and delivered.headers["cache-control"] == "no-store"
+    assert sent == [(1, "vpn-s1.conf", profile_config)]
     assert api.get("/api/v1/access/profiles").json()["items"][0]["id"] == profile_id
     revoked = api.delete(f"/api/v1/access/profiles/{profile_id}", headers={"Idempotency-Key": "revoke-1"})
     assert revoked.status_code == 200 and revoked.json()["profile_state"] == "revoked"

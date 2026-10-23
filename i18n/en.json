@@ -233,6 +233,8 @@
   "keys.creatingBody": "The key is created only on this device. Only its public part is sent to the server.",
   "keys.current": "My profiles",
   "keys.download": "Download profile file",
+  "keys.sendTelegram": "Receive in Telegram",
+  "keys.sentTelegram": "The file was sent to you in a message",
   "keys.mvp": "New profiles are currently issued by the administrator",
   "keys.noAccess": "Ask the owner for server access first.",
   "keys.once": "The file is available once. Save it now.",

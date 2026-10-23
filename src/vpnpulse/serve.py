@@ -20,6 +20,7 @@ from vpnpulse.api.static import AppFiles
 from vpnpulse.cli.common import CliError, contracts_dir, load_public_config, open_database, repo_root, resolve_db
 from vpnpulse.storage import SqliteReadModel, SqliteStore
 from vpnpulse.profile_service import ProfileService, SshProvisioner
+from vpnpulse.profile_delivery import TelegramProfileSender
 from vpnpulse.telegram import NoMembership, TelegramMembership
 
 DEMO_MARKER = "demo-data"
@@ -80,6 +81,7 @@ def build_app(config_path: Path, *, now=None, opener=None) -> FastAPI:
         default_language=app_cfg.get("default_language", "ru"),
         now=now,
         profile_service=profile_service,
+        profile_sender=TelegramProfileSender(token) if token else None,
     )
     static_dir = repo_root() / "docs" / "prototypes"
     if static_dir.exists():

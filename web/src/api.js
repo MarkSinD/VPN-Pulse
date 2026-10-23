@@ -47,6 +47,7 @@ window.VPNPulseApi = function (opts) {
     requestAccess: () => call('POST', '/access/requests'),
     issueProfile: (serverId, publicKey, idempotencyKey) => call('POST', '/access/servers/' + encodeURIComponent(serverId) + '/profiles', null, { public_key: publicKey }, { headers: { 'Idempotency-Key': idempotencyKey } }),
     profiles: () => call('GET', '/access/profiles'),
+    sendProfile: (profileId, config) => call('POST', '/access/profiles/' + encodeURIComponent(profileId) + '/send', null, { config }),
     revokeProfile: (profileId, idempotencyKey) => call('DELETE', '/access/profiles/' + encodeURIComponent(profileId), null, undefined, { headers: { 'Idempotency-Key': idempotencyKey } }),
     // admin
     adminServer: id => call('GET', '/admin/servers/' + encodeURIComponent(id)),
