@@ -26,7 +26,7 @@ from vpnpulse.storage.database import apply_migrations, connect
 from vpnpulse.storage.store import SqliteStore, sync_servers
 
 # The version the API reports is the contract it implements; a test keeps the two equal.
-API_VERSION = "1.8.0"
+API_VERSION = "1.8.1"
 
 
 class SessionInput(BaseModel):
@@ -290,7 +290,8 @@ def create_app(
         session = require_session(vpnpulse_session)
         if not session.identity.member_id:
             raise HTTPException(status_code=409, detail={"code": "MEMBER_REGISTRY_REQUIRED"})
-        return {"grants": store.member_access(session.identity.member_id, now())}
+        return {"grants": store.member_access(session.identity.member_id, now()),
+                "request": store.pending_access_request(session.identity.member_id)}
 
     @app.post("/api/v1/access/servers/{server_id}/profiles", response_model=schemas.ProfileIssueResponse,
               status_code=201)

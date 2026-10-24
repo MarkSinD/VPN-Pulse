@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: VPN Pulse API
-  version: 1.8.0
+  version: 1.8.1
   description: Closed Telegram Mini App and probe API. Unknown values are null, never zero.
 servers:
   - url: /api/v1
@@ -854,9 +854,10 @@ components:
     MemberAccess:
       type: object
       additionalProperties: false
-      required: [grants]
+      required: [grants, request]
       properties:
         grants: { type: array, items: { $ref: "#/components/schemas/AccessGrant" } }
+        request: { anyOf: [{ $ref: "#/components/schemas/AccessRequest" }, { type: "null" }] }
     ProfileDelivery:
       type: object
       additionalProperties: false
@@ -921,7 +922,7 @@ components:
     MemberSummary:
       type: object
       additionalProperties: false
-      required: [id, display_name, username, membership_state, first_seen_at, last_seen_at, grants]
+      required: [id, display_name, username, membership_state, first_seen_at, last_seen_at, grants, access_request]
       properties:
         id: { type: string, format: uuid }
         display_name: { type: [string, "null"], maxLength: 160 }
@@ -930,6 +931,7 @@ components:
         first_seen_at: { type: string, format: date-time }
         last_seen_at: { type: string, format: date-time }
         grants: { type: array, items: { $ref: "#/components/schemas/AccessGrant" } }
+        access_request: { anyOf: [{ $ref: "#/components/schemas/AccessRequest" }, { type: "null" }] }
     MemberCoverage:
       type: object
       additionalProperties: false

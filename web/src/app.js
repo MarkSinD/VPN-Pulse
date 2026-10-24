@@ -392,6 +392,7 @@
     const grants = access.grants || [];
     const active = grants.filter(g => g.state === 'active');
     if (active.length) return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.setupTitle')) + '</h2><p>' + esc(t('access.setupBody', { n: active.length })) + '</p></div><button type="button" class="btn btn-primary" data-access="setup">' + esc(t('access.setupAction')) + '</button></section>';
+    if (access.request && access.request.state === 'pending') return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.pendingTitle')) + '</h2><p>' + esc(t('access.pendingBody')) + '</p></div><span class="chip chip-fresh">' + esc(t('access.pendingBadge')) + '</span></section>';
     return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.requestTitle')) + '</h2><p>' + esc(t('access.requestBody')) + '</p></div><button type="button" class="btn btn-primary" data-access="request">' + esc(t('access.requestAction')) + '</button></section>';
   }
   function skeleton() {
@@ -545,7 +546,11 @@
     const order = new Map(SC.list.map((server, index) => [server.id, index]));
     const grants = ((S.access && S.access.grants) || []).filter(g => g.state === 'active' && !live.some(p => p.server_id === g.server_id)).sort((a, b) => (order.get(a.server_id) ?? 999) - (order.get(b.server_id) ?? 999));
     const current = live.length ? '<section class="stack"><h2 class="sub">' + esc(t('keys.current')) + '</h2>' + live.map(p => { const s = byId(p.server_id); return '<article class="profile-row">' + (s ? ring(s, 'sm') : '') + '<div><b>' + esc(sname(s || p.server_id)) + '</b><span class="small muted">' + esc((s && s.country ? s.country + ' · ' : '') + t('keys.profileState.' + p.state)) + '</span></div><button type="button" class="btn btn-ghost btn-danger" data-profile-revoke="' + esc(p.id) + '">' + esc(t('keys.revoke')) + '</button></article>'; }).join('') + '</section><div class="divider"></div>' : '';
-    if (!grants.length) return '<div class="screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + (!live.length ? '<p>' + esc(t('keys.noAccess')) + '</p>' : '') + '</div>';
+    if (!grants.length) {
+      const pending = S.access && S.access.request && S.access.request.state === 'pending';
+      const empty = !live.length ? '<section class="access-empty">' + ico(pending ? 'clock' : 'key') + '<h2>' + esc(t(pending ? 'access.pendingTitle' : 'access.requestTitle')) + '</h2><p>' + esc(t(pending ? 'access.pendingBody' : 'keys.noAccess')) + '</p>' + (pending ? '<span class="chip chip-fresh">' + esc(t('access.pendingBadge')) + '</span>' : '<button type="button" class="btn btn-primary" id="keys-request">' + esc(t('access.requestAction')) + '</button>') + '</section>' : '';
+      return '<div class="screen keys-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + empty + '</div>';
+    }
     let body = '';
     if (S.keyStep === 1) body = '<h2 class="sub">' + esc(t('keys.chooseServer')) + '</h2><p class="small muted key-hint">' + esc(t('keys.chooseHint')) + '</p><div class="key-servers">' + grants.map(g => { const s = byId(g.server_id); const busy = S.keyBusy && S.keyServer === g.server_id; const label = t('keys.serverLabel', { server: sname(s || g.server_id), country: (s && s.country) || '', state: s ? t('status.state.' + s.state) : '' }); return '<button type="button" class="key-server-card" data-key-server="' + esc(g.server_id) + '" aria-label="' + esc(label) + '" ' + (S.keyBusy ? 'disabled' : '') + '>' + (s ? ring(s) : '') + '<span class="key-server-main"><span class="key-server-name"><b>' + esc(sname(s || g.server_id)) + '</b>' + (SC.recommended === g.server_id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span><span class="key-server-meta">' + esc(s ? t('status.state.' + s.state) + ' · ' + s.country : '') + '</span></span><span class="key-server-action">' + esc(busy ? t('keys.wait') : t('keys.receive')) + (busy ? '' : ico('chevron', 'chev')) + '</span></button>'; }).join('') + '</div>';
     else body = '<h2 class="sub">' + esc(t('keys.deliveryProblem')) + '</h2><p>' + esc(t('keys.deliveryProblemBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-send">' + esc(t('keys.sendTelegram')) + '</button><button type="button" class="btn btn-ghost btn-block" id="key-download">' + esc(t('keys.download')) + '</button><p class="small muted">' + esc(t('keys.once')) + '</p>';
@@ -566,6 +571,12 @@
       DisableCookies: extra.DisableCookies });
   }
   function bindKeys() {
+    const request = $('#keys-request'); if (request) request.addEventListener('click', async () => {
+      if (!api) return toast(t('access.requested'));
+      request.disabled = true;
+      try { await api.requestAccess(); toast(t('access.requested')); await load(); }
+      catch (e) { request.disabled = false; toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })); }
+    });
     root.querySelectorAll('[data-profile-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('keys.revoke')) + '</h2><p>' + esc(t('keys.revokeConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
       () => apiAction(() => api.revokeProfile(b.getAttribute('data-profile-revoke'), uuid())).then(ok => { if (ok) { S.keyStep = 1; load(); } }))));
     root.querySelectorAll('[data-key-server]').forEach(b => b.addEventListener('click', async () => {
@@ -644,7 +655,7 @@
     const nt = SC.note, noteVal = noteDraft !== null ? noteDraft : (nt ? nt.text : '');
     const note = '<div class="stack"><textarea class="note-input" id="note-input" maxlength="' + SC.noteMax + '" placeholder="' + esc(t('admin.note.placeholder')) + '" aria-label="' + esc(t('admin.note')) + '">' + esc(noteVal) + '</textarea><div class="small muted" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><span id="note-count">' + esc(t('admin.note.chars', { n: noteVal.length, max: SC.noteMax })) + '</span>' + (nt && nt.expires ? '<span>' + esc(t('admin.note.expires', { time: fmtTime(nt.expires) })) + '</span>' : '') + '</div><div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn btn-primary" id="note-save">' + esc(t('action.save')) + '</button>' + (nt ? '<button type="button" class="btn btn-ghost btn-danger" id="note-del">' + esc(t('admin.note.delete')) + '</button>' : '') + '</div>' + (!nt && !noteVal ? '<p class="small muted">' + esc(t('admin.note.empty')) + '</p>' : '') + '</div>';
     const registry = S.adminMembers;
-    const members = registry ? '<div class="member-summary">' + esc(t('admin.membersCoverage', { active: registry.coverage.active, known: registry.coverage.known })) + '</div><div class="member-list">' + registry.items.map(m => {
+    const members = registry ? '<div class="member-summary">' + esc(t('admin.membersCoverage', { active: registry.coverage.active, known: registry.coverage.known })) + '</div><div class="member-list">' + registry.items.slice().sort((a, b) => Number(!!b.access_request) - Number(!!a.access_request)).map(m => {
       const name = m.display_name || (m.username ? '@' + m.username : t('admin.memberUnnamed'));
       const grants = m.grants || [];
       const actions = SC.list.map(s => { const g = grants.find(x => x.server_id === s.id && ['active', 'suspended'].includes(x.state));
@@ -652,7 +663,7 @@
         if (g.state === 'suspended') return '<button type="button" class="btn btn-ghost member-grant" data-grant-state="active" data-grant-id="' + esc(g.id) + '">' + esc(t('admin.resumeServer', { server: s.name })) + '</button>';
         return '<span class="member-grant c-operational">' + esc(s.name) + ' · ' + esc(t('admin.granted')) + '</span><button type="button" class="btn btn-ghost member-grant" data-grant-state="suspended" data-grant-id="' + esc(g.id) + '">' + esc(t('admin.suspend')) + '</button><button type="button" class="btn btn-ghost btn-danger member-grant" data-grant-state="revoked" data-grant-id="' + esc(g.id) + '">' + esc(t('admin.revoke')) + '</button>';
       }).join('');
-      return '<article class="member-row"><div><b>' + esc(name) + '</b><span class="xs muted">' + esc(t('admin.memberState.' + m.membership_state)) + '</span></div><div class="member-actions">' + actions + '</div></article>';
+      return '<article class="member-row ' + (m.access_request ? 'has-request' : '') + '"><div><b>' + esc(name) + (m.access_request ? '<span class="chip chip-fresh">' + esc(t('admin.accessRequested')) + '</span>' : '') + '</b><span class="xs muted">' + esc(t('admin.memberState.' + m.membership_state)) + '</span></div><div class="member-actions">' + actions + '</div></article>';
     }).join('') + '</div>' : '<p class="small muted">' + esc(t('status.unknown')) + '</p>';
     return '<div class="screen admin-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('admin.title')) + '</h1>' +
       '<section class="stack"><h2 class="sub">' + esc(t('admin.attention')) + '</h2>' + attHtml + '</section>' +

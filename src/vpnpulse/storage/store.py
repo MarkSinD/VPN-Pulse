@@ -339,6 +339,13 @@ class SqliteStore:
             ).fetchall()
         ]
 
+    def pending_access_request(self, member_id: str) -> dict | None:
+        row = self.db.execute(
+            "SELECT id,state,created_at FROM access_requests WHERE member_id=? AND state='pending' ORDER BY created_at DESC LIMIT 1",
+            (member_id,),
+        ).fetchone()
+        return {"id": row[0], "state": row[1], "created_at": row[2]} if row else None
+
     def member_coverage(self) -> dict:
         rows = dict(self.db.execute("SELECT membership_state, count(*) FROM members GROUP BY membership_state").fetchall())
         return {"known": sum(rows.values()), "active": rows.get("active", 0), "left": rows.get("left", 0),
@@ -347,7 +354,7 @@ class SqliteStore:
     def list_members(self) -> list[dict]:
         items = [
             {"id": row[0], "display_name": row[1], "username": row[2], "membership_state": row[3],
-             "first_seen_at": row[4], "last_seen_at": row[5], "grants": []}
+             "first_seen_at": row[4], "last_seen_at": row[5], "grants": [], "access_request": None}
             for row in self.db.execute(
                 "SELECT id, display_name, username, membership_state, first_seen_at, last_seen_at FROM members ORDER BY COALESCE(display_name, username, id)"
             ).fetchall()
@@ -359,6 +366,11 @@ class SqliteStore:
             if row[1] in by_id:
                 by_id[row[1]]["grants"].append({"id": row[0], "server_id": row[2], "state": row[3],
                                                  "valid_until": row[4], "reason": row[5]})
+        for row in self.db.execute(
+            "SELECT member_id,id,state,created_at FROM access_requests WHERE state='pending' ORDER BY created_at"
+        ).fetchall():
+            if row[0] in by_id:
+                by_id[row[0]]["access_request"] = {"id": row[1], "state": row[2], "created_at": row[3]}
         return items
 
     # ---------- profile reservations (no secret material) ----------

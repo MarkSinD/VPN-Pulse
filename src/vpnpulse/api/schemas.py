@@ -231,6 +231,7 @@ class AccessGrant(Strict):
 
 class MemberAccess(Strict):
     grants: list[AccessGrant]
+    request: AccessRequest | None = None
 
 
 class ProfileDelivery(Strict):
@@ -290,6 +291,7 @@ class MemberSummary(Strict):
     first_seen_at: datetime
     last_seen_at: datetime
     grants: list[AccessGrant] = Field(default_factory=list)
+    access_request: AccessRequest | None = None
 
 
 class MemberCoverage(Strict):

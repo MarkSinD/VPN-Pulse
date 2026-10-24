@@ -38,7 +38,7 @@ def test_member_requests_and_admin_grants_without_exposing_telegram_id(tmp_path)
     login(member, 1)
     request = member.post("/api/v1/access/requests")
     assert request.status_code == 202 and request.json()["state"] == "pending"
-    assert member.get("/api/v1/access").json() == {"grants": []}
+    assert member.get("/api/v1/access").json() == {"grants": [], "request": request.json()}
 
     admin = client(tmp_path)
     login(admin, 2)
@@ -46,10 +46,14 @@ def test_member_requests_and_admin_grants_without_exposing_telegram_id(tmp_path)
     assert listing["coverage"]["active"] == 2
     assert all("telegram" not in key for item in listing["items"] for key in item)
     member_id = next(item["id"] for item in listing["items"] if item["id"] != admin.get("/api/v1/sessions/current").json()["member_id"])
+    member_item = next(item for item in listing["items"] if item["id"] == member_id)
+    assert member_item["access_request"] == request.json()
     granted = admin.post(f"/api/v1/admin/members/{member_id}/grants",
                          json={"server_id": "s1", "reason": "recommended", "valid_until": None})
     assert granted.status_code == 201 and granted.json()["state"] == "active"
-    assert member.get("/api/v1/access").json()["grants"][0]["server_id"] == "s1"
+    access = member.get("/api/v1/access").json()
+    assert access["grants"][0]["server_id"] == "s1"
+    assert access["request"] is None
 
 
 def test_grants_flag_is_fail_closed(tmp_path):
