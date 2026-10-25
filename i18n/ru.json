@@ -6,7 +6,7 @@
   "access.pendingTitle": "Запрос уже отправлен",
   "access.pendingBody": "Владелец увидит запрос и откроет доступ к нужным серверам.",
   "access.pendingBadge": "Ожидает решения",
-  "access.setupAction": "Настроить VPN",
+  "access.setupAction": "Создать ключ",
   "access.setupBody": "Доступно серверов: {n}. Установка займёт несколько минут.",
   "access.setupTitle": "Настроить VPN",
   "action.back": "Назад",

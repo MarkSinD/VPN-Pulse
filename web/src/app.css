@@ -131,6 +131,8 @@ p { margin: 0; }
 .access-card p { margin: 0; color: var(--color-muted); font-size: var(--text-md); }
 .access-card .btn { min-height: 48px; font-size: 17px; width: 100%; }
 @media (min-width: 720px) { .access-card { grid-template-columns: 1fr auto; align-items: center; } .access-card .btn { width: auto; min-width: 190px; } }
+.access-create-key { min-height: 54px; font-size: var(--text-lg); gap: var(--space-2); }
+.access-create-key .icon { width: 22px; height: 22px; }
 .banner-info { background: var(--color-surface); }
 .banner-info .i { color: var(--color-muted); }
 .banner .act { grid-column: 2; display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-1); }

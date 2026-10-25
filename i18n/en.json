@@ -6,7 +6,7 @@
   "access.pendingTitle": "Request already sent",
   "access.pendingBody": "The owner will see the request and enable the right servers.",
   "access.pendingBadge": "Waiting for approval",
-  "access.setupAction": "Set up VPN",
+  "access.setupAction": "Create key",
   "access.setupBody": "Servers available: {n}. Setup takes a few minutes.",
   "access.setupTitle": "Set up VPN",
   "action.back": "Back",

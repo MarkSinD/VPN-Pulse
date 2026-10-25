@@ -391,7 +391,7 @@
     if (!access) return '';
     const grants = access.grants || [];
     const active = grants.filter(g => g.state === 'active');
-    if (active.length) return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.setupTitle')) + '</h2><p>' + esc(t('access.setupBody', { n: active.length })) + '</p></div><button type="button" class="btn btn-primary" data-access="setup">' + esc(t('access.setupAction')) + '</button></section>';
+    if (active.length) return '<button type="button" class="btn btn-primary btn-block access-create-key" data-access="setup">' + ico('key') + esc(t('access.setupAction')) + '</button>';
     if (access.request && access.request.state === 'pending') return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.pendingTitle')) + '</h2><p>' + esc(t('access.pendingBody')) + '</p></div><span class="chip chip-fresh">' + esc(t('access.pendingBadge')) + '</span></section>';
     return '<section class="access-card" aria-labelledby="access-card-title"><div><h2 id="access-card-title">' + esc(t('access.requestTitle')) + '</h2><p>' + esc(t('access.requestBody')) + '</p></div><button type="button" class="btn btn-primary" data-access="request">' + esc(t('access.requestAction')) + '</button></section>';
   }
