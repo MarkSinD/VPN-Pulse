@@ -30,7 +30,7 @@
     scrollPos: 0, originRow: null, eventsPage: 1, noteExpanded: false, eventsState: 'ok',
     text200: q.get('text') === '200',
     sessionRole: null, memberId: null, help: null, access: null, profiles: null, adminMembers: null,
-    keyStep: 1, keyServer: null, keyBusy: false, keyResult: null, keyMaterial: null
+    keyStep: 1, keyServer: null, keyBusy: false, keyOperation: null, keyResult: null, keyMaterial: null
   };
   if (!I18N[S.lang]) S.lang = 'ru';
   const screenParam = q.get('screen');
@@ -545,6 +545,7 @@
     const live = profiles.filter(p => !['revoked', 'failed'].includes(p.state));
     const order = new Map(SC.list.map((server, index) => [server.id, index]));
     const grants = ((S.access && S.access.grants) || []).filter(g => g.state === 'active' && !live.some(p => p.server_id === g.server_id)).sort((a, b) => (order.get(a.server_id) ?? 999) - (order.get(b.server_id) ?? 999));
+    const operation = S.keyBusy ? '<div class="key-operation" role="status" aria-live="polite" aria-busy="true"><span class="spinner" aria-hidden="true"></span><div><b>' + esc(t(S.keyOperation === 'sending' ? 'keys.sendingTitle' : 'keys.creatingTitle')) + '</b><p>' + esc(t('keys.operationBody')) + '</p></div></div>' : '';
     const current = live.length ? '<section class="stack"><h2 class="sub">' + esc(t('keys.current')) + '</h2>' + live.map(p => { const s = byId(p.server_id); return '<article class="profile-row">' + (s ? ring(s, 'sm') : '') + '<div><b>' + esc(sname(s || p.server_id)) + '</b><span class="small muted">' + esc((s && s.country ? s.country + ' · ' : '') + t('keys.profileState.' + p.state)) + '</span></div><button type="button" class="btn btn-ghost btn-danger" data-profile-revoke="' + esc(p.id) + '">' + esc(t('keys.revoke')) + '</button></article>'; }).join('') + '</section><div class="divider"></div>' : '';
     if (!grants.length) {
       const pending = S.access && S.access.request && S.access.request.state === 'pending';
@@ -552,7 +553,7 @@
       return '<div class="screen keys-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + empty + '</div>';
     }
     let body = '';
-    if (S.keyStep === 1) body = '<h2 class="sub">' + esc(t('keys.chooseServer')) + '</h2><p class="small muted key-hint">' + esc(t('keys.chooseHint')) + '</p><div class="key-servers">' + grants.map(g => { const s = byId(g.server_id); const busy = S.keyBusy && S.keyServer === g.server_id; const label = t('keys.serverLabel', { server: sname(s || g.server_id), country: (s && s.country) || '', state: s ? t('status.state.' + s.state) : '' }); return '<button type="button" class="key-server-card" data-key-server="' + esc(g.server_id) + '" aria-label="' + esc(label) + '" ' + (S.keyBusy ? 'disabled' : '') + '>' + (s ? ring(s) : '') + '<span class="key-server-main"><span class="key-server-name"><b>' + esc(sname(s || g.server_id)) + '</b>' + (SC.recommended === g.server_id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span><span class="key-server-meta">' + esc(s ? t('status.state.' + s.state) + ' · ' + s.country : '') + '</span></span><span class="key-server-action">' + esc(busy ? t('keys.wait') : t('keys.receive')) + (busy ? '' : ico('chevron', 'chev')) + '</span></button>'; }).join('') + '</div>';
+    if (S.keyStep === 1) body = operation + '<h2 class="sub">' + esc(t('keys.chooseServer')) + '</h2><p class="small muted key-hint">' + esc(t('keys.chooseHint')) + '</p><div class="key-servers">' + grants.map(g => { const s = byId(g.server_id); const busy = S.keyBusy && S.keyServer === g.server_id; const label = t('keys.serverLabel', { server: sname(s || g.server_id), country: (s && s.country) || '', state: s ? t('status.state.' + s.state) : '' }); return '<button type="button" class="key-server-card" data-key-server="' + esc(g.server_id) + '" aria-label="' + esc(label) + '" ' + (S.keyBusy ? 'disabled' : '') + '>' + (s ? ring(s) : '') + '<span class="key-server-main"><span class="key-server-name"><b>' + esc(sname(s || g.server_id)) + '</b>' + (SC.recommended === g.server_id ? '<span class="chip chip-rec">' + ico('star') + esc(t('status.recommended')) + '</span>' : '') + '</span><span class="key-server-meta">' + esc(s ? t('status.state.' + s.state) + ' · ' + s.country : '') + '</span></span><span class="key-server-action">' + (busy ? '<span class="spinner spinner-small" aria-hidden="true"></span>' : '') + esc(busy ? t('keys.wait') : t('keys.receive')) + (busy ? '' : ico('chevron', 'chev')) + '</span></button>'; }).join('') + '</div>';
     else body = '<h2 class="sub">' + esc(t('keys.deliveryProblem')) + '</h2><p>' + esc(t('keys.deliveryProblemBody')) + '</p><button type="button" class="btn btn-primary btn-block" id="key-send">' + esc(t('keys.sendTelegram')) + '</button><button type="button" class="btn btn-ghost btn-block" id="key-download">' + esc(t('keys.download')) + '</button><p class="small muted">' + esc(t('keys.once')) + '</p>';
     return '<div class="screen keys-screen"><h1 class="title" id="screen-title" tabindex="-1">' + esc(t('keys.title')) + '</h1>' + current + '<section class="stack key-wizard">' + body + '</section></div>';
   }
@@ -577,24 +578,24 @@
       try { await api.requestAccess(); toast(t('access.requested')); await load(); }
       catch (e) { request.disabled = false; toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' })); }
     });
-    root.querySelectorAll('[data-profile-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('keys.revoke')) + '</h2><p>' + esc(t('keys.revokeConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm>' + esc(t('action.confirm')) + '</button></div>', b,
-      () => apiAction(() => api.revokeProfile(b.getAttribute('data-profile-revoke'), uuid())).then(ok => { if (ok) { S.keyStep = 1; load(); } }))));
+    root.querySelectorAll('[data-profile-revoke]').forEach(b => b.addEventListener('click', () => openSheet('<h2>' + esc(t('keys.revoke')) + '</h2><p>' + esc(t('keys.revokeConfirm')) + '</p><div class="acts"><button type="button" class="btn btn-ghost" data-close>' + esc(t('action.cancel')) + '</button><button type="button" class="btn btn-primary" data-confirm data-busy-label="' + esc(t('keys.revokingTitle')) + '">' + esc(t('action.confirm')) + '</button></div><p class="sheet-progress" data-progress hidden aria-live="polite">' + esc(t('keys.revokeOperationBody')) + '</p>', b,
+      async () => { const ok = await apiAction(() => api.revokeProfile(b.getAttribute('data-profile-revoke'), uuid())); if (!ok) return false; S.keyStep = 1; await load(); return true; })));
     root.querySelectorAll('[data-key-server]').forEach(b => b.addEventListener('click', async () => {
       if (!api || !window.VpnPulseAccessKeys) return toast(t('error.generic', { code: 'KEYGEN_UNAVAILABLE' }));
       S.keyServer = b.getAttribute('data-key-server');
-      S.keyBusy = true; render();
+      S.keyBusy = true; S.keyOperation = 'creating'; render();
       try {
         const material = window.VpnPulseAccessKeys.generate();
         const result = await api.issueProfile(S.keyServer, material.publicKey, uuid());
         if (!result.delivery) { material.destroy(); throw { code: 'PROFILE_ALREADY_DELIVERED' }; }
-        S.keyMaterial = material; S.keyResult = result; track('profile_issued', { server_public_id: S.keyServer });
+        S.keyMaterial = material; S.keyResult = result; S.keyOperation = 'sending'; render(); track('profile_issued', { server_public_id: S.keyServer });
         await api.sendProfile(result.profile_id, profileText());
-        material.destroy(); S.keyMaterial = null; S.keyResult = null; S.keyBusy = false;
+        material.destroy(); S.keyMaterial = null; S.keyResult = null; S.keyBusy = false; S.keyOperation = null;
         toast(t('keys.sentTelegram')); await load();
         if (tg && tg.close) setTimeout(() => tg.close(), 350);
         return;
       } catch (e) {
-        S.keyBusy = false;
+        S.keyBusy = false; S.keyOperation = null;
         if (S.keyMaterial && S.keyResult) { S.keyStep = 3; render(); toast(t('keys.deliveryRetry')); return; }
         if (S.keyMaterial) S.keyMaterial.destroy(); S.keyMaterial = null; S.keyResult = null; S.keyStep = 1;
         render(); toast(t('error.generic', { code: (e && e.code) || 'HTTP_ERROR' }));
@@ -708,7 +709,17 @@
     document.addEventListener('keydown', onKey);
     bd.addEventListener('click', e => { if (e.target === bd) close(); });
     bd.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
-    bd.querySelectorAll('[data-confirm]').forEach(b => b.addEventListener('click', () => { if (onConfirm) onConfirm(); else toast(t('admin.demoAction')); close(); }));
+    bd.querySelectorAll('[data-confirm]').forEach(b => b.addEventListener('click', async () => {
+      if (!onConfirm) { toast(t('admin.demoAction')); close(); return; }
+      const original = b.innerHTML, busyLabel = b.getAttribute('data-busy-label');
+      bd.setAttribute('aria-busy', 'true');
+      bd.querySelectorAll('button').forEach(button => { button.disabled = true; });
+      const progress = bd.querySelector('[data-progress]'); if (progress) progress.hidden = false;
+      if (busyLabel) b.innerHTML = '<span class="spinner spinner-small" aria-hidden="true"></span>' + esc(busyLabel);
+      const ok = await onConfirm();
+      if (ok === false) { bd.removeAttribute('aria-busy'); bd.querySelectorAll('button').forEach(button => { button.disabled = false; }); if (progress) progress.hidden = true; b.innerHTML = original; return; }
+      close();
+    }));
     bd.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => copy(b.getAttribute('data-copy'))));
     const f = bd.querySelector('button'); if (f) f.focus();
   }
