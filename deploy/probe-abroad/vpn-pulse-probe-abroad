@@ -32,7 +32,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-VERSION = "0.3.0"
+VERSION = "0.3.1"
 DEFAULT_CONFIG = "/etc/vpn-pulse-probe/config"
 HANDSHAKE_MAX_AGE = 30  # seconds: the handshake must be from this very check
 QUEUE_MAX_AGE = 24 * 3600
